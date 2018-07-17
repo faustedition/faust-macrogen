@@ -1,6 +1,6 @@
 import pytest
 
-from uris import Witness, Inscription, UnknownRef, AmbiguousRef
+from .uris import Witness, Inscription, UnknownRef, AmbiguousRef
 
 
 @pytest.fixture

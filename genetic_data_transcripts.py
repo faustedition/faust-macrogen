@@ -1,5 +1,5 @@
 import data_curation.query
-import faust
+from . import faust
 
 
 
@@ -15,7 +15,7 @@ import faust
 for f in faust.transcript_files():
     inscriptions = data_curation.query.unique_values ([f], '//ge:stageNote/@xml:id[contains(.,"i_")]')
     for i in inscriptions:
-        print '%s/%s' % (f, i)
+        print('%s/%s' % (f, i))
 
 
 

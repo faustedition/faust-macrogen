@@ -3,8 +3,8 @@
 # Helper functions and routines common to Faust related tasks
 #
 
-import ConfigParser
-import StringIO
+import configparser
+import io
 import email.mime.text
 import os
 import os.path
@@ -12,7 +12,7 @@ import smtplib
 
 import lxml.etree
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read(['faust.ini', "local.ini"])
 
 xml_dir = config.get("xml", "dir")
@@ -92,14 +92,14 @@ def send_report(subject, msg):
 		server.sendmail(report_sender, report_recipients, msg.as_string())
 		server.quit()
 	else:
-		print "From:", report_sender
-		print "To:", ", ".join(report_recipients)
-		print "Subject:", subject
-		print
-		print msg
+		print("From:", report_sender)
+		print("To:", ", ".join(report_recipients))
+		print("Subject:", subject)
+		print()
+		print(msg)
 	
 
-tei_serialization_xslt = StringIO.StringIO('''\
+tei_serialization_xslt = io.StringIO('''\
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 	<xsl:output indent="no" omit-xml-declaration="yes" />
 	<!-- <xsl:strip-space elements="*" /> -->

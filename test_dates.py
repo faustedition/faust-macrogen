@@ -3,8 +3,8 @@ from datetime import date
 
 import pytest
 
-from dates import collect_wiki_dates, TimeSpan
-import dates
+from .dates import collect_wiki_dates, TimeSpan
+from . import dates
 
 
 @pytest.mark.parametrize("string, parsed", [

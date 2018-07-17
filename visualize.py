@@ -12,9 +12,9 @@ import textwrap
 
 import networkx
 
-import uris
-import faust
-import graph
+from . import uris
+from . import faust
+from . import graph
 
 # styles and defaults
 
@@ -47,7 +47,7 @@ def _label_from_uri(uri):
     # label = uri[len('faust://'):]
 
     wit = uris.Witness.get(uri)
-    if hasattr(wit, u'sigil'):
+    if hasattr(wit, 'sigil'):
         return codecs.encode(wit.sigil, 'ascii', 'xmlcharrefreplace')
     if (uri.startswith('faust://document/faustedition/')):
         return uri[len('faust://document/faustedition/'):]
@@ -85,7 +85,7 @@ def _apply_agraph_styles(agraph, edge_labels=False):
 
 
 
-        if graph.KEY_BIBLIOGRAPHIC_SOURCE in edge.attr.keys():
+        if graph.KEY_BIBLIOGRAPHIC_SOURCE in list(edge.attr.keys()):
             edge_tooltip = 's. %s &#013;&#013;%s    ->    %s&#013;&#013;Source file: %s' % (
                 _label_from_uri(edge.attr[graph.KEY_BIBLIOGRAPHIC_SOURCE]),
                 _label_from_uri(edge[0]), _label_from_uri(edge[1]),
@@ -97,12 +97,12 @@ def _apply_agraph_styles(agraph, edge_labels=False):
                 edge.attr['label'] = _label_from_uri(edge.attr[graph.KEY_BIBLIOGRAPHIC_SOURCE])
 
         for (genetic_key, genetic_value, style_key, style_value) in EDGE_STYLES:
-            if genetic_key in edge.attr.keys() and edge.attr[genetic_key] == genetic_value:
+            if genetic_key in list(edge.attr.keys()) and edge.attr[genetic_key] == genetic_value:
                 edge.attr[style_key] = style_value
 
     for node in agraph.nodes():
 
-        if graph.KEY_NODE_TYPE in node.attr.keys() and node.attr[graph.KEY_NODE_TYPE] == graph.VALUE_ITEM_NODE:
+        if graph.KEY_NODE_TYPE in list(node.attr.keys()) and node.attr[graph.KEY_NODE_TYPE] == graph.VALUE_ITEM_NODE:
             # link to subgraph for single node neighborhood
             _set_node_url(node.attr, _highlighted_base_filename(node))
             node.attr['label'] = str(_label_from_uri(node))
@@ -110,7 +110,7 @@ def _apply_agraph_styles(agraph, edge_labels=False):
                                    % (_label_from_uri(node), node)
 
         for (genetic_key, genetic_value, style_key, style_value) in NODE_STYLES:
-            if genetic_key in node.attr.keys() and node.attr[genetic_key] == genetic_value:
+            if genetic_key in list(node.attr.keys()) and node.attr[genetic_key] == genetic_value:
                 node.attr[style_key] = style_value
 
 
@@ -145,7 +145,7 @@ def _visualize_absolute_datings(agraph):
     dated_nodes = []
 
     for node in agraph.nodes():
-        if graph.KEY_ABSOLUTE_DATINGS_PICKLED in node.attr.keys():
+        if graph.KEY_ABSOLUTE_DATINGS_PICKLED in list(node.attr.keys()):
             logging.debug("Adding cluster for absolute datings of node {0}".format(node))
             absolute_datings = graph.deserialize_from_graphviz(node.attr[graph.KEY_ABSOLUTE_DATINGS_PICKLED])
             absolute_dating_nodes = []

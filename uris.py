@@ -5,14 +5,14 @@ import json
 import logging
 import re
 from functools import wraps
-from urllib2 import urlopen
+from urllib.request import urlopen
 from collections import defaultdict, Counter
 from operator import itemgetter
 
 import pandas as pd
 from lxml import etree
 
-import faust
+from . import faust
 
 
 def call_recorder(function=None, argument_picker=None):
@@ -135,7 +135,7 @@ class Witness(object):
             for uri in self.other_sigils:
                 uri = uri.replace('-', '_')
                 result.append(uri)
-                if u'/wa_faust/' in uri:
+                if '/wa_faust/' in uri:
                     result.append(uri.replace('/wa_faust/', '/wa/'))
         if getattr(self, 'type', '') == 'print':
             result.extend([uri.replace('faust://document/', 'faust://print/') for uri in result])
@@ -215,7 +215,7 @@ class Witness(object):
             para_n = wa_para.group(2)
             inscription = wa_para.group(4) if wa_para.group(4) else ('P' + para_n)
             witness = \
-                [witness for witness in cls.database.values() if
+                [witness for witness in list(cls.database.values()) if
                  isinstance(witness, Witness) and witness.sigil == sigil][0]
             result = Inscription(witness, inscription)
             logging.info('Recognized WA paralipomenon: %s -> %s', uri, result)
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     wits = _collect_wits()
 
     resolutions = defaultdict(set)
-    for uri, result in Witness.get.recorder.keys():
+    for uri, result in list(Witness.get.recorder.keys()):
         resolutions[result].add(uri)
 
     with codecs.open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:
@@ -304,9 +304,9 @@ if __name__ == '__main__':
     _report_wits(wits)
 
     wit_sigils = dict()
-    for w in [w for w in Witness.database.values() if isinstance(w, Witness)]:
+    for w in [w for w in list(Witness.database.values()) if isinstance(w, Witness)]:
         sigils = dict()
-        for uri, sigil in w.other_sigils.items():
+        for uri, sigil in list(w.other_sigils.items()):
             parts = uri.split('/')
             type_, ascii = parts[3:5]
             sigils[type_] = sigil

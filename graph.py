@@ -6,11 +6,11 @@ import pickle
 import networkx
 import lxml.etree as etree
 import logging
-import faust
+from . import faust
 import datetime
 import base64
 
-from uris import Witness
+from .uris import Witness
 
 KEY_RELATION_NAME = 'relation_name'
 KEY_ABSOLUTE_DATINGS = 'absolute_datings'
@@ -149,7 +149,7 @@ def insert_minimal_edges_from_absolute_datings(graph):
 def _absolutely_dated_nodes_sorted(graph):
     """Sort nodes according to their absolute datings"""
     # list of (node_id, node_attr) tuples
-    absolutely_dated_nodes = [(n, graph.node[n]) for n in graph.nodes() if KEY_ABSOLUTE_DATINGS in graph.node[n].keys()]
+    absolutely_dated_nodes = [(n, graph.node[n]) for n in graph.nodes() if KEY_ABSOLUTE_DATINGS in list(graph.node[n].keys())]
     logging.debug("Sorting dates")
     absolutely_dated_nodes.sort(key=lambda n: _average_absolute_date(n[1]))
     return absolutely_dated_nodes
@@ -167,11 +167,11 @@ def _parse_dates(macrogenetic_document, graph):
             source_uri = date.find('f:source', namespaces=faust.namespaces).attrib['uri']
 
             absolute_dating = AbsoluteDating(
-                    _parse_datestr(date.attrib["when"] if date.attrib.has_key("when") else None),
-                    _parse_datestr(date.attrib["from"] if date.attrib.has_key("from") else None),
-                    _parse_datestr(date.attrib["to"] if date.attrib.has_key("to") else None),
-                    _parse_datestr(date.attrib["notBefore"] if date.attrib.has_key("notBefore") else None),
-                    _parse_datestr(date.attrib["notAfter"] if date.attrib.has_key("notAfter") else None),
+                    _parse_datestr(date.attrib["when"] if "when" in date.attrib else None),
+                    _parse_datestr(date.attrib["from"] if "from" in date.attrib else None),
+                    _parse_datestr(date.attrib["to"] if "to" in date.attrib else None),
+                    _parse_datestr(date.attrib["notBefore"] if "notBefore" in date.attrib else None),
+                    _parse_datestr(date.attrib["notAfter"] if "notAfter" in date.attrib else None),
                     bibliographic_source=source_uri, source_file=macrogenetic_document.docinfo.URL)
 
             date_id = 'date_{0}'.format(date_index)
@@ -216,7 +216,7 @@ def _parse_relationships(macrogenetic_document, graph):
                     info_message += '   '
                 else:
                     edge_attr_dict = {}
-                    if relation_name in GENETIC_RELATION_MAP.keys():
+                    if relation_name in list(GENETIC_RELATION_MAP.keys()):
                         edge_attr_dict[KEY_RELATION_NAME] = GENETIC_RELATION_MAP[relation_name]
                     else:
                         raise ValueError("Unknown relation {0} encountered".format(relation_name))
@@ -229,7 +229,7 @@ def _parse_relationships(macrogenetic_document, graph):
                                                    edge[1] == item_uri]
                     used_bibliographic_sources = [edge[2][KEY_BIBLIOGRAPHIC_SOURCE] for edge in
                                                   edges_from_previous_to_this if
-                                                  edge[2].has_key(KEY_BIBLIOGRAPHIC_SOURCE)]
+                                                  KEY_BIBLIOGRAPHIC_SOURCE in edge[2]]
                     if not source_uri in used_bibliographic_sources:
                         # if not relation_name == 'temp-syn':
                         graph.add_edge(previous_item_uri, item_uri, attr_dict=edge_attr_dict)
