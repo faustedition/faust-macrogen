@@ -12,9 +12,9 @@ import textwrap
 
 import networkx
 
-from . import uris
-from . import faust
-from . import graph
+import uris
+import faust
+import graph
 
 # styles and defaults
 
@@ -48,7 +48,7 @@ def _label_from_uri(uri):
 
     wit = uris.Witness.get(uri)
     if hasattr(wit, 'sigil'):
-        return codecs.encode(wit.sigil, 'ascii', 'xmlcharrefreplace')
+        return wit.sigil
     if (uri.startswith('faust://document/faustedition/')):
         return uri[len('faust://document/faustedition/'):]
     if (uri.startswith('faust://document/wa/')):
@@ -183,7 +183,7 @@ def _write_agraph_layout (agraph, dir, basename):
 
 def _highlighted_base_filename (highlighted_node_url):
     """Calculate and return a unique filename for a subgraph of the neighborhood of a certain ("highlighted") node"""
-    return '20_highlighted_%s' % base64.urlsafe_b64encode(highlighted_node_url)
+    return '20_highlighted_%s' % base64.urlsafe_b64encode(codecs.encode(highlighted_node_url, 'ascii', 'strip'))
 
 def visualize():
     """
@@ -278,13 +278,13 @@ def visualize():
     agraph_transitive_closure = _agraph_from(transitive_closure)
 
     # draw transitive reduction
-    logging.info("Generating transitive reduction graph.")
-    agraph_transitive_reduction = agraph_transitive_closure.tred(copy=True)
-    logging.info("{0} nodes, {1} edges in transtive reduction.".format(agraph_transitive_reduction.number_of_nodes(),
-                                                                      agraph_transitive_reduction.number_of_edges()))
-    base_filename_transitive_reduction = '30_transitive_reduction'
-    _write_agraph_layout(agraph_transitive_reduction, output_dir, base_filename_transitive_reduction)
-    links.append(('Transitive reduction', '%s.html' % base_filename_transitive_reduction))
+    #logging.info("Generating transitive reduction graph.")
+    #agraph_transitive_reduction = agraph_transitive_closure.tred(copy=True)
+    #logging.info("{0} nodes, {1} edges in transtive reduction.".format(agraph_transitive_reduction.number_of_nodes(),
+    #                                                                  agraph_transitive_reduction.number_of_edges()))
+    #base_filename_transitive_reduction = '30_transitive_reduction'
+    #_write_agraph_layout(agraph_transitive_reduction, output_dir, base_filename_transitive_reduction)
+    #links.append(('Transitive reduction', '%s.html' % base_filename_transitive_reduction))
     return links
 
 

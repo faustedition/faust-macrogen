@@ -7,8 +7,8 @@ import os
 
 import networkx
 
-from . import faust
-from . import graph
+import faust
+import graph
 
 def graph_statistics(macrogenetic_graph):
     """Print statistics about the macrogenenesis graph"""

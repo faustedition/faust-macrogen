@@ -11,10 +11,10 @@ import time
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from . import faust
-from . import graph
-from . import inscription_order
-from . import visualize
+import faust
+import graph
+import inscription_order
+import visualize
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser()

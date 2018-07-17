@@ -4,15 +4,17 @@ import csv
 import json
 import logging
 import re
-from functools import wraps
+from abc import ABCMeta
+from functools import wraps, total_ordering
 from urllib.request import urlopen
 from collections import defaultdict, Counter
 from operator import itemgetter
 
 import pandas as pd
+import requests
 from lxml import etree
 
-from . import faust
+import faust
 
 
 def call_recorder(function=None, argument_picker=None):
@@ -42,7 +44,30 @@ def call_recorder(function=None, argument_picker=None):
         return decorator
 
 
-class Inscription(object):
+@total_ordering
+class Reference(metaclass=ABCMeta):
+
+    def __init__(self, uri):
+        self.uri = uri
+
+    def __lt__(self, other):
+        if isinstance(other, Reference):
+            return self.uri < other.uri
+        else:
+            raise TypeError(f"{type(self)} cannot be compared to {type(other)}")
+
+    def __str__(self):
+        return self.uri
+
+    def __hash__(self):
+        return hash(self.uri)
+
+    def __eq__(self, other):
+        if isinstance(other, Reference):
+            return self.uri == other.uri
+
+
+class Inscription(Reference):
 
     def __init__(self, witness, inscription):
         self.witness = witness
@@ -61,50 +86,20 @@ class Inscription(object):
     def uri(self):
         return "/".join([self.witness.uri.replace('faust://document/', 'faust://inscription/'), self.inscription])
 
-    def __str__(self):
-        return self.uri
 
-    def __hash__(self):
-        return hash(self.witness) ^ hash(self.inscription)
-
-    def __eq__(self, other):
-        if isinstance(other, Inscription):
-            return self.witness == other.witness and self.inscription == other.inscription
-
-
-class UnknownRef(object):
+class UnknownRef(Reference):
 
     def __init__(self, uri):
         self.uri = uri
         self.status = "unknown"
 
-    def __str__(self):
-        return self.uri
 
-    def __hash__(self):
-        return hash(self.uri)
-
-    def __eq__(self, other):
-        if isinstance(other, UnknownRef):
-            return self.uri == other.uri
-        else:
-            return self is other
-
-
-class AmbiguousRef(object):
+class AmbiguousRef(Reference):
 
     def __init__(self, uri, wits):
         self.uri = uri
         self.witnesses = frozenset(wits)
         self.status = 'ambiguous: ' + ", ".join(str(wit) for wit in sorted(self.witnesses))
-
-    def __hash__(self):
-        return hash(self.uri)
-
-    def __eq__(self, other):
-        if isinstance(other, AmbiguousRef):
-            return self.uri == other.uri
-        return self is other
 
     def first(self):
         return sorted(self.witnesses, key=str)[0]
@@ -114,11 +109,8 @@ class AmbiguousRef(object):
         new_witnesses = new_witnesses.union(self.witnesses)
         return AmbiguousRef(self.uri, new_witnesses)
 
-    def __str__(self):
-        return self.uri
 
-
-class Witness(object):
+class Witness(Reference):
     database = {}
     paralipomena = None
 
@@ -144,9 +136,7 @@ class Witness(object):
     @classmethod
     def _load_database(cls,
                        url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json'):
-        sigil_json = urlopen(url)
-        sigil_data = json.load(sigil_json)
-        sigil_json.close()
+        sigil_data = requests.get(url).json()
         cls.database = cls.build_database(sigil_data)
 
     @classmethod
@@ -240,12 +230,8 @@ class Witness(object):
             return self.uri == other.uri
         return str(self) == str(other)
 
-    def __unicode__(self):
-        return self.sigil_t
-
     def __str__(self):
-        return codecs.encode(self.__unicode__(), 'ascii', 'xmlcharrefreplace')
-
+        return self.sigil_t
 
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
@@ -300,7 +286,6 @@ if __name__ == '__main__':
                 if str(uri) != str(ref):
                     table.writerow((ref, uri))
 
-
     _report_wits(wits)
 
     wit_sigils = dict()
@@ -315,4 +300,3 @@ if __name__ == '__main__':
 
     wit_report = pd.DataFrame(wit_sigils).T
     wit_report.to_excel('witness-sigils.xlsx')
-

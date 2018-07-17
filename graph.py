@@ -6,11 +6,11 @@ import pickle
 import networkx
 import lxml.etree as etree
 import logging
-from . import faust
+import faust
 import datetime
 import base64
 
-from .uris import Witness
+from uris import Witness
 
 KEY_RELATION_NAME = 'relation_name'
 KEY_ABSOLUTE_DATINGS = 'absolute_datings'
