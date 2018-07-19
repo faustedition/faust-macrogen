@@ -1,6 +1,6 @@
 import pytest
 
-from .uris import Witness, Inscription, UnknownRef, AmbiguousRef
+from uris import Witness, Inscription, UnknownRef, AmbiguousRef
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def fake_json():
             'sigil': '2 H',
             'sigil_t': '2_H',
             'other_sigils': {
-                'faust://document/wa_faust/2_H'
+                'faust://document/wa_faust/2_H': '2 H'
             },
             'inscriptions': ['i_uebrige', 'i_oben']
         },
@@ -20,7 +20,7 @@ def fake_json():
             'sigil': '2 H a',
             'sigil_t': '2_H_a',
             'other_sigils': {
-                'faust://document/wa_faust/2_H'
+                'faust://document/wa_faust/2_H': '2 H'
             }
 
         }

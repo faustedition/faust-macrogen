@@ -11,9 +11,9 @@ import re
 import pandas as pd
 from lxml import etree
 
-from . import faust
-from .graph import AbsoluteDating
-from .uris import Witness
+import faust
+from graph import AbsoluteDating
+from uris import Witness
 
 
 class TimeSpan(object):

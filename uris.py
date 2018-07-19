@@ -5,10 +5,10 @@ import json
 import logging
 import re
 from abc import ABCMeta
-from functools import wraps, total_ordering
-from urllib.request import urlopen
 from collections import defaultdict, Counter
+from functools import wraps, total_ordering
 from operator import itemgetter
+from os.path import commonprefix
 
 import pandas as pd
 import requests
@@ -56,8 +56,20 @@ class Reference(metaclass=ABCMeta):
         else:
             raise TypeError(f"{type(self)} cannot be compared to {type(other)}")
 
+    @property
+    def label(self):
+        if self.uri.startswith('faust://inscription'):
+            kind, sigil, inscription = self.uri.split('/')[-3:]
+            return f"{kind}: {sigil} {inscription}"
+        elif self.uri.startswith('faust://document'):
+            kind, sigil = self.uri.split('/')[-2:]
+            return f"{kind}: {sigil}"
+        else:
+            return self.uri
+
+
     def __str__(self):
-        return self.uri
+        return self.label
 
     def __hash__(self):
         return hash(self.uri)
@@ -66,6 +78,8 @@ class Reference(metaclass=ABCMeta):
         if isinstance(other, Reference):
             return self.uri == other.uri
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({repr(self.uri)})'
 
 class Inscription(Reference):
 
@@ -85,6 +99,10 @@ class Inscription(Reference):
     @property
     def uri(self):
         return "/".join([self.witness.uri.replace('faust://document/', 'faust://inscription/'), self.inscription])
+
+    @property
+    def label(self):
+        return f"{self.witness.label} {self.inscription}"
 
 
 class UnknownRef(Reference):
@@ -109,6 +127,11 @@ class AmbiguousRef(Reference):
         new_witnesses = new_witnesses.union(self.witnesses)
         return AmbiguousRef(self.uri, new_witnesses)
 
+    @property
+    def label(self):
+        prefix = commonprefix([wit.label for wit in self.witnesses])
+        return f"{prefix} … ({len(self.witnesses)})"
+
 
 class Witness(Reference):
     database = {}
@@ -125,6 +148,8 @@ class Witness(Reference):
         result = [self.uri]
         if hasattr(self, 'other_sigils'):
             for uri in self.other_sigils:
+                if self.other_sigils[uri] in {'none', 'n.s.', ''}:
+                    continue
                 uri = uri.replace('-', '_')
                 result.append(uri)
                 if '/wa_faust/' in uri:
@@ -143,9 +168,8 @@ class Witness(Reference):
     def _load_paralipomena(cls,
                            url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js'):
         if cls.paralipomena is None:
-            para_file = urlopen(url)
-            json_str = '[' + ''.join(para_file.readlines()[1:])
-            para_file.close()
+            para_text = requests.get(url).text
+            json_str = '[' + ''.join(para_text.split('\n')[1:])
             orig_para = json.loads(json_str, encoding='utf-8')
             cls.paralipomena = {p['n'].strip(): p for p in orig_para}
 
@@ -222,16 +246,9 @@ class Witness(Reference):
         logging.warning('Unknown reference: %s', uri)
         return UnknownRef(uri)
 
-    def __hash__(self):
-        return hash(self.uri)
-
-    def __eq__(self, other):
-        if isinstance(other, Witness):
-            return self.uri == other.uri
-        return str(self) == str(other)
-
-    def __str__(self):
-        return self.sigil_t
+    @property
+    def label(self):
+        return self.sigil
 
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
