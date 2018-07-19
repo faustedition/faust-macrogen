@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d4508757a36e37cbebc5eb24bb25bb0cb7db8711a07d09182e7f68ba2bfaf40e"
+            "sha256": "cf265f41aa4230e493617c66afb0175ca0cd8eee53e12e56bd8f9df442424992"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -95,6 +95,15 @@
             ],
             "index": "pypi",
             "version": "==4.2.3"
+        },
+        "more-itertools": {
+            "hashes": [
+                "sha256:2b6b9893337bfd9166bee6a62c2b0c9fe7735dcf85948b387ec8cba30e85d8e8",
+                "sha256:6703844a52d3588f951883005efcf555e49566a48afd4db4e965d69b883980d3",
+                "sha256:a18d870ef2ffca2b8463c0070ad17b5978056f403fb64e3f15fe62a52db21cc0"
+            ],
+            "index": "pypi",
+            "version": "==4.2.0"
         },
         "networkx": {
             "hashes": [
@@ -264,6 +273,7 @@
                 "sha256:6703844a52d3588f951883005efcf555e49566a48afd4db4e965d69b883980d3",
                 "sha256:a18d870ef2ffca2b8463c0070ad17b5978056f403fb64e3f15fe62a52db21cc0"
             ],
+            "index": "pypi",
             "version": "==4.2.0"
         },
         "pluggy": {

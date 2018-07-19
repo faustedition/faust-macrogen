@@ -11,6 +11,7 @@ openpyxl = "*"
 watchdog = "*"
 lxml = "*"
 requests = "*"
+more-itertools = "*"
 
 [dev-packages]
 pytest = "*"
