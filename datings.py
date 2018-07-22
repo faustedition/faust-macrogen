@@ -124,6 +124,16 @@ class AbsoluteDating(_AbstractDating):
     def date_after(self) -> Optional[datetime.date]:
         return self.end + datetime.timedelta(days=1) if self.end is not None else None
 
+    def __str__(self):
+        if self.when is not None:
+            result = self.when.isoformat()
+        else:
+            result = ''
+            if self.start is not None: result += self.start.isoformat()
+            result += ' .. '
+            if self.end is not None: result += self.end.isoformat()
+        return result
+
     def add_to_graph(self, G: nx.MultiDiGraph):
         for item in self.items:
             for source in self.sources:
