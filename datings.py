@@ -37,14 +37,29 @@ class BiblSource:
         self.uri = uri
         self.detail = detail
 
+    def __eq__(self, other):
+        if isinstance(other, BiblSource):
+            return self.uri == other.uri and self.detail == other.detail
+        else:
+            return super().__eq__(other)
+
+    def __hash__(self):
+        return hash(self.uri) ^ hash(self.detail)
+
+    def __str__(self):
+        result = self.uri
+        if self.detail is not None:
+            result += ' ' + self.detail
+        return result
+
 
 class _AbstractDating(metaclass=ABCMeta):
 
     def __init__(self, el: etree._Element):
         self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=faust.namespaces)]
-        self.sources: List[str] = [BiblSource(source.get('uri'), source.text)
-                                   for source in el.xpath('f:source', namespaces=faust.namespaces)]
-        self.comments: List[str] = [comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces)]
+        self.sources = tuple(BiblSource(source.get('uri'), source.text)
+                                   for source in el.xpath('f:source', namespaces=faust.namespaces))
+        self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces))
         self.xmlsource: Tuple[str, int] = (el.getroottree().docinfo.URL, el.sourceline)
 
     @abstractmethod
@@ -146,7 +161,7 @@ def _add_timeline_edges(graph):
     date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
     for earlier, later in pairwise(date_nodes):
         if earlier != later and (earlier, later) not in graph.edges:
-           graph.add_edge(earlier, later, kind='timeline')
+            graph.add_edge(earlier, later, kind='timeline')
 
 
 def base_graph():
