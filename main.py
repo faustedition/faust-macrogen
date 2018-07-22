@@ -167,4 +167,6 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
 
 
 if __name__ == '__main__':
+    import requests_cache
+    requests_cache.install_cache(expire_after=86400)
     _main()
