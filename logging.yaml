@@ -20,3 +20,5 @@ loggers:
     level: INFO
   main:
     level: INFO
+  datings:
+    level: INFO
