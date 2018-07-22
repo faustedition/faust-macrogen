@@ -1,6 +1,7 @@
 """
 This is the result of parsing the respective files.
 """
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Tuple, TypeVar, Optional, Any
 
@@ -12,6 +13,8 @@ from more_itertools import pairwise
 
 import faust
 from uris import Witness, Reference
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_datestr(datestr: str) -> datetime.date:
@@ -67,6 +70,10 @@ class AbsoluteDating(_AbstractDating):
         self.not_after = _parse_datestr(el.get('notAfter', None))
         self.when = _parse_datestr(el.get('when', None))
         self.normalized = el.get('type', '') == 'normalized'
+
+        if self.start is None and self.end is None:
+            xml = etree.tostring(el, pretty_print=True, encoding='unicode')
+            logger.warning('Absolute dating without a date: %s at %s:%d', xml, *self.xmlsource)
 
     @property
     def start_attr(self):

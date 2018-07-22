@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "cf265f41aa4230e493617c66afb0175ca0cd8eee53e12e56bd8f9df442424992"
+            "sha256": "168b68063a5c2babfcf7df61bdd2dde37766f729f80c912d9c1d348344a7e00b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -37,6 +37,14 @@
             ],
             "version": "==3.0.4"
         },
+        "colorlog": {
+            "hashes": [
+                "sha256:418db638c9577f37f0fae4914074f395847a728158a011be2a193ac491b9779d",
+                "sha256:8b234ebae1ba1237bc79c0d5f1f47b31a3f3e90c0b4c2b0ebdde63a174d3b97b"
+            ],
+            "index": "pypi",
+            "version": "==3.1.4"
+        },
         "decorator": {
             "hashes": [
                 "sha256:2c51dff8ef3c447388fe5e4453d24a2bf128d3a4c32af3fabef1f01c6851ab82",
@@ -63,6 +71,13 @@
                 "sha256:ea0a5067c5f0f50ad4c7bdc80abad3d976604f6fb026b0b3a17a9d84bb9046c9"
             ],
             "version": "==1.4"
+        },
+        "logging-tree": {
+            "hashes": [
+                "sha256:3df68a170f30386e58bbea330d27c6a6ce88681919b35080deac8ec69458973e"
+            ],
+            "index": "pypi",
+            "version": "==1.7"
         },
         "lxml": {
             "hashes": [

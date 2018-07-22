@@ -16,6 +16,7 @@ from lxml import etree
 
 import faust
 
+logger = logging.getLogger(__name__)
 
 def call_recorder(function=None, argument_picker=None):
     """
@@ -183,7 +184,7 @@ class Witness(Reference):
             for uri in wit.uris():
                 if uri in database:
                     old_entry = database[uri]
-                    logging.warning("URI %s is already in db for %s, adding %s", uri, old_entry, wit)
+                    logger.debug("URI %s is already in db for %s, adding %s", uri, old_entry, wit)
                     if isinstance(old_entry, AmbiguousRef):
                         database[uri] = old_entry + wit
                     else:
@@ -216,7 +217,7 @@ class Witness(Reference):
             if isinstance(wit, Witness):
                 return Inscription(wit, 'alpha')
             else:
-                logging.warning('Could not fix WA pseudo inscription candidate %s (%s)', uri, wit)
+                logger.warning('Could not fix WA pseudo inscription candidate %s (%s)', uri, wit)
 
         space_inscr = re.match('faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
         if space_inscr is not None:
@@ -232,7 +233,7 @@ class Witness(Reference):
                 [witness for witness in list(cls.database.values()) if
                  isinstance(witness, Witness) and witness.sigil == sigil][0]
             result = Inscription(witness, inscription)
-            logging.info('Recognized WA paralipomenon: %s -> %s', uri, result)
+            logger.debug('Recognized WA paralipomenon: %s -> %s', uri, result)
             return result
 
         if uri.startswith('faust://inscription'):
@@ -243,7 +244,7 @@ class Witness(Reference):
                 wit = cls.get(base)
                 return Inscription(wit, inscription)
 
-        logging.warning('Unknown reference: %s', uri)
+        logger.debug('Unknown reference: %s', uri)
         return UnknownRef(uri)
 
     @property
@@ -258,6 +259,7 @@ def _collect_wits():
             uri = element.get('uri')
             wit = Witness.get(uri, allow_duplicate=True)
             items[wit].append((macrogenetic_file.split('macrogenesis/')[-1], element.sourceline))
+    logger.info('Collected %d references in %d macrogenesis files', len(items), len(faust.macrogenesis_files()))
     return items
 
 
@@ -283,11 +285,12 @@ def _report_wits(wits, output_csv='witness-usage.csv'):
             table.writerow(row)
         stats = Counter([row[1].split(':')[0] for row in rows])
         report = "\n".join('%5d: %s' % (count, status) for status, count in stats.most_common())
-        logging.warning('Analyzed references in data:\n%s', report)
+        logger.info('Analyzed references in data:\n%s', report)
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logger.WARNING)
+    logger.setLevel(logging.INFO)
     wits = _collect_wits()
 
     resolutions = defaultdict(set)

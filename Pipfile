@@ -12,6 +12,8 @@ watchdog = "*"
 lxml = "*"
 requests = "*"
 more-itertools = "*"
+logging-tree = "*"
+colorlog = "*"
 
 [dev-packages]
 pytest = "*"

@@ -1,0 +1,22 @@
+version: 1
+
+formatters:
+  colored:
+    '()': colorlog.ColoredFormatter
+    format: '%(log_color)s%(levelname)-8s %(name)-8s %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: colored
+
+root:
+  handlers:
+    - console
+  level: WARNING
+
+loggers:
+  uris:
+    level: INFO
+  main:
+    level: INFO
