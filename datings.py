@@ -170,3 +170,20 @@ def base_graph():
         dating.add_to_graph(graph)
     _add_timeline_edges(graph)
     return graph
+
+
+def cycle_subgraphs(graph: nx.Graph):
+    """
+    Extracts the strongly connected components of the given graph. Those components
+    that consist of more than one nodes are then returned, sorted by size (in nodes,
+    descending)
+
+    Args:
+        graph: a graph
+
+    Returns:
+        list of subgraphs
+    """
+    cycles = [cycle for cycle in nx.strongly_connected_components(graph) if len(cycle) > 1]
+    sorted_cycles = sorted(cycles, key=len, reverse=True)
+    return [graph.subgraph(cycle) for cycle in sorted_cycles]
