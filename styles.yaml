@@ -1,0 +1,24 @@
+edge:
+  not_before:
+    style: dashed
+    color: blue
+  not_after:
+    style: dashed
+    color: blue
+  from_:
+    color: blue
+  to_:
+    color: blue
+  when:
+    color: cyan
+  temp-syn:
+    dirType: none
+    constraint: false
+timeline:
+  graph:
+    color: white
+  edge:
+    style: dotted
+    group: timeline
+  node:
+    style: none
