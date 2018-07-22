@@ -28,6 +28,15 @@ def _parse_datestr(datestr: str) -> datetime.date:
         return None
 
 
+class InvalidDatingError(ValueError):
+
+    def __init__(self, msg, element: Optional[etree._Element] = None):
+        if element is not None:
+            xml = etree.tostring(element, pretty_print=True, encoding='unicode')
+            msg = f"{msg}:\n{xml} at {element.getroottree().docinfo.URL}:{element.sourceline}"
+        super().__init__(msg)
+
+
 class BiblSource:
     """
     A bibliographic source
@@ -58,7 +67,7 @@ class _AbstractDating(metaclass=ABCMeta):
     def __init__(self, el: etree._Element):
         self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=faust.namespaces)]
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
-                                   for source in el.xpath('f:source', namespaces=faust.namespaces))
+                             for source in el.xpath('f:source', namespaces=faust.namespaces))
         self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces))
         self.xmlsource: Tuple[str, int] = (el.getroottree().docinfo.URL, el.sourceline)
 
@@ -87,8 +96,9 @@ class AbsoluteDating(_AbstractDating):
         self.normalized = el.get('type', '') == 'normalized'
 
         if self.start is None and self.end is None:
-            xml = etree.tostring(el, pretty_print=True, encoding='unicode')
-            logger.warning('Absolute dating without a date: %s at %s:%d', xml, *self.xmlsource)
+            raise InvalidDatingError('Absolute dating without a date', el)
+        elif self.date_before is not None and self.date_after is not None and not self.date_before < self.date_after:
+            raise InvalidDatingError('Backwards dating (%s), this would have caused a conflict' % self, el)
 
     @property
     def start_attr(self):
@@ -99,19 +109,19 @@ class AbsoluteDating(_AbstractDating):
         return _firstattr(self, 'to', 'when', 'not_after')
 
     @property
-    def start(self):
+    def start(self) -> Optional[datetime.date]:
         return self.start_attr[1]
 
     @property
-    def end(self):
+    def end(self) -> Optional[datetime.date]:
         return self.end_attr[1]
 
     @property
-    def date_before(self):
+    def date_before(self) -> Optional[datetime.date]:
         return self.start - datetime.timedelta(days=1) if self.start is not None else None
 
     @property
-    def date_after(self):
+    def date_after(self) -> Optional[datetime.date]:
         return self.end + datetime.timedelta(days=1) if self.end is not None else None
 
     def add_to_graph(self, G: nx.MultiDiGraph):
@@ -149,7 +159,10 @@ def _parse_file(filename: str):
     for element in tree.xpath('//f:relation', namespaces=faust.namespaces):
         yield RelativeDating(element)
     for element in tree.xpath('//f:date', namespaces=faust.namespaces):
-        yield AbsoluteDating(element)
+        try:
+            yield AbsoluteDating(element)
+        except InvalidDatingError as e:
+            logger.error(str(e))
 
 
 def _parse_files():
