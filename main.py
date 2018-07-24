@@ -4,14 +4,17 @@ import logging
 import sys
 from collections import Counter, defaultdict
 from datetime import date
+from itertools import islice
 from logging.config import dictConfig
 from pathlib import Path
 from typing import Callable, Any, Dict
 
+import igraph
 import networkx as nx
 import yaml
 from networkx import MultiDiGraph
 from pygraphviz import AGraph
+from tqdm import tqdm
 
 from datings import base_graph, BiblSource
 from uris import Reference
@@ -77,6 +80,7 @@ def analyse_conflicts(graph):
             if size > 1:
                 logger.debug('  - Subgraph %d, %d refs', index, refs)
                 subgraph = nx.subgraph(graph, nodes)  # type: networkx.DiGraph
+                feedback_arcs(subgraph)
                 simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph.copy()), 0, 5000), desc='Finding cycles in component %d' % index))
                 sc_count = len(simple_cycles)
                 sc_avg_len = sum(map(len, simple_cycles)) / sc_count
@@ -122,6 +126,19 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         writer.writerow(['Reference', 'Total'] + kinds)
         for bibl, total in totals.most_common():
             writer.writerow([bibl, total] + [bibls[bibl][kind] for kind in kinds])
+
+def feedback_arcs(graph, method='eades'):
+    integer_graph = nx.convert_node_labels_to_integers(graph, label_attribute='object')
+    int_mapping = integer_graph.nodes(data='object')
+    graph_i = igraph.Graph(edges=list(integer_graph.edges()), directed=True)
+    logger.debug('Running feedback arc set analysis ...')
+    edges_to_remove = graph_i.es[graph_i.feedback_arc_set(method='ip')]
+    int_edges = [(e.source, e.target) for e in edges_to_remove]
+
+    logger.info('%s edges for removal', len(edges_to_remove))
+    # TODO translation
+    logger.debug('Here they are: %s', edges_to_remove)
+    return edges_to_remove
 
 
 def _main(argv=sys.argv):
