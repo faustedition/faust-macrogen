@@ -47,6 +47,8 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     nx.relabel_nodes(graph, translation, copy=False)
 
     for u, v, attrs in graph.edges(data=True):
+        if 'source' in attrs and not 'label' in attrs:
+            attrs['label'] = str(attrs['source'])
         _simplify_attrs(attrs)
 
     return graph
@@ -68,19 +70,25 @@ def analyse_conflicts(graph):
     conflicts_file_name = 'conflicts.tsv'
     with open(conflicts_file_name, "wt") as conflicts_file:
         writer = csv.writer(conflicts_file, delimiter='\t')
-        writer.writerow(['Index', 'Size', 'References', 'Edges', 'Sources', 'Types', 'Cycle'])
-        for index, nodes in enumerate(sorted(nx.strongly_connected_components(graph), key=len, reverse=True)):
+        writer.writerow(['Index', 'Size', 'References', 'Edges', 'Simple Cycles', 'Avg. Cycle Length', 'Sources', 'Types', 'Cycle'])
+        for index, nodes in enumerate([scc for scc in sorted(nx.strongly_connected_components(graph), key=len) if len(scc) > 1]):
             size = len(nodes)
             refs = len([node for node in nodes if isinstance(node, Reference)])
             if size > 1:
+                logger.debug('  - Subgraph %d, %d refs', index, refs)
                 subgraph = nx.subgraph(graph, nodes)  # type: networkx.DiGraph
+                simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph.copy()), 0, 5000), desc='Finding cycles in component %d' % index))
+                sc_count = len(simple_cycles)
+                sc_avg_len = sum(map(len, simple_cycles)) / sc_count
                 edge_count = len(subgraph.edges)
                 sources = {str(attr['source'].uri) for u, v, attr in subgraph.edges.data() if 'source' in attr}
                 node_types = {str(attr['kind']) for u, v, attr in subgraph.edges.data()}
                 writer.writerow(
-                        [index, size, refs, edge_count, ", ".join(sources), ", ".join(node_types),
+                        [index, size, refs, edge_count, sc_count, sc_avg_len, ", ".join(sources), ", ".join(node_types),
                          " -> ".join(map(str, nodes))])
+                conflicts_file.flush()
                 write_dot(subgraph, f"conflict-{index:02d}.dot")
+                nx.write_graphml(simplify_graph(subgraph), f"conflict-{index:02d}.graphml")
     return [('List of conflicts', conflicts_file_name)]
 
 
@@ -102,7 +110,7 @@ def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[st
     # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
-def get_bibliography_stats(graph: nx.MultiDiGraph):
+def write_bibliography_stats(graph: nx.MultiDiGraph):
     bibls = defaultdict(Counter)
     for u, v, attr in graph.edges(data=True):
         if 'source' in attr:
@@ -121,10 +129,8 @@ def _main(argv=sys.argv):
 
     logger.info('Building base graph ...')
     base = base_graph()
-    get_bibliography_stats(base)
-    logger.info('Removing hertz')
-    # without_hertz = nx.restricted_view(base, base.nodes, [(u, v, k) for u, v, k, attr in base.edges(data=True, keys=True)
-    #                                                      if 'source' in attr and 'hertz' in attr['source'].uri])
+    write_bibliography_stats(base)
+    logger.info('Removing hertz and temp-syn')
     without_hertz = remove_edges(base, lambda u, v, attr: 'source' in attr and 'hertz' in attr['source'].uri)
     without_syn = remove_edges(without_hertz, lambda u, v, attr: attr['kind'] == 'temp-syn')
     write_dot(without_syn)
@@ -141,6 +147,8 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
     logger.info('Writing %s ...', target)
     simplified: MultiDiGraph = simplify_graph(graph)
     agraph: AGraph = nx.nx_agraph.to_agraph(simplified)
+    agraph.edge_attr['fontsize'] = 8
+    agraph.graph_attr['fontname'] = 'Ubuntu'
 
     # extract the timeline
     timeline = agraph.add_subgraph([node for node in agraph.nodes() if node.attr['kind'] == 'date'], name='cluster_timeline')
@@ -149,6 +157,7 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
         for t in ('graph', 'edge', 'node'):
             if t in timeline_style:
                 getattr(timeline, t + '_attr', {}).update(timeline_style[t])
+                logger.debug('timeline style: %s = %s', t, getattr(timeline, t + '_attr').items()) ## Doesn’t work
 
     # now style by kind:
     if 'edge' in style:

@@ -19,6 +19,6 @@ loggers:
   uris:
     level: INFO
   main:
-    level: INFO
+    level: DEBUG
   datings:
     level: INFO

@@ -1,3 +1,6 @@
+node:
+  date:
+    shape: none
 edge:
   not_before:
     style: dashed
@@ -14,11 +17,13 @@ edge:
   temp-syn:
     dirType: none
     constraint: false
+  timeline:
+    style: dotted
+    group: timeline
 timeline:
   graph:
     color: white
   edge:
     style: dotted
-    group: timeline
   node:
-    style: none
+    shape: none
