@@ -15,6 +15,8 @@ requests-cache = "*"
 more-itertools = "*"
 logging-tree = "*"
 colorlog = "*"
+tqdm = "*"
+python-igraph = "*"
 
 [dev-packages]
 pytest = "*"
