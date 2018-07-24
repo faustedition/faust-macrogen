@@ -3,7 +3,8 @@ This is the result of parsing the respective files.
 """
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, TypeVar, Optional, Any
+from collections import namedtuple
+from typing import List, Tuple, TypeVar, Optional, Any, Dict
 
 import networkx as nx
 from lxml import etree
@@ -37,6 +38,23 @@ class InvalidDatingError(ValueError):
         super().__init__(msg)
 
 
+BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference'])
+
+
+def _parse_bibliography(url):
+    db: Dict[str, BibEntry] = {}
+    et = etree.parse(url)
+    for bib in et.xpath('//f:bib', namespaces=faust.namespaces):
+        uri = bib.get('uri')
+        citation = bib.find('f:citation', namespaces=faust.namespaces).text
+        reference = bib.find('f:reference', namespaces=faust.namespaces).text
+        db[uri] = BibEntry(uri, citation, reference)
+    return db
+
+
+_bib_db = _parse_bibliography('bibliography.xml')
+
+
 class BiblSource:
     """
     A bibliographic source
@@ -56,9 +74,12 @@ class BiblSource:
         return hash(self.uri) ^ hash(self.detail)
 
     def __str__(self):
-        result = self.uri
-        if self.detail is not None:
-            result += ' ' + self.detail
+        if self.uri in _bib_db:
+            result = _bib_db[self.uri].citation
+        else:
+            result = self.uri.replace('faust://bibliography/', '')
+        # if self.detail is not None:
+        #     result += ' ' + self.detail
         return result
 
 
