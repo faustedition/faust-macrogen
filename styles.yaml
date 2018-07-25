@@ -3,15 +3,13 @@ node:
     shape: none
 edge:
   not_before:
-    style: dashed
     color: blue
   not_after:
-    style: dashed
     color: blue
   from_:
-    color: blue
+    color: green
   to_:
-    color: blue
+    color: green
   when:
     color: cyan
   temp-syn:
@@ -20,6 +18,10 @@ edge:
   timeline:
     style: dotted
     group: timeline
+  delete:
+    constraint: false
+    color: red
+    style: dashed
 timeline:
   graph:
     color: white

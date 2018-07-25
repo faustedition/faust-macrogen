@@ -17,6 +17,7 @@ from pygraphviz import AGraph
 from tqdm import tqdm
 
 from datings import base_graph, BiblSource
+from igraph_wrapper import to_igraph, nx_edges
 from uris import Reference
 
 logger = logging.getLogger('main')
@@ -73,15 +74,19 @@ def analyse_conflicts(graph):
     conflicts_file_name = 'conflicts.tsv'
     with open(conflicts_file_name, "wt") as conflicts_file:
         writer = csv.writer(conflicts_file, delimiter='\t')
-        writer.writerow(['Index', 'Size', 'References', 'Edges', 'Simple Cycles', 'Avg. Cycle Length', 'Sources', 'Types', 'Cycle'])
-        for index, nodes in enumerate([scc for scc in sorted(nx.strongly_connected_components(graph), key=len) if len(scc) > 1]):
+        writer.writerow(
+                ['Index', 'Size', 'References', 'Edges', 'Simple Cycles', 'Avg. Cycle Length', 'Sources', 'Types',
+                 'Cycle'])
+        for index, nodes in enumerate(
+                [scc for scc in sorted(nx.strongly_connected_components(graph), key=len) if len(scc) > 1]):
             size = len(nodes)
             refs = len([node for node in nodes if isinstance(node, Reference)])
             if size > 1:
                 logger.debug('  - Subgraph %d, %d refs', index, refs)
-                subgraph = nx.subgraph(graph, nodes)  # type: networkx.DiGraph
-                feedback_arcs(subgraph)
-                simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph.copy()), 0, 5000), desc='Finding cycles in component %d' % index))
+                subgraph = nx.subgraph(graph, nodes).copy()  # type: networkx.DiGraph
+                simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph), 0, 5000),
+                                          desc='Finding cycles in component %d' % index))
+                edges_to_remove = feedback_arcs(subgraph)
                 sc_count = len(simple_cycles)
                 sc_avg_len = sum(map(len, simple_cycles)) / sc_count
                 edge_count = len(subgraph.edges)
@@ -91,6 +96,7 @@ def analyse_conflicts(graph):
                         [index, size, refs, edge_count, sc_count, sc_avg_len, ", ".join(sources), ", ".join(node_types),
                          " -> ".join(map(str, nodes))])
                 conflicts_file.flush()
+                mark_edges_to_delete(subgraph, edges_to_remove)
                 write_dot(subgraph, f"conflict-{index:02d}.dot")
                 nx.write_graphml(simplify_graph(subgraph), f"conflict-{index:02d}.graphml")
     return [('List of conflicts', conflicts_file_name)]
@@ -127,18 +133,26 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, total] + [bibls[bibl][kind] for kind in kinds])
 
-def feedback_arcs(graph, method='eades'):
-    integer_graph = nx.convert_node_labels_to_integers(graph, label_attribute='object')
-    int_mapping = integer_graph.nodes(data='object')
-    graph_i = igraph.Graph(edges=list(integer_graph.edges()), directed=True)
-    logger.debug('Running feedback arc set analysis ...')
-    edges_to_remove = graph_i.es[graph_i.feedback_arc_set(method='ip')]
-    int_edges = [(e.source, e.target) for e in edges_to_remove]
 
-    logger.info('%s edges for removal', len(edges_to_remove))
-    # TODO translation
-    logger.debug('Here they are: %s', edges_to_remove)
-    return edges_to_remove
+def feedback_arcs(graph: nx.MultiDiGraph, method='eades'):
+    """
+    Calculates the feedback arc set using the given method and returns a
+    list of edges in the form (u, v, key, data)
+
+    Args:
+        graph: NetworkX DiGraph
+        method: 'eades' (approximation, fast) or 'ip' (exact, exponential)
+    """
+    logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
+    igraph = to_igraph(graph)
+    iedges = igraph.es[igraph.feedback_arc_set(method=method)]
+    logger.debug('%d edges to remove', len(iedges))
+    return list(nx_edges(iedges, keys=True, data=True))
+
+
+def mark_edges_to_delete(graph: nx.MultiDiGraph, edges):
+    for u, v, k, _ in edges:
+        graph.edges[u, v, k]['delete'] = True
 
 
 def _main(argv=sys.argv):
@@ -168,13 +182,14 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
     agraph.graph_attr['fontname'] = 'Ubuntu'
 
     # extract the timeline
-    timeline = agraph.add_subgraph([node for node in agraph.nodes() if node.attr['kind'] == 'date'], name='cluster_timeline')
+    timeline = agraph.add_subgraph([node for node in agraph.nodes() if node.attr['kind'] == 'date'],
+                                   name='cluster_timeline')
     if 'timeline' in style:
         timeline_style = style['timeline']
         for t in ('graph', 'edge', 'node'):
             if t in timeline_style:
                 getattr(timeline, t + '_attr', {}).update(timeline_style[t])
-                logger.debug('timeline style: %s = %s', t, getattr(timeline, t + '_attr').items()) ## Doesn’t work
+                logger.debug('timeline style: %s = %s', t, getattr(timeline, t + '_attr').items())  ## Doesn’t work
 
     # now style by kind:
     if 'edge' in style:
@@ -182,6 +197,8 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
             kind = edge.attr['kind']
             if kind in style['edge']:
                 edge.attr.update(style['edge'][kind])
+            if 'delete' in edge.attr and edge.attr['delete'] and 'delete' in style['edge']:
+                edge.attr.update(style['edge']['delete'])
 
     if 'node' in style:
         for node in agraph.nodes():
@@ -194,5 +211,6 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
 
 if __name__ == '__main__':
     import requests_cache
+
     requests_cache.install_cache(expire_after=86400)
     _main()
