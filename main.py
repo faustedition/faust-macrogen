@@ -129,9 +129,9 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
     totals = Counter({ref: sum(types.values()) for ref, types in bibls.items()})
     with open('sources.tsv', 'wt', encoding='utf-8') as out:
         writer = csv.writer(out, delimiter='\t')
-        writer.writerow(['Reference', 'Total'] + kinds)
+        writer.writerow(['Reference', 'Weight', 'Total'] + kinds)
         for bibl, total in totals.most_common():
-            writer.writerow([bibl, total] + [bibls[bibl][kind] for kind in kinds])
+            writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
 
 def feedback_arcs(graph: nx.MultiDiGraph, method='eades'):
@@ -145,7 +145,7 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='eades'):
     """
     logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
     igraph = to_igraph(graph)
-    iedges = igraph.es[igraph.feedback_arc_set(method=method)]
+    iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
     logger.debug('%d edges to remove', len(iedges))
     return list(nx_edges(iedges, keys=True, data=True))
 
@@ -155,11 +155,21 @@ def mark_edges_to_delete(graph: nx.MultiDiGraph, edges):
         graph.edges[u, v, k]['delete'] = True
 
 
+def add_edge_weights(graph):
+    for u, v, k, data in graph.edges(data=True, keys=True):
+        if 'weight' not in data:
+            if data['kind'] == 'timeline':
+                data['weight'] = 2 ** 31
+            if 'source' in data:
+                data['weight'] = data['source'].weight
+
+
 def _main(argv=sys.argv):
     setup_logging()
 
     logger.info('Building base graph ...')
     base = base_graph()
+    add_edge_weights(base)
     write_bibliography_stats(base)
     logger.info('Removing hertz and temp-syn')
     without_hertz = remove_edges(base, lambda u, v, attr: 'source' in attr and 'hertz' in attr['source'].uri)

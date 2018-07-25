@@ -1,9 +1,11 @@
 """
 This is the result of parsing the respective files.
 """
+import csv
 import logging
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
+from collections import namedtuple, defaultdict
+from csv import DictReader
 from typing import List, Tuple, TypeVar, Optional, Any, Dict
 
 import networkx as nx
@@ -38,18 +40,34 @@ class InvalidDatingError(ValueError):
         super().__init__(msg)
 
 
-BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference'])
+BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
 
 
 def _parse_bibliography(url):
     db: Dict[str, BibEntry] = {}
+    scores = _read_scores()
     et = etree.parse(url)
     for bib in et.xpath('//f:bib', namespaces=faust.namespaces):
         uri = bib.get('uri')
         citation = bib.find('f:citation', namespaces=faust.namespaces).text
         reference = bib.find('f:reference', namespaces=faust.namespaces).text
-        db[uri] = BibEntry(uri, citation, reference)
+        db[uri] = BibEntry(uri, citation, reference, scores[uri])
     return db
+
+
+def _read_scores():
+    scores = defaultdict(lambda: 1)
+    try:
+        with open('bibscores.tsv', encoding='utf-8') as scorefile:
+            r = csv.reader(scorefile, delimiter='\t')
+            for row in r:
+                try:
+                    scores[row[0]] = int(row[1])
+                except ValueError as e:
+                    logger.warning('Skipping row %s: %s', row, e)
+    except FileNotFoundError as e:
+        logger.warning('Could not read score file: %s. Will use default score', e)
+    return scores
 
 
 _bib_db = _parse_bibliography('bibliography.xml')
@@ -60,9 +78,10 @@ class BiblSource:
     A bibliographic source
     """
 
-    def __init__(self, uri, detail):
+    def __init__(self, uri, detail=''):
         self.uri = uri
         self.detail = detail
+        self.weight = _bib_db[uri].weight if uri in _bib_db else 1
 
     def __eq__(self, other):
         if isinstance(other, BiblSource):
