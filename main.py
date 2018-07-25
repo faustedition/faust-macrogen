@@ -86,7 +86,8 @@ def analyse_conflicts(graph):
                 subgraph = nx.subgraph(graph, nodes).copy()  # type: networkx.DiGraph
                 simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph), 0, 5000),
                                           desc='Finding cycles in component %d' % index))
-                edges_to_remove = feedback_arcs(subgraph)
+                collapsed_subgraph = collapse_edges(subgraph)
+                edges_to_remove = feedback_arcs(collapsed_subgraph)
                 sc_count = len(simple_cycles)
                 sc_avg_len = sum(map(len, simple_cycles)) / sc_count
                 edge_count = len(subgraph.edges)
@@ -162,6 +163,38 @@ def add_edge_weights(graph):
                 data['weight'] = 2 ** 31
             if 'source' in data:
                 data['weight'] = data['source'].weight
+
+def collapse_edges(graph: nx.MultiDiGraph):
+    """
+    Returns a new graph with all multi- and conflicting edges collapsed.
+    Args:
+        graph:
+
+    Returns:
+
+    """
+    result = graph.copy()
+    multiedges = defaultdict(list)
+
+    for u,v,k,attr in graph.edges(keys=True, data=True):
+        multiedges[tuple(sorted([u,v], key=str))].append((u,v,k,attr))
+
+    for (u, v), edges in multiedges.items():
+        if len(edges) > 1:
+            total_weight = sum(attr['source'].weight * (1 if (u,v) == (w,r) else -1) for w,r,k,attr in edges)
+            result.remove_edges_from([(u,v), (v,u)])
+            if total_weight < 0:
+                u,v = v,u
+                total_weight = -total_weight
+            result.add_edge(u, v,
+                            kind='collapsed',
+                            weight=total_weight,
+                            sources=tuple(attr['source'] for w,r,k,attr in edges))
+
+    return result
+
+
+
 
 
 def _main(argv=sys.argv):
