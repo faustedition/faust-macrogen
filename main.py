@@ -164,6 +164,7 @@ def add_edge_weights(graph):
             if 'source' in data:
                 data['weight'] = data['source'].weight
 
+
 def collapse_edges(graph: nx.MultiDiGraph):
     """
     Returns a new graph with all multi- and conflicting edges collapsed.
@@ -176,25 +177,22 @@ def collapse_edges(graph: nx.MultiDiGraph):
     result = graph.copy()
     multiedges = defaultdict(list)
 
-    for u,v,k,attr in graph.edges(keys=True, data=True):
-        multiedges[tuple(sorted([u,v], key=str))].append((u,v,k,attr))
+    for u, v, k, attr in graph.edges(keys=True, data=True):
+        multiedges[tuple(sorted([u, v], key=str))].append((u, v, k, attr))
 
     for (u, v), edges in multiedges.items():
         if len(edges) > 1:
-            total_weight = sum(attr['source'].weight * (1 if (u,v) == (w,r) else -1) for w,r,k,attr in edges)
-            result.remove_edges_from([(u,v,k) for u,v,k,data in edges])
+            total_weight = sum(attr['source'].weight * (1 if (u, v) == (w, r) else -1) for w, r, k, attr in edges)
+            result.remove_edges_from([(u, v, k) for u, v, k, data in edges])
             if total_weight < 0:
-                u,v = v,u
+                u, v = v, u
                 total_weight = -total_weight
             result.add_edge(u, v,
                             kind='collapsed',
                             weight=total_weight,
-                            sources=tuple(attr['source'] for w,r,k,attr in edges))
+                            sources=tuple(attr['source'] for w, r, k, attr in edges))
 
     return result
-
-
-
 
 
 def _main(argv=sys.argv):
