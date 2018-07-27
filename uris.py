@@ -9,6 +9,7 @@ from collections import defaultdict, Counter
 from functools import wraps, total_ordering
 from operator import itemgetter
 from os.path import commonprefix
+from typing import Tuple
 
 import pandas as pd
 import requests
@@ -68,6 +69,13 @@ class Reference(metaclass=ABCMeta):
         else:
             return self.uri
 
+    def sort_tuple(self):
+        match = re.match('faust://(document|inscription)/(.+?)/(.+?)')
+        if match:
+            return (0, match.group(3), 99999, match.group(2))
+        else:
+            return (0, self.label, 99999, "")
+
 
     def __str__(self):
         return self.label
@@ -105,6 +113,10 @@ class Inscription(Reference):
     def label(self):
         return f"{self.witness.label} {self.inscription}"
 
+    def sort_tuple(self):
+        v, s1, n, s2 = super().sort_tuple()
+        return (v, s1, n, s2 + " " + self.inscription)
+
 
 class UnknownRef(Reference):
 
@@ -120,7 +132,7 @@ class AmbiguousRef(Reference):
         self.witnesses = frozenset(wits)
         self.status = 'ambiguous: ' + ", ".join(str(wit) for wit in sorted(self.witnesses))
 
-    def first(self):
+    def first(self) -> 'Witness':
         return sorted(self.witnesses, key=str)[0]
 
     def __add__(self, other):
@@ -133,6 +145,8 @@ class AmbiguousRef(Reference):
         prefix = commonprefix([wit.label for wit in self.witnesses])
         return f"{prefix} … ({len(self.witnesses)})"
 
+    def sort_tuple(self):
+        return self.first().sort_tuple()
 
 class Witness(Reference):
     database = {}
@@ -250,6 +264,39 @@ class Witness(Reference):
     @property
     def label(self):
         return self.sigil
+
+    def sort_tuple(self):
+        p, n, s = self.sigil_sort_key()
+        v = 0
+        if 'first_verse' in self:
+            v = self.first_verse
+        return v, p, n, s
+
+    def sigil_sort_key(self) -> Tuple[str, int, str]:
+        """
+        A sigil like 2 III H.159:1 currently consists of three parts, basically:
+
+        1. the part before the index number, here "2 III H.", sorted alphabetically
+        2. the index number, here "159", sorted numerically
+        3. the part after the index number, here ":1", sorted alphabetically.
+
+        This method converts this sigil's
+        """
+        match = re.match(r'^([12]?\s*[IV]{0,3}\s*[^0-9]+)(\d*)(.*)$', self.sigil)
+        if match is None:
+            logger.warning("Failed to split sigil %s", self.sigil)
+            return [self.sigil, 99999, ""];
+        split = list(match.groups())
+
+        if split[1] == "H P": # Paraliponemon
+            split[1] = "3 H P"
+        if split[2] == "":    # 2 H
+            split[2] = -1
+        else:
+            split[2] = int(split[2])
+
+        return tuple(split)
+
 
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]

@@ -2,12 +2,12 @@
 import csv
 import logging
 import sys
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from datetime import date
 from itertools import islice
 from logging.config import dictConfig
 from pathlib import Path
-from typing import Callable, Any, Dict
+from typing import Callable, Any, Dict, List, Tuple
 
 import igraph
 import networkx as nx
@@ -70,32 +70,43 @@ def _simplify_attrs(attrs):
             attrs[key] = str(value)
 
 
+def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
+    """
+    Extracts the smallest conflicted subgraphs of the given graph, i.e. the
+    non-trivial (more than one node) strongly connected components.
+
+    Args:
+        graph: the base graph, or some modified version of it
+
+    Returns:
+        List of subgraphs, ordered by number of nodes. Note the subgraphs
+        are views on the original graph
+    """
+    sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
+    by_node_count = sorted(sccs, key=len)
+    return [nx.subgraph(graph, scc_nodes) for scc_nodes in by_node_count]
+
+
 def analyse_conflicts(graph):
     conflicts_file_name = 'conflicts.tsv'
     with open(conflicts_file_name, "wt") as conflicts_file:
         writer = csv.writer(conflicts_file, delimiter='\t')
         writer.writerow(
-                ['Index', 'Size', 'References', 'Edges', 'Simple Cycles', 'Avg. Cycle Length', 'Sources', 'Types',
-                 'Cycle'])
-        for index, nodes in enumerate(
-                [scc for scc in sorted(nx.strongly_connected_components(graph), key=len) if len(scc) > 1]):
-            size = len(nodes)
+                ['Index', 'Size', 'References', 'Edges', 'Sources', 'Types',
+                 'Nodes'])
+        for index, subgraph in enumerate(subgraphs_with_conflicts(graph), start=1):
+            nodes = subgraph.nodes
+            size = subgraph.number_of_nodes()
             refs = len([node for node in nodes if isinstance(node, Reference)])
             if size > 1:
                 logger.debug('  - Subgraph %d, %d refs', index, refs)
-                subgraph = nx.subgraph(graph, nodes).copy()  # type: networkx.DiGraph
-                simple_cycles = list(tqdm(islice(nx.simple_cycles(subgraph), 0, 5000),
-                                          desc='Finding cycles in component %d' % index))
-                subgraph = collapse_edges(subgraph)
                 edges_to_remove = feedback_arcs(subgraph)
-                sc_count = len(simple_cycles)
-                sc_avg_len = sum(map(len, simple_cycles)) / sc_count
                 edge_count = len(subgraph.edges)
                 sources = {str(attr['source'].uri) for u, v, attr in subgraph.edges.data() if 'source' in attr}
                 node_types = {str(attr['kind']) for u, v, attr in subgraph.edges.data()}
                 writer.writerow(
-                        [index, size, refs, edge_count, sc_count, sc_avg_len, ", ".join(sources), ", ".join(node_types),
-                         " -> ".join(map(str, nodes))])
+                        [index, size, refs, edge_count, ", ".join(sources), ", ".join(node_types),
+                         " / ".join(map(str, nodes))])
                 conflicts_file.flush()
                 mark_edges_to_delete(subgraph, edges_to_remove)
                 write_dot(subgraph, f"conflict-{index:02d}.dot")
@@ -135,15 +146,17 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
 
-def feedback_arcs(graph: nx.MultiDiGraph, method='eades'):
+def feedback_arcs(graph: nx.MultiDiGraph, method='auto'):
     """
     Calculates the feedback arc set using the given method and returns a
     list of edges in the form (u, v, key, data)
 
     Args:
         graph: NetworkX DiGraph
-        method: 'eades' (approximation, fast) or 'ip' (exact, exponential)
+        method: 'eades' (approximation, fast) or 'ip' (exact, exponential), or 'auto'
     """
+    if method == 'auto':
+        method = 'eades' if len(graph.edges) > 256 else 'ip'
     logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
     igraph = to_igraph(graph)
     iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
@@ -151,12 +164,14 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='eades'):
     return list(nx_edges(iedges, keys=True, data=True))
 
 
-def mark_edges_to_delete(graph: nx.MultiDiGraph, edges):
+def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
+    """Marks edges to delete by setting their 'delete' attribute to True. Modifies the given graph."""
     for u, v, k, _ in edges:
         graph.edges[u, v, k]['delete'] = True
 
 
-def add_edge_weights(graph):
+def add_edge_weights(graph: nx.MultiDiGraph):
+    """Adds a 'weight' attribute, coming from the node kind or the bibliography, to the given graph"""
     for u, v, k, data in graph.edges(data=True, keys=True):
         if 'weight' not in data:
             if data['kind'] == 'timeline':
@@ -168,10 +183,10 @@ def add_edge_weights(graph):
 def collapse_edges(graph: nx.MultiDiGraph):
     """
     Returns a new graph with all multi- and conflicting edges collapsed.
-    Args:
-        graph:
 
-    Returns:
+    Note:
+        This is not able to reduce the number of edges enough to let the
+        feedback_arc_set method 'ip' work with the
 
     """
     result = graph.copy()
@@ -195,6 +210,43 @@ def collapse_edges(graph: nx.MultiDiGraph):
     return result
 
 
+def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    logger.info('Removing hertz and temp-syn')
+
+    def is_hertz(u, v, attr):
+        return 'source' in attr and 'hertz' in attr['source'].uri
+
+    def is_syn(u, v, attr):
+        return attr['kind'] == 'temp-syn'
+
+    without_hertz = remove_edges(A, is_hertz)
+    without_syn = remove_edges(without_hertz, is_syn)
+    return without_syn
+
+
+def workflow():
+    base = base_graph()
+    working = cleanup_graph(base)
+    conflicts = subgraphs_with_conflicts(working)
+
+    all_conflicting_edges = []
+    for conflict in conflicts:
+        conflicting_edges = feedback_arcs(conflict)
+        mark_edges_to_delete(conflict, conflicting_edges)
+        all_conflicting_edges.append(conflicting_edges)
+
+    mark_edges_to_delete(base, all_conflicting_edges)
+
+    dag = working.copy()
+    dag.remove_edges_from(all_conflicting_edges)
+    closure = nx.transitive_closure(dag)
+
+    MacrogenesisGraphs = namedtuple('MacrogenesisGraphs', ['base', 'working', 'dag', 'closure', 'conflicts'])
+    return MacrogenesisGraphs(base, working, dag, closure, conflicts)
+
+
+
+
 def _main(argv=sys.argv):
     setup_logging()
 
@@ -202,9 +254,6 @@ def _main(argv=sys.argv):
     base = base_graph()
     add_edge_weights(base)
     write_bibliography_stats(base)
-    logger.info('Removing hertz and temp-syn')
-    without_hertz = remove_edges(base, lambda u, v, attr: 'source' in attr and 'hertz' in attr['source'].uri)
-    without_syn = remove_edges(without_hertz, lambda u, v, attr: attr['kind'] == 'temp-syn')
     write_dot(without_syn)
     logger.info('Analyzing conflicts ...')
     analyse_conflicts(without_syn)

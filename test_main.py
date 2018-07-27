@@ -15,7 +15,6 @@ def conflict_03():
     G = nx.MultiDiGraph()
     G.add_edge(c41, c4, source=BiblSource('faust://bibliography/wa_i_15_2', '1'))
     G.add_edge(c4, c41,source=BiblSource('faust://bibliography/wa_i_15_2', '2'))
-
     G.add_edge(c41, q, source=BiblSource('faust://bibliography/wa_i_15_2', '3'))
     G.add_edge(c41, q, source=BiblSource('faust://bibliography/wa_i_15_2', '2'))
     G.add_edge(c41, q, source=BiblSource('faust://bibliography/wa_i_15_2', '3'))
@@ -26,4 +25,4 @@ def conflict_03():
 
 def test_collapse_edges(conflict_03):
     collapsed = collapse_edges(conflict_03)
-    assert 2 == len(collapsed.edges)
+    assert len(collapsed.edges) == 2

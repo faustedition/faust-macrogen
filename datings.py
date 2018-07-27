@@ -229,6 +229,7 @@ def _add_timeline_edges(graph):
 
 def base_graph():
     graph = nx.MultiDiGraph()
+    logger.info('Reading data to build base graph ...')
     for dating in _parse_files():
         dating.add_to_graph(graph)
     _add_timeline_edges(graph)

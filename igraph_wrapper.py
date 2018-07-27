@@ -58,7 +58,7 @@ def _get_edge_list(graph: nx.DiGraph):
         return list(graph.edges(data=True))
 
 
-def to_igraph(nx_graph: nx.MultiDiGraph, keep_node_attrs='all', keep_edge_attrs='all'):
+def to_igraph(nx_graph: nx.MultiDiGraph, keep_node_attrs='all', keep_edge_attrs='all') -> ig.Graph:
     """
     Converts a networkx (Multi)DiGraph to an igraph graph.
 
