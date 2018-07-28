@@ -1,3 +1,8 @@
+from faust_logging import logging
+logger = logging.getLogger()
+
+import csv
+from collections.__init__ import defaultdict, Counter
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -6,7 +11,9 @@ from typing import Iterable, List, Optional
 import networkx as nx
 
 import faust
+from datings import BiblSource
 from uris import Reference
+from visualize import write_dot
 
 target = Path(faust.config.get('macrogenesis', 'output-dir'))
 
@@ -85,7 +92,7 @@ def write_html(filename, content, head=None):
 def report_conflicts(conflicts: List[nx.MultiDiGraph]):
     out = target / 'conflicts'
     out.joinpath('conflicts').mkdir(parents=True, exist_ok=True)
-    table = HtmlTable().column('Nummer', format_spec='<a href="conflict-{0:02d}.html">{0}</a>') \
+    table = HtmlTable().column('Nummer', format_spec='<a href="conflict-{0:02d}.svg">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
         .column('Entfernte Relationen') \
@@ -100,7 +107,7 @@ def report_conflicts(conflicts: List[nx.MultiDiGraph]):
         sources = {attr['source'] for u, v, k, attr in relations}
         conflict_sources = {attr['source'] for u, v, k, attr in conflicts}
         table.row(index, refs, len(relations), len(conflicts), sources, conflict_sources)
-        # TODO write actual graphics -> requires moving graph stuff out of main
+        write_dot(subgraph, out / "conflict-{:02d}.dot".format(index))
 
     write_html(out / 'index.html', table.format_table(), 'Konfliktgruppen')
 
@@ -116,4 +123,18 @@ def order_refs(dag: nx.MultiDiGraph):
 
     nodes = nx.lexicographical_topological_sort(dag, key=secondary_key)
     refs = [node for node in nodes if isinstance(node, Reference)]
+    return refs
 
+
+def write_bibliography_stats(graph: nx.MultiDiGraph):
+    bibls = defaultdict(Counter)
+    for u, v, attr in graph.edges(data=True):
+        if 'source' in attr:
+            bibls[attr['source'].uri][attr['kind']] += 1
+    kinds = sorted({str(kind) for bibl in bibls.values() for kind in bibl.keys()})
+    totals = Counter({ref: sum(types.values()) for ref, types in bibls.items()})
+    with open('sources.tsv', 'wt', encoding='utf-8') as out:
+        writer = csv.writer(out, delimiter='\t')
+        writer.writerow(['Reference', 'Weight', 'Total'] + kinds)
+        for bibl, total in totals.most_common():
+            writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])

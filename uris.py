@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+from faust_logging import logging
+
 import codecs
 import csv
 import json
-import logging
 import re
 from abc import ABCMeta
 from collections import defaultdict, Counter
@@ -17,7 +18,7 @@ from lxml import etree
 
 import faust
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 def call_recorder(function=None, argument_picker=None):
     """
@@ -76,7 +77,6 @@ class Reference(metaclass=ABCMeta):
         else:
             return (0, self.label, 99999, "")
 
-
     def __str__(self):
         return self.label
 
@@ -89,6 +89,7 @@ class Reference(metaclass=ABCMeta):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(self.uri)})'
+
 
 class Inscription(Reference):
 
@@ -147,6 +148,7 @@ class AmbiguousRef(Reference):
 
     def sort_tuple(self):
         return self.first().sort_tuple()
+
 
 class Witness(Reference):
     database = {}
@@ -288,9 +290,9 @@ class Witness(Reference):
             return [self.sigil, 99999, ""];
         split = list(match.groups())
 
-        if split[1] == "H P": # Paraliponemon
+        if split[1] == "H P":  # Paraliponemon
             split[1] = "3 H P"
-        if split[2] == "":    # 2 H
+        if split[2] == "":  # 2 H
             split[2] = -1
         else:
             split[2] = int(split[2])

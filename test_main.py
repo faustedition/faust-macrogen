@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 
 from datings import BiblSource
-from main import collapse_edges
+from graph import collapse_edges
 from uris import Witness
 
 

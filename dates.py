@@ -12,7 +12,7 @@ import pandas as pd
 from lxml import etree
 
 import faust
-from graph import AbsoluteDating
+from attic.graph import AbsoluteDating
 from uris import Witness
 
 
@@ -100,7 +100,6 @@ def extract_wiki_timespans(filename):
     df.insert(4, 'score', 2 + df.startExact + df.endExact.fillna(-1))
     return df
 
-
 def parse_absolute_datings():
     for macrogenetic_file in faust.macrogenesis_files():
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
@@ -119,7 +118,6 @@ def parse_absolute_datings():
                     yield abs_dating, comment, wit
             except Exception:
                 logging.exception('Problem parsing %s', etree.tostring(date_el))
-
 
 def rate_absolute_datings(known_info=None):
     if known_info is None:

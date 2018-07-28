@@ -1,20 +1,15 @@
-"""
-This is the result of parsing the respective files.
-"""
 import csv
-import logging
+import datetime
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, defaultdict
-from csv import DictReader
-from typing import List, Tuple, TypeVar, Optional, Any, Dict
+from typing import List, Tuple, Optional, Any, Dict
 
 import networkx as nx
 from lxml import etree
-import datetime
-
 from more_itertools import pairwise
 
 import faust
+from faust_logging import logging
 from uris import Witness, Reference
 
 logger = logging.getLogger(__name__)
