@@ -55,7 +55,7 @@ def _load_style(filename):
         return yaml.load(f)
 
 
-def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
+def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None):
     logger.info('Writing %s ...', target)
     simplified: MultiDiGraph = simplify_graph(graph)
     agraph: AGraph = nx.nx_agraph.to_agraph(simplified)
@@ -85,6 +85,6 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
         for node in agraph.nodes():
             kind = node.attr['kind']
             if kind in style['node']:
-                edge.attr.update(style['node'][kind])
+                node.attr.update(style['node'][kind])
 
     agraph.write(str(target))

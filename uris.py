@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from pathlib import Path
+
 from faust_logging import logging
 
 import codecs
@@ -89,6 +91,17 @@ class Reference(metaclass=ABCMeta):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(self.uri)})'
+
+    @property
+    def filename(self):
+        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?$', self.uri)
+        if match:
+            result = f'{match.group(2)}.{match.group(3)}'
+            if match.group(5):
+                result += '.' + re.sub(r'\W+', '_', match.group(5))
+        else:
+            result = re.sub(r'\W+', '_', self.uri)
+        return Path(result + '.dot')
 
 
 class Inscription(Reference):
@@ -309,6 +322,10 @@ class Witness(Reference):
             split[2] = split[1] + split[2]
 
         return tuple(split)
+
+    @property
+    def filename(self):
+        return Path(self.sigil_t + '.dot')
 
 
 def _collect_wits():

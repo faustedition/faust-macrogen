@@ -1,10 +1,8 @@
 from datetime import timedelta, date
 from itertools import chain
 
-
 from faust_logging import logging
 from graph import order_refs, MacrogenesisInfo
-
 
 import csv
 from collections.__init__ import defaultdict, Counter
@@ -79,7 +77,8 @@ class HtmlTable:
 
 def write_html(filename, content, head=None):
     title = head if head is not None else "Faustedition"
-    prefix = """<html xmlns="http://www.w3.org/1999/html>
+    prefix = """<?xml version="1.0" encoding="utf-8"?>
+    <html xmlns="http://www.w3.org/1999/html">
     <head>    
         <meta charset="utf-8" />
         <title>{0}</title>
@@ -131,29 +130,87 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
+def _fmt_node(node):
+    if isinstance(node, Reference):
+        return f'<a href="{node.filename.with_suffix(".html")}">{node}</a>'
+    else:
+        return format(node)
 
 def report_refs(graphs: MacrogenesisInfo):
+    # Fake dates for when we don’t have any earliest/latest info
+    EARLIEST = date(1749, 8, 27)
+    LATEST = date.today()
 
-    nx.write_yaml(simplify_graph(graphs.base),    str(target / 'base.yaml'))
+    nx.write_yaml(simplify_graph(graphs.base), str(target / 'base.yaml'))
     nx.write_yaml(simplify_graph(graphs.working), str(target / 'working.yaml'))
-    nx.write_yaml(simplify_graph(graphs.dag),     str(target / 'dag.yaml'))
+    nx.write_yaml(simplify_graph(graphs.dag), str(target / 'dag.yaml'))
 
     refs = order_refs(graphs.dag)
-    table = (HtmlTable()
-             .column('Nr.')
-             .column('Rang')
-             .column('Sigle')
-             .column('nicht vor')
-             .column('nicht nach')
-             .column('Aussagen')
-             .column('<a href="conflicts">Konflikte</a>'))
+    overview = (HtmlTable()
+                .column('Nr.')
+                .column('Rang')
+                .column('Sigle', format_spec=_fmt_node)
+                .column('nicht vor')
+                .column('nicht nach')
+                .column('Aussagen')
+                .column('<a href="conflicts">Konflikte</a>'))
 
     for index, ref in enumerate(refs, start=1):
         rank = graphs.closure.in_degree(ref)
-        earliest = max((d for d,_ in graphs.closure.in_edges(ref) if isinstance(d, date)), default=date(1749,8,27)) + timedelta(days=1)
-        latest = min((d for _,d in graphs.closure.out_edges(ref) if isinstance(d, date)), default=date.today()) - timedelta(days=1)
+        max_before_date = max((d for d, _ in graphs.closure.in_edges(ref) if isinstance(d, date)), default=EARLIEST)
+        earliest = max_before_date + timedelta(days=1)
+        min_after_date = min((d for _, d in graphs.closure.out_edges(ref) if isinstance(d, date)), default=LATEST)
+        latest = min_after_date - timedelta(days=1)
         assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
         conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-        table.row((index, rank, ref, earliest, latest, len(assertions), len(conflicts)))
+        overview.row((index, rank, ref, earliest, latest, len(assertions), len(conflicts)))
 
-    write_html(target / 'index.html', table.format_table(), head="Referenzen")
+        basename = target / ref.filename
+        relevant_nodes = set(graphs.base.neighbors(ref))
+        if max_before_date != EARLIEST:
+            relevant_nodes |= set(nx.shortest_path(graphs.base, max_before_date, ref))
+        if min_after_date != LATEST:
+            relevant_nodes |= set(nx.shortest_path(graphs.base, ref, min_after_date))
+        ref_subgraph = graphs.base.subgraph(relevant_nodes)
+        write_dot(ref_subgraph, basename.with_suffix('.dot'), highlight=ref)
+        report = f"""<!-- {repr(ref)} -->
+        <h1>{ref}</h1>
+        <img class="refgraph" src="{basename.with_suffix('.svg').name}" />
+        <dl>
+            <dt>Nr.</dt><dd>{index}</dd>
+            <dt>Rang</dt><dd>{rank}</dd>
+            <dt>nicht vor</dt><dd>{earliest}</dd>
+            <dt>nicht nach</dt><dd>{latest}</dd>
+        </dl>
+        """
+        kinds = {'not_before': 'nicht vor',
+                 'not_after': 'nicht nach',
+                 'from_': 'von',
+                 'to': 'bis',
+                 'when': 'am',
+                 'temp-syn': 'ca. gleichzeitig',
+                 'temp-pre': 'früherer Zeuge:',
+                 None: '?'
+                 }
+        assertionTable = (HtmlTable()
+                          .column('berücksichtigt?')
+                          .column('Relation')
+                          .column('als …', format_spec=_fmt_node)
+                          .column('Quelle')
+                          .column('Kommentare'))
+        for (u, v, attr) in graphs.base.in_edges(ref, data=True):
+            assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+                                kinds[attr['kind']],
+                                u,
+                                attr['source'],
+                                '<br/>'.join(attr.get('comments', []))))
+        kinds['temp-pre'] = 'späterer Zeuge:'
+        for (u, v, attr) in graphs.base.out_edges(ref, data=True):
+            assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+                                kinds[attr['kind']],
+                                v,
+                                attr['source'],
+                                '<br/>'.join(attr.get('comments', []))))
+        write_html(basename.with_suffix('.html'), report + assertionTable.format_table())
+
+    write_html(target / 'index.html', overview.format_table(), head="Referenzen")

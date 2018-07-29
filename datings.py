@@ -90,7 +90,7 @@ class BiblSource:
     def __str__(self):
         result = self.citation
         if self.detail is not None:
-            result += ' ' + self.detail
+            result += '\n' + self.detail
         return result
 
     @property
