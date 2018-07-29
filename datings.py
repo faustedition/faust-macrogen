@@ -88,13 +88,17 @@ class BiblSource:
         return hash(self.uri) ^ hash(self.detail)
 
     def __str__(self):
-        if self.uri in _bib_db:
-            result = _bib_db[self.uri].citation
-        else:
-            result = self.uri.replace('faust://bibliography/', '')
-        # if self.detail is not None:
-        #     result += ' ' + self.detail
+        result = self.citation
+        if self.detail is not None:
+            result += ' ' + self.detail
         return result
+
+    @property
+    def citation(self):
+        if self.uri in _bib_db:
+            return _bib_db[self.uri].citation
+        else:
+            return self.uri.replace('faust://bibliography/', '')
 
 
 class _AbstractDating(metaclass=ABCMeta):

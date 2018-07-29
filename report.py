@@ -1,20 +1,25 @@
+from datetime import timedelta, date
+from itertools import chain
+
+
 from faust_logging import logging
-logger = logging.getLogger()
+from graph import order_refs, MacrogenesisInfo
+
 
 import csv
 from collections.__init__ import defaultdict, Counter
-from datetime import date
 from html import escape
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List
 
 import networkx as nx
 
 import faust
 from datings import BiblSource
 from uris import Reference
-from visualize import write_dot
+from visualize import write_dot, simplify_graph
 
+logger = logging.getLogger()
 target = Path(faust.config.get('macrogenesis', 'output-dir'))
 
 
@@ -91,6 +96,7 @@ def write_html(filename, content, head=None):
 
 def report_conflicts(conflicts: List[nx.MultiDiGraph]):
     out = target / 'conflicts'
+    logger.info('Writing conflict overview to %s', out)
     out.joinpath('conflicts').mkdir(parents=True, exist_ok=True)
     table = HtmlTable().column('Nummer', format_spec='<a href="conflict-{0:02d}.svg">{0}</a>') \
         .column('Dokumente') \
@@ -102,28 +108,14 @@ def report_conflicts(conflicts: List[nx.MultiDiGraph]):
     for index, subgraph in enumerate(conflicts, start=1):
         refs = len([node for node in subgraph.nodes if isinstance(node, Reference)])
         all_edges = list(subgraph.edges(keys=True, data=True))
-        conflicts = [(u, v, k, attr) for (u, v, k, attr) in all_edges if attr['delete']]
-        relations = [(u, v, k, attr) for (u, v, k, attr) in all_edges if not attr['delete']]
-        sources = {attr['source'] for u, v, k, attr in relations}
-        conflict_sources = {attr['source'] for u, v, k, attr in conflicts}
-        table.row(index, refs, len(relations), len(conflicts), sources, conflict_sources)
+        conflicts = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' in attr and attr['delete']]
+        relations = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' not in attr or not attr['delete']]
+        sources = {attr['source'].citation for u, v, k, attr in relations if 'source' in attr}
+        conflict_sources = {attr['source'].citation for u, v, k, attr in conflicts}
+        table.row((index, refs, len(relations), len(conflicts), sources, conflict_sources))
         write_dot(subgraph, out / "conflict-{:02d}.dot".format(index))
 
     write_html(out / 'index.html', table.format_table(), 'Konfliktgruppen')
-
-
-def order_refs(dag: nx.MultiDiGraph):
-    def secondary_key(node):
-        if isinstance(node, Reference):
-            return node.sort_tuple()
-        elif isinstance(node, date):
-            return date.year, format(date.month, '02d'), date.day, ''
-        else:
-            return 99999, "zzzzzz", 99999, "zzzzzz"
-
-    nodes = nx.lexicographical_topological_sort(dag, key=secondary_key)
-    refs = [node for node in nodes if isinstance(node, Reference)]
-    return refs
 
 
 def write_bibliography_stats(graph: nx.MultiDiGraph):
@@ -138,3 +130,30 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         writer.writerow(['Reference', 'Weight', 'Total'] + kinds)
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
+
+
+def report_refs(graphs: MacrogenesisInfo):
+
+    nx.write_yaml(simplify_graph(graphs.base),    str(target / 'base.yaml'))
+    nx.write_yaml(simplify_graph(graphs.working), str(target / 'working.yaml'))
+    nx.write_yaml(simplify_graph(graphs.dag),     str(target / 'dag.yaml'))
+
+    refs = order_refs(graphs.dag)
+    table = (HtmlTable()
+             .column('Nr.')
+             .column('Rang')
+             .column('Sigle')
+             .column('nicht vor')
+             .column('nicht nach')
+             .column('Aussagen')
+             .column('<a href="conflicts">Konflikte</a>'))
+
+    for index, ref in enumerate(refs, start=1):
+        rank = graphs.closure.in_degree(ref)
+        earliest = max((d for d,_ in graphs.closure.in_edges(ref) if isinstance(d, date)), default=date(1749,8,27)) + timedelta(days=1)
+        latest = min((d for _,d in graphs.closure.out_edges(ref) if isinstance(d, date)), default=date.today()) - timedelta(days=1)
+        assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
+        conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
+        table.row((index, rank, ref, earliest, latest, len(assertions), len(conflicts)))
+
+    write_html(target / 'index.html', table.format_table(), head="Referenzen")

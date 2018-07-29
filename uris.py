@@ -71,7 +71,7 @@ class Reference(metaclass=ABCMeta):
             return self.uri
 
     def sort_tuple(self):
-        match = re.match('faust://(document|inscription)/(.+?)/(.+?)')
+        match = re.match('faust://(document|inscription)/(.+?)/(.+?)', self.uri)
         if match:
             return (0, match.group(3), 99999, match.group(2))
         else:
@@ -270,7 +270,7 @@ class Witness(Reference):
     def sort_tuple(self):
         p, n, s = self.sigil_sort_key()
         v = 0
-        if 'first_verse' in self:
+        if hasattr(self, 'first_verse'):
             v = self.first_verse
         return v, p, n, s
 
@@ -290,12 +290,15 @@ class Witness(Reference):
             return [self.sigil, 99999, ""];
         split = list(match.groups())
 
-        if split[1] == "H P":  # Paraliponemon
-            split[1] = "3 H P"
-        if split[2] == "":  # 2 H
-            split[2] = -1
+        if split[0] == "H P":  # Paraliponemon
+            split[0] = "3 H P"
+        if split[1] == "":  # 2 H
+            split[1] = -1
+        elif split[1].isdigit():
+            split[1] = int(split[1])
         else:
-            split[2] = int(split[2])
+            split[1] = -1
+            split[2] = split[1] + split[2]
 
         return tuple(split)
 

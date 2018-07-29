@@ -17,6 +17,7 @@ logging-tree = "*"
 colorlog = "*"
 tqdm = "*"
 python-igraph = "*"
+dataclasses = "*"
 
 [dev-packages]
 pytest = "*"

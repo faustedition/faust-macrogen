@@ -4,12 +4,15 @@ from faust_logging import logging
 import sys
 
 import graph
+from report import report_conflicts, report_refs
 
 logger = logging.getLogger('main')
 
 
 def _main(argv=sys.argv):
-    graphs = graph.workflow()
+    graphs = graph.macrogenesis_graphs()
+    report_conflicts(graphs.conflicts)
+    report_refs(graphs)
 
 
 if __name__ == '__main__':

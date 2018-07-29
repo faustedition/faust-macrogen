@@ -13,12 +13,12 @@ handlers:
 root:
   handlers:
     - console
-  level: WARNING
+  level: INFO
 
 loggers:
+  graph:
+    level: DEBUG
   uris:
     level: INFO
-  main:
-    level: DEBUG
   datings:
     level: INFO

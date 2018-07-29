@@ -1,7 +1,11 @@
+from datetime import date
+
+from dataclasses import dataclass
+
 from faust_logging import logging
 import csv
 from collections import defaultdict, namedtuple
-from typing import List, Callable, Any, Dict, Tuple
+from typing import List, Callable, Any, Dict, Tuple, Type, Union
 
 import networkx as nx
 
@@ -11,6 +15,7 @@ from visualize import simplify_graph, write_dot
 from uris import Reference
 
 logger = logging.getLogger()
+
 
 def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
     """
@@ -26,6 +31,7 @@ def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
     """
     sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
     by_node_count = sorted(sccs, key=len)
+    logger.info('Extracted %d subgraphs with conflicts', len(by_node_count))
     return [nx.subgraph(graph, scc_nodes) for scc_nodes in by_node_count]
 
 
@@ -74,7 +80,7 @@ def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[st
     # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
-def feedback_arcs(graph: nx.MultiDiGraph, method='auto'):
+def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
     """
     Calculates the feedback arc set using the given method and returns a
     list of edges in the form (u, v, key, data)
@@ -84,7 +90,7 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='auto'):
         method: 'eades' (approximation, fast) or 'ip' (exact, exponential), or 'auto'
     """
     if method == 'auto':
-        method = 'eades' if len(graph.edges) > 256 else 'ip'
+        method = 'eades' if len(graph.edges) > auto_threshold else 'ip'
     logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
     igraph = to_igraph(graph)
     iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
@@ -138,25 +144,56 @@ def collapse_edges(graph: nx.MultiDiGraph):
     return result
 
 
-def workflow():
+@dataclass
+class MacrogenesisInfo:
+    base: nx.MultiDiGraph
+    working: nx.MultiDiGraph
+    dag: nx.MultiDiGraph
+    closure: nx.MultiDiGraph
+    conflicts: List[Tuple[Union[date, Reference], Union[date, Reference], int, Dict[str, Any]]]
+
+
+def macrogenesis_graphs() -> MacrogenesisInfo:
+    """
+    Runs the complete analysis by loading the data, building the graph,
+    removing conflicting edges and calculating a transitive closure.
+
+    Returns:
+
+    """
     base = base_graph()
     working = cleanup_graph(base)
+    add_edge_weights(working)
     conflicts = subgraphs_with_conflicts(working)
+
+    logger.info('Calculating minimum feedback arc set for %d subgraphs', len(conflicts))
 
     all_conflicting_edges = []
     for conflict in conflicts:
         conflicting_edges = feedback_arcs(conflict)
         mark_edges_to_delete(conflict, conflicting_edges)
-        all_conflicting_edges.append(conflicting_edges)
+        all_conflicting_edges.extend(conflicting_edges)
 
+    selfloops = list(nx.selfloop_edges(working, data=True, keys=True))
+    if selfloops:
+        logger.warning('Found %d self loops, will also remove those. Affected nodes: %s',
+                       len(selfloops), ", ".join(str(u) for u,v,k,attr in selfloops))
+        all_conflicting_edges.extend(selfloops)
+
+    logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
     mark_edges_to_delete(base, all_conflicting_edges)
 
+    logger.info('Building DAG from remaining data')
     dag = working.copy()
     dag.remove_edges_from(all_conflicting_edges)
+    if not nx.is_directed_acyclic_graph(dag):
+        logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_conflicting_edges))
+        cycles = list(nx.simple_cycles(dag))
+        logger.error('It contains %d simple cycles', len(cycles))
+
     closure = nx.transitive_closure(dag)
 
-    MacrogenesisGraphs = namedtuple('MacrogenesisGraphs', ['base', 'working', 'dag', 'closure', 'conflicts'])
-    return MacrogenesisGraphs(base, working, dag, closure, conflicts)
+    return MacrogenesisInfo(base, working, dag, closure, conflicts)
 
 
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
@@ -171,3 +208,19 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     without_hertz = remove_edges(A, is_hertz)
     without_syn = remove_edges(without_hertz, is_syn)
     return without_syn
+
+
+def order_refs(dag: nx.MultiDiGraph):
+    logger.info('Creating sort order from DAG')
+
+    def secondary_key(node):
+        if isinstance(node, Reference):
+            return node.sort_tuple()
+        elif isinstance(node, date):
+            return node.year, format(node.month, '02d'), node.day, ''
+        else:
+            return 99999, "zzzzzz", 99999, "zzzzzz"
+
+    nodes = nx.lexicographical_topological_sort(dag, key=secondary_key)
+    refs = [node for node in nodes if isinstance(node, Reference)]
+    return refs

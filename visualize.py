@@ -87,4 +87,4 @@ def write_dot(graph, target='base_graph.dot', style=_load_style('styles.yaml')):
             if kind in style['node']:
                 edge.attr.update(style['node'][kind])
 
-    agraph.write(target)
+    agraph.write(str(target))
