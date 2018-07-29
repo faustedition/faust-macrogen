@@ -226,6 +226,14 @@ class Witness(Reference):
             else:
                 return result
 
+        wa_h = re.match('faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
+        if wa_h is not None:
+            wit = cls.get('faust://document/faustedition/2_H')
+            if wa_h.group(4):
+                return Inscription(wit, wa_h.group(5))
+            else:
+                return wit
+
         wa_pseudo_inscr = re.match('faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
         if wa_pseudo_inscr is not None:
             docuri = 'faust://document/wa_faust/' + wa_pseudo_inscr.group(2)
