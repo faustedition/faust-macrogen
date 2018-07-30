@@ -130,11 +130,13 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
+
 def _fmt_node(node):
     if isinstance(node, Reference):
         return f'<a href="{node.filename.with_suffix(".html")}">{node}</a>'
     else:
         return format(node)
+
 
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
@@ -166,7 +168,7 @@ def report_refs(graphs: MacrogenesisInfo):
         overview.row((index, rank, ref, earliest, latest, len(assertions), len(conflicts)))
 
         basename = target / ref.filename
-        relevant_nodes = set(graphs.base.neighbors(ref))
+        relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
         if max_before_date != EARLIEST:
             relevant_nodes |= set(nx.shortest_path(graphs.base, max_before_date, ref))
         if min_after_date != LATEST:
@@ -175,7 +177,7 @@ def report_refs(graphs: MacrogenesisInfo):
         write_dot(ref_subgraph, basename.with_suffix('.dot'), highlight=ref)
         report = f"""<!-- {repr(ref)} -->
         <h1>{ref}</h1>
-        <img class="refgraph" src="{basename.with_suffix('.svg').name}" />
+        <object class="refgraph" type="image/svg+xml" data="{basename.with_suffix('.svg').name}"></object>
         <dl>
             <dt>Nr.</dt><dd>{index}</dd>
             <dt>Rang</dt><dd>{rank}</dd>

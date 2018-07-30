@@ -5,14 +5,16 @@ import sys
 
 import graph
 from report import report_conflicts, report_refs
+from visualize import render_all
 
 logger = logging.getLogger('main')
 
 
 def _main(argv=sys.argv):
     graphs = graph.macrogenesis_graphs()
-    report_conflicts(graphs.conflicts)
     report_refs(graphs)
+    report_conflicts(graphs.conflicts)
+    render_all()
 
 
 if __name__ == '__main__':

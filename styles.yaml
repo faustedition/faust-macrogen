@@ -1,6 +1,9 @@
 node:
   date:
     shape: none
+  highlight:
+    fillcolor: '#FABE00'
+    style: bold
 edge:
   not_before:
     color: blue

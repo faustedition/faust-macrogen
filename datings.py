@@ -219,7 +219,7 @@ def _parse_files():
         yield from _parse_file(file)
 
 
-def _add_timeline_edges(graph):
+def add_timeline_edges(graph):
     date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
     for earlier, later in pairwise(date_nodes):
         if earlier != later and (earlier, later) not in graph.edges:
@@ -231,7 +231,7 @@ def base_graph():
     logger.info('Reading data to build base graph ...')
     for dating in _parse_files():
         dating.add_to_graph(graph)
-    _add_timeline_edges(graph)
+    add_timeline_edges(graph)
     return graph
 
 
