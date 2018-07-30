@@ -68,7 +68,7 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
     add_timeline_edges(vis)
     for node in vis:
         if isinstance(node, Reference):
-            vis.nodes[node]['URL'] = node.filename.with_suffix('.html')
+            vis.nodes[node]['URL'] = node.filename.stem
             vis.nodes[node]['target'] = '_top'
 
     if highlight is not None and 'highlight' in style['node']:

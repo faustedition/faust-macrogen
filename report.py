@@ -64,7 +64,7 @@ class HtmlTable:
 
     def _format_header(self):
         column_headers = ''.join('<th>{}</th>'.format(title) for title in self.titles)
-        return '<table><thead>{}</thead><tbody>'.format(column_headers)
+        return '<table class="pure-table"><thead>{}</thead><tbody>'.format(column_headers)
 
     def _format_footer(self):
         return '</tbody></table>'
@@ -77,14 +77,10 @@ class HtmlTable:
 
 def write_html(filename, content, head=None):
     title = head if head is not None else "Faustedition"
-    prefix = """<?xml version="1.0" encoding="utf-8"?>
-    <html xmlns="http://www.w3.org/1999/html">
-    <head>    
-        <meta charset="utf-8" />
-        <title>{0}</title>
-    </head>
-    <body>""".format(escape(title))
-    suffix = """</body></head>"""
+    prefix = """<?php include "../includes/header.php"?>
+     <section>""".format(escape(title))
+    suffix = """</section>
+    <?php include "../includes/footer.php"?>"""
     with open(filename, 'wt', encoding='utf-8') as f:
         f.write(prefix)
         if head is not None:
@@ -133,7 +129,7 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
 
 def _fmt_node(node):
     if isinstance(node, Reference):
-        return f'<a href="{node.filename.with_suffix(".html")}">{node}</a>'
+        return f'<a href="{node.filename.stem}">{node}</a>'
     else:
         return format(node)
 
@@ -142,6 +138,8 @@ def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
     EARLIEST = date(1749, 8, 27)
     LATEST = date.today()
+
+    target.mkdir(exist_ok=True, parents=True)
 
     nx.write_yaml(simplify_graph(graphs.base), str(target / 'base.yaml'))
     nx.write_yaml(simplify_graph(graphs.working), str(target / 'working.yaml'))
@@ -213,6 +211,10 @@ def report_refs(graphs: MacrogenesisInfo):
                                 v,
                                 attr['source'],
                                 '<br/>'.join(attr.get('comments', []))))
-        write_html(basename.with_suffix('.html'), report + assertionTable.format_table())
+        write_html(basename.with_suffix('.php'), report + assertionTable.format_table())
 
-    write_html(target / 'index.html', overview.format_table(), head="Referenzen")
+    write_html(target / 'index.php', overview.format_table(), head="Referenzen")
+
+    write_dot(simplify_graph(graphs.base), str(target / 'base.dot'))
+    write_dot(simplify_graph(graphs.working), str(target / 'working.dot'))
+    write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'))
