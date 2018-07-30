@@ -22,6 +22,7 @@ import faust
 
 logger = logging.getLogger()
 
+
 def call_recorder(function=None, argument_picker=None):
     """
     Decorator that records call / result counts.

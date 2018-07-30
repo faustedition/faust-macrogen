@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta, date
 from itertools import chain
 
@@ -8,13 +9,13 @@ import csv
 from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Dict, Mapping
 
 import networkx as nx
 
 import faust
 from datings import BiblSource
-from uris import Reference, Witness, Inscription
+from uris import Reference, Witness, Inscription, UnknownRef
 from visualize import write_dot, simplify_graph
 
 logger = logging.getLogger()
@@ -75,24 +76,29 @@ class HtmlTable:
         return self._format_header() + ''.join(self._format_row(row) for row in rows) + self._format_footer()
 
 
-def write_html(filename, content, head=None):
-    title = head if head is not None else "Faustedition"
+def write_html(filename, content, head=None, breadcrumbs=[]):
+    if head is not None and not breadcrumbs:
+        breadcrumbs = [dict(caption=head)]
+    breadcrumbs = [dict(caption='Makrogenese', link='/macrogenesis')] + breadcrumbs
     prefix = """<?php include "../includes/header.php"?>
-     <section>""".format(escape(title))
+     <section>"""
     suffix = """</section>
-    <?php include "../includes/footer.php"?>"""
+    <script type="text/javascript">
+        requirejs(['faust_common'], function(Faust) {{
+            document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs({}));
+        }});
+    </script>
+    <?php include "../includes/footer.php"?>""".format(json.dumps(breadcrumbs))
     with open(filename, 'wt', encoding='utf-8') as f:
         f.write(prefix)
-        if head is not None:
-            f.write('<h1>{}</h1>'.format(escape(head)))
         f.write(content)
         f.write(suffix)
 
 
 def report_conflicts(conflicts: List[nx.MultiDiGraph]):
-    out = target / 'conflicts'
+    out = target
     logger.info('Writing conflict overview to %s', out)
-    out.joinpath('conflicts').mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     table = HtmlTable().column('Nummer', format_spec='<a href="conflict-{0:02d}.svg">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
@@ -110,7 +116,7 @@ def report_conflicts(conflicts: List[nx.MultiDiGraph]):
         table.row((index, refs, len(relations), len(conflicts), sources, conflict_sources))
         write_dot(subgraph, out / "conflict-{:02d}.dot".format(index))
 
-    write_html(out / 'index.html', table.format_table(), 'Konfliktgruppen')
+    write_html(out / 'conflicts.php', table.format_table(), breadcrumbs=[dict(caption="Makrogenese", link='/macrogenesis'), dict(caption="Komponenten")])
 
 
 def write_bibliography_stats(graph: nx.MultiDiGraph):
@@ -155,18 +161,19 @@ def report_refs(graphs: MacrogenesisInfo):
     refs = graphs.order_refs()
     overview = (HtmlTable()
                 .column('Nr.')
-                .column('Rang')
+                .column('Knoten davor')
                 .column('Objekt', format_spec=_fmt_node)
                 .column('Typ / Edition', format_spec=_edition_link)
-                .column('nicht vor')
-                .column('nicht nach')
+                .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "—")
+                .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "—")
+                .column('erster Vers')
                 .column('Aussagen')
                 .column('<a href="conflicts">Konflikte</a>'))
 
     for index, ref in enumerate(refs, start=1):
         assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
         conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-        overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, len(assertions), len(conflicts)))
+        overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)))
 
         DAY = timedelta(days=1)
         basename = target / ref.filename
@@ -181,40 +188,75 @@ def report_refs(graphs: MacrogenesisInfo):
         report += overview.format_table(overview.rows[-1:])
         report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_suffix('.svg').name}"></object>\n"""
 
-        kinds = {'not_before': 'nicht vor',
-                 'not_after': 'nicht nach',
+        kinds = {'not_before': 'nicht vor',
+                 'not_after': 'nicht nach',
                  'from_': 'von',
                  'to': 'bis',
                  'when': 'am',
-                 'temp-syn': 'ca. gleichzeitig',
-                 'temp-pre': 'früherer Zeuge:',
-                 None: '?'
+                 'temp-syn': 'ca. gleichzeitig',
+                 'temp-pre': 'entstanden nach',
+                 None: '???'
                  }
         assertionTable = (HtmlTable()
                           .column('berücksichtigt?')
-                          .column('Relation')
-                          .column('als …', format_spec=_fmt_node)
+                          .column('Aussage')
+                          .column('Bezug', format_spec=_fmt_node)
                           .column('Quelle')
-                          .column('Kommentare')
-                          .column('XML'))
+                          .column('Kommentare', format_spec="/".join)
+                          .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
         for (u, v, attr) in graphs.base.in_edges(ref, data=True):
             assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
                                 kinds[attr['kind']],
-                                u,
+                                u+DAY if isinstance(u, date) else u,
                                 attr['source'],
-                                '<br/>'.join(attr.get('comments', [])),
-                                ':'.join(map(str, attr['xml']))))
-        kinds['temp-pre'] = 'späterer Zeuge:'
+                                attr.get('comments', []),
+                                attr['xml']))
+        kinds['temp-pre'] = 'entstanden vor'
         for (u, v, attr) in graphs.base.out_edges(ref, data=True):
             assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
                                 kinds[attr['kind']],
-                                v,
+                                v-DAY if isinstance(v, date) else v,
                                 attr['source'],
-                                '<br/>'.join(attr.get('comments', []))))
-        write_html(basename.with_suffix('.php'), report + assertionTable.format_table())
+                                attr.get('comments', []),
+                                attr['xml']))
+        write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
+                   head=str(ref))
 
     write_html(target / 'index.php', overview.format_table(), head="Referenzen")
 
     write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
     write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
     write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
+
+def _invert_mapping(mapping: Mapping) -> Dict:
+    result = defaultdict(set)
+    for key, value in mapping.items():
+        result[value].add(key)
+    return result
+
+def report_missing(graphs: MacrogenesisInfo):
+    refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
+    all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
+    used_wits = {wit for wit in refs if isinstance(wit, Witness)}
+    unknown_refs = {wit for wit in refs if isinstance(wit, UnknownRef)}
+    missing_wits = all_wits - used_wits
+    inscr = {inscr: inscr.witness for inscr in refs if isinstance(inscr, Inscription)}
+    wits_with_inscr = _invert_mapping(inscr)
+    report = f"""
+    <h2>Fehlende Zeugen</h2>
+    <p>Für {len(missing_wits)} von insgesamt {len(used_wits)} Zeugen <a href="#missing">liegen keine Makrogenesedaten
+       vor</a>. Bei {len(missing_wits & wits_with_inscr.keys())} davon sind zumindest Informationen über 
+       Inskriptionen hinterlegt. Umgekehrt gibt es <a href="#unknown">zu {len(unknown_refs)} Referenzen in der 
+       Makrogenese</a> keine Entsprechung in der Edition.</p>
+    <h3 id="missing">Zeugen ohne Makrogenesedaten</h3>
+    """
+    missing_table = (HtmlTable()
+                     .column('Zeuge ohne Daten', format_spec=_edition_link)
+                     .column('Inskriptionen', format_spec=lambda refs: ", ".join(map(_fmt_node, refs))))
+    report += missing_table.format_table((ref, wits_with_inscr[ref]) for ref in sorted(missing_wits, key=lambda r: r.sort_tuple()))
+    report += '\n<h3 id="unknown">Unbekannte Referenzen</h3>'
+    unknown_table = (HtmlTable()
+                     .column('Referenz')
+                     .column('URI'))
+    report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
+    write_html(target / 'missing.php', report, head="Fehlendes")
