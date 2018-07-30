@@ -108,7 +108,7 @@ class _AbstractDating(metaclass=ABCMeta):
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
                              for source in el.xpath('f:source', namespaces=faust.namespaces))
         self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces))
-        self.xmlsource: Tuple[str, int] = (el.getroottree().docinfo.URL, el.sourceline)
+        self.xmlsource: Tuple[str, int] = (faust.relative_path(el.getroottree().docinfo.URL), el.sourceline)
 
     @abstractmethod
     def add_to_graph(self, G: nx.MultiDiGraph):
@@ -177,9 +177,9 @@ class AbsoluteDating(_AbstractDating):
         for item in self.items:
             for source in self.sources:
                 if self.start is not None:
-                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self)
+                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource)
                 if self.end is not None:
-                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self)
+                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource)
 
 
 class RelativeDating(_AbstractDating):
@@ -200,7 +200,9 @@ class RelativeDating(_AbstractDating):
             G.add_edges_from(pairwise(self.items),
                              kind=self.kind,
                              source=source,
-                             comments=self.comments)
+                             comments=self.comments,
+                             dating=self,
+                             xml=self.xmlsource)
 
 
 def _parse_file(filename: str):

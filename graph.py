@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from dataclasses import dataclass
 
@@ -16,6 +16,9 @@ from uris import Reference
 
 logger = logging.getLogger()
 
+EARLIEST = date(1749, 8, 28)
+LATEST = date.today()
+DAY = timedelta(days=1)
 
 def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
     """
@@ -152,6 +155,39 @@ class MacrogenesisInfo:
     closure: nx.MultiDiGraph
     conflicts: List[Tuple[Union[date, Reference], Union[date, Reference], int, Dict[str, Any]]]
 
+    def __post_init__(self):
+        self._augment_details()
+
+    def order_refs(self):
+        if hasattr(self, '_order'):
+            return self._order
+
+        logger.info('Creating sort order from DAG')
+
+        def secondary_key(node):
+            if isinstance(node, Reference):
+                return node.sort_tuple()
+            elif isinstance(node, date):
+                return node.year, format(node.month, '02d'), node.day, ''
+            else:
+                return 99999, "zzzzzz", 99999, "zzzzzz"
+
+        nodes = nx.lexicographical_topological_sort(self.dag, key=secondary_key)
+        refs = [node for node in nodes if isinstance(node, Reference)]
+        self._order = refs
+        return refs
+
+    def _augment_details(self):
+        logger.info('Augmenting refs with data from graphs')
+        for index, ref in enumerate(self.order_refs(), start=1):
+            ref.index = index
+            ref.rank = self.closure.in_degree(ref)
+            max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)), default=EARLIEST-DAY)
+            ref.earliest = max_before_date + DAY
+            min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)), default=LATEST+DAY)
+            ref.latest = min_after_date - DAY
+
+
 
 def macrogenesis_graphs() -> MacrogenesisInfo:
     """
@@ -210,17 +246,4 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return without_syn
 
 
-def order_refs(dag: nx.MultiDiGraph):
-    logger.info('Creating sort order from DAG')
 
-    def secondary_key(node):
-        if isinstance(node, Reference):
-            return node.sort_tuple()
-        elif isinstance(node, date):
-            return node.year, format(node.month, '02d'), node.day, ''
-        else:
-            return 99999, "zzzzzz", 99999, "zzzzzz"
-
-    nodes = nx.lexicographical_topological_sort(dag, key=secondary_key)
-    refs = [node for node in nodes if isinstance(node, Reference)]
-    return refs

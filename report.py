@@ -2,7 +2,7 @@ from datetime import timedelta, date
 from itertools import chain
 
 from faust_logging import logging
-from graph import order_refs, MacrogenesisInfo
+from graph import MacrogenesisInfo, EARLIEST, LATEST
 
 import csv
 from collections.__init__ import defaultdict, Counter
@@ -14,7 +14,7 @@ import networkx as nx
 
 import faust
 from datings import BiblSource
-from uris import Reference
+from uris import Reference, Witness, Inscription
 from visualize import write_dot, simplify_graph
 
 logger = logging.getLogger()
@@ -133,11 +133,18 @@ def _fmt_node(node):
     else:
         return format(node)
 
+def _edition_link(ref: Reference):
+    if isinstance(ref, Witness):
+        return f'<a href="/document?sigil={ref.sigil_t}">{ref}</a>'
+    elif isinstance(ref, Inscription):
+        return f'Inskription {ref.inscription} von {_edition_link(ref.witness)}'
+    else:
+        return format(ref)
+
+
 
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
-    EARLIEST = date(1749, 8, 27)
-    LATEST = date.today()
 
     target.mkdir(exist_ok=True, parents=True)
 
@@ -145,44 +152,35 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_yaml(simplify_graph(graphs.working), str(target / 'working.yaml'))
     nx.write_yaml(simplify_graph(graphs.dag), str(target / 'dag.yaml'))
 
-    refs = order_refs(graphs.dag)
+    refs = graphs.order_refs()
     overview = (HtmlTable()
                 .column('Nr.')
                 .column('Rang')
-                .column('Sigle', format_spec=_fmt_node)
+                .column('Objekt', format_spec=_fmt_node)
+                .column('Typ / Edition', format_spec=_edition_link)
                 .column('nicht vor')
                 .column('nicht nach')
                 .column('Aussagen')
                 .column('<a href="conflicts">Konflikte</a>'))
 
     for index, ref in enumerate(refs, start=1):
-        rank = graphs.closure.in_degree(ref)
-        max_before_date = max((d for d, _ in graphs.closure.in_edges(ref) if isinstance(d, date)), default=EARLIEST)
-        earliest = max_before_date + timedelta(days=1)
-        min_after_date = min((d for _, d in graphs.closure.out_edges(ref) if isinstance(d, date)), default=LATEST)
-        latest = min_after_date - timedelta(days=1)
         assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
         conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-        overview.row((index, rank, ref, earliest, latest, len(assertions), len(conflicts)))
+        overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, len(assertions), len(conflicts)))
 
+        DAY = timedelta(days=1)
         basename = target / ref.filename
         relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
-        if max_before_date != EARLIEST:
-            relevant_nodes |= set(nx.shortest_path(graphs.base, max_before_date, ref))
-        if min_after_date != LATEST:
-            relevant_nodes |= set(nx.shortest_path(graphs.base, ref, min_after_date))
+        if ref.earliest != EARLIEST:
+            relevant_nodes |= set(nx.shortest_path(graphs.base, ref.earliest-DAY, ref))
+        if ref.latest != LATEST:
+            relevant_nodes |= set(nx.shortest_path(graphs.base, ref, ref.latest+DAY))
         ref_subgraph = graphs.base.subgraph(relevant_nodes)
         write_dot(ref_subgraph, basename.with_suffix('.dot'), highlight=ref)
-        report = f"""<!-- {repr(ref)} -->
-        <h1>{ref}</h1>
-        <object class="refgraph" type="image/svg+xml" data="{basename.with_suffix('.svg').name}"></object>
-        <dl>
-            <dt>Nr.</dt><dd>{index}</dd>
-            <dt>Rang</dt><dd>{rank}</dd>
-            <dt>nicht vor</dt><dd>{earliest}</dd>
-            <dt>nicht nach</dt><dd>{latest}</dd>
-        </dl>
-        """
+        report =  f"<!-- {repr(ref)} -->\n"
+        report += overview.format_table(overview.rows[-1:])
+        report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_suffix('.svg').name}"></object>\n"""
+
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
@@ -197,13 +195,15 @@ def report_refs(graphs: MacrogenesisInfo):
                           .column('Relation')
                           .column('als …', format_spec=_fmt_node)
                           .column('Quelle')
-                          .column('Kommentare'))
+                          .column('Kommentare')
+                          .column('XML'))
         for (u, v, attr) in graphs.base.in_edges(ref, data=True):
             assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
                                 kinds[attr['kind']],
                                 u,
                                 attr['source'],
-                                '<br/>'.join(attr.get('comments', []))))
+                                '<br/>'.join(attr.get('comments', [])),
+                                ':'.join(map(str, attr['xml']))))
         kinds['temp-pre'] = 'späterer Zeuge:'
         for (u, v, attr) in graphs.base.out_edges(ref, data=True):
             assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
@@ -215,6 +215,6 @@ def report_refs(graphs: MacrogenesisInfo):
 
     write_html(target / 'index.php', overview.format_table(), head="Referenzen")
 
-    write_dot(simplify_graph(graphs.base), str(target / 'base.dot'))
-    write_dot(simplify_graph(graphs.working), str(target / 'working.dot'))
-    write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'))
+    write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
+    write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
+    write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)

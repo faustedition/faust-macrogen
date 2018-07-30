@@ -61,7 +61,7 @@ def _load_style(filename):
         return yaml.load(f)
 
 
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None):
+def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record=True):
     logger.info('Writing %s ...', target)
 
     vis = graph.copy()
@@ -118,7 +118,8 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
 
     dotfilename = str(target)
     agraph.write(dotfilename)
-    _render_queue.append(dotfilename)
+    if record:
+        _render_queue.append(dotfilename)
 
 
 def render_file(filename):
