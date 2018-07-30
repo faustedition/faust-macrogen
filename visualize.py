@@ -61,8 +61,10 @@ def _load_style(filename):
         return yaml.load(f)
 
 
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record=True):
+def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record='auto'):
     logger.info('Writing %s ...', target)
+    if record == 'auto':
+        record = len(graph.edges) < 1000
 
     vis = graph.copy()
     add_timeline_edges(vis)
@@ -120,6 +122,8 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
     agraph.write(dotfilename)
     if record:
         _render_queue.append(dotfilename)
+    else:
+        logger.warning('%s has not been queued for rendering', dotfilename)
 
 
 def render_file(filename):

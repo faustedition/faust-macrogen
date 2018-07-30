@@ -95,28 +95,43 @@ def write_html(filename, content, head=None, breadcrumbs=[]):
         f.write(suffix)
 
 
-def report_conflicts(conflicts: List[nx.MultiDiGraph]):
-    out = target
-    logger.info('Writing conflict overview to %s', out)
-    out.mkdir(parents=True, exist_ok=True)
-    table = HtmlTable().column('Nummer', format_spec='<a href="conflict-{0:02d}.svg">{0}</a>') \
+def report_components(graphs: MacrogenesisInfo):
+    logger.info('Writing component overview to %s', target)
+    target.mkdir(parents=True, exist_ok=True)
+    report = f"""<h3>{len(graphs.conflicts)} stark zusammenhängende Komponenten</h3>
+    <p>Stark zusammenhängende Komponenten sind Teilgraphen, in denen jeder Knoten von
+    jedem anderen erreichbar ist. Hier ist keine Ordnung möglich, ohne dass Kanten entfernt 
+    werden.</p>
+    """
+    scc_table = _report_subgraphs(graphs.conflicts, target, 'scc-{0:02d}')
+    report += scc_table.format_table()
+
+    wccs = [nx.subgraph(graphs.working, component) for component in nx.weakly_connected_components(graphs.working)]
+    report += f"""<h3>{len(wccs)} schwach zusammenhängende Komponenten</h3>
+    <p>Zwischen unterschiedlichen schwach zusammenhängenden Komponenten gibt es keine Verbindungen.</p>"""
+
+    wcc_table = _report_subgraphs(wccs, target, 'wcc-{0:02d}')
+    report += wcc_table.format_table()
+    write_html(target / 'components.php', report, head="Komponenten")
+
+
+def _report_subgraphs(subgraphs, out, pattern):
+    table = HtmlTable().column('Nummer', format_spec='<a href="'+pattern+'.svg">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
         .column('Entfernte Relationen') \
         .column('Quellen', format_spec=lambda s: ", ".join(map(str, s))) \
         .column('Entfernte Quellen', format_spec=lambda s: ", ".join(map(str, s)))
-
-    for index, subgraph in enumerate(conflicts, start=1):
+    for index, subgraph in enumerate(subgraphs, start=1):
         refs = len([node for node in subgraph.nodes if isinstance(node, Reference)])
         all_edges = list(subgraph.edges(keys=True, data=True))
-        conflicts = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' in attr and attr['delete']]
+        subgraphs = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' in attr and attr['delete']]
         relations = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' not in attr or not attr['delete']]
         sources = {attr['source'].citation for u, v, k, attr in relations if 'source' in attr}
-        conflict_sources = {attr['source'].citation for u, v, k, attr in conflicts}
-        table.row((index, refs, len(relations), len(conflicts), sources, conflict_sources))
-        write_dot(subgraph, out / "conflict-{:02d}.dot".format(index))
-
-    write_html(out / 'conflicts.php', table.format_table(), breadcrumbs=[dict(caption="Makrogenese", link='/macrogenesis'), dict(caption="Komponenten")])
+        conflict_sources = {attr['source'].citation for u, v, k, attr in subgraphs}
+        table.row((index, refs, len(relations), len(subgraphs), sources, conflict_sources))
+        write_dot(subgraph, out / (pattern+".dot").format(index))
+    return table
 
 
 def write_bibliography_stats(graph: nx.MultiDiGraph):
