@@ -3,7 +3,7 @@ from datetime import timedelta, date
 from itertools import chain
 
 from faust_logging import logging
-from graph import MacrogenesisInfo, EARLIEST, LATEST
+from graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
 
 import csv
 from collections.__init__ import defaultdict, Counter
@@ -77,8 +77,8 @@ class HtmlTable:
 
 
 def write_html(filename, content, head=None, breadcrumbs=[]):
-    if head is not None and not breadcrumbs:
-        breadcrumbs = [dict(caption=head)]
+    if head is not None:
+        breadcrumbs = breadcrumbs + [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese', link='/macrogenesis')] + breadcrumbs
     prefix = """<?php include "../includes/header.php"?>
      <section>"""
@@ -115,21 +115,21 @@ def report_components(graphs: MacrogenesisInfo):
     write_html(target / 'components.php', report, head="Komponenten")
 
 
-def _report_subgraphs(subgraphs, out, pattern):
+def _report_subgraphs(removed_edges, out, pattern):
     table = HtmlTable().column('Nummer', format_spec='<a href="'+pattern+'.svg">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
         .column('Entfernte Relationen') \
         .column('Quellen', format_spec=lambda s: ", ".join(map(str, s))) \
         .column('Entfernte Quellen', format_spec=lambda s: ", ".join(map(str, s)))
-    for index, subgraph in enumerate(subgraphs, start=1):
+    for index, subgraph in enumerate(removed_edges, start=1):
         refs = len([node for node in subgraph.nodes if isinstance(node, Reference)])
         all_edges = list(subgraph.edges(keys=True, data=True))
-        subgraphs = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' in attr and attr['delete']]
+        removed_edges = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' in attr and attr['delete']]
         relations = [(u, v, k, attr) for (u, v, k, attr) in all_edges if 'delete' not in attr or not attr['delete']]
         sources = {attr['source'].citation for u, v, k, attr in relations if 'source' in attr}
-        conflict_sources = {attr['source'].citation for u, v, k, attr in subgraphs}
-        table.row((index, refs, len(relations), len(subgraphs), sources, conflict_sources))
+        conflict_sources = {attr['source'].citation for u, v, k, attr in removed_edges}
+        table.row((index, refs, len(relations), len(removed_edges), sources, conflict_sources))
         write_dot(subgraph, out / (pattern+".dot").format(index))
     return table
 
@@ -179,8 +179,8 @@ def report_refs(graphs: MacrogenesisInfo):
                 .column('Knoten davor')
                 .column('Objekt', format_spec=_fmt_node)
                 .column('Typ / Edition', format_spec=_edition_link)
-                .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "—")
-                .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "—")
+                .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "")
+                .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "")
                 .column('erster Vers')
                 .column('Aussagen')
                 .column('<a href="conflicts">Konflikte</a>'))
@@ -198,10 +198,10 @@ def report_refs(graphs: MacrogenesisInfo):
         if ref.latest != LATEST:
             relevant_nodes |= set(nx.shortest_path(graphs.base, ref, ref.latest+DAY))
         ref_subgraph = graphs.base.subgraph(relevant_nodes)
-        write_dot(ref_subgraph, basename.with_suffix('.dot'), highlight=ref)
+        write_dot(ref_subgraph, basename.with_name(basename.stem+'-graph.dot'), highlight=ref)
         report =  f"<!-- {repr(ref)} -->\n"
         report += overview.format_table(overview.rows[-1:])
-        report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_suffix('.svg').name}"></object>\n"""
+        report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
 
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
@@ -235,9 +235,10 @@ def report_refs(graphs: MacrogenesisInfo):
                                 attr.get('comments', []),
                                 attr['xml']))
         write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
+                   breadcrumbs=[dict(caption='Referenzen', link='refs')],
                    head=str(ref))
 
-    write_html(target / 'index.php', overview.format_table(), head="Referenzen")
+    write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
     write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
     write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
@@ -275,3 +276,64 @@ def report_missing(graphs: MacrogenesisInfo):
                      .column('URI'))
     report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
     write_html(target / 'missing.php', report, head="Fehlendes")
+
+def report_conflicts(graphs: MacrogenesisInfo):
+
+    kinds = {'not_before': 'nicht vor',
+             'not_after': 'nicht nach',
+             'from_': 'von',
+             'to': 'bis',
+             'when': 'am',
+             'temp-syn': 'ca. gleichzeitig',
+             'temp-pre': 'zeitlich vor',
+             None: '???'
+             }
+    table = (HtmlTable()
+             .column('#', format_spec=_fmt_node)
+             .column('u', format_spec=_fmt_node)
+             .column('Relation', format_spec=kinds.get)
+             .column('v', format_spec=_fmt_node)
+             .column('Quelle')
+             .column('Kommentare', format_spec="/".join)
+             .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+    removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if 'delete' in attr and attr['delete']]
+    for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
+        graphfile = Path(f"conflict-{index:03d}.dot")
+        table.row((f"""<a href="{graphfile.with_suffix('.svg')}">{index}</a>""",
+                   u+DAY if isinstance(u, date) else u,
+                   attr['kind'],
+                   v-DAY if isinstance(v, date) else v,
+                   attr['source'],
+                   attr.get('comments', []),
+                   attr['xml']))
+        relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
+                         | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
+        subgraph = nx.subgraph(graphs.base, relevant_nodes)
+        write_dot(subgraph, str(target / graphfile), highlight=(u,v,k))
+    write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
+
+def report_index():
+    report = f"""
+      <p>
+        Dieser Bereich der Edition enthält experimentelle Informationen zur Makrogenese, er wurde zuletzt
+        am {date.today()} generiert.
+      </p>
+      <section class="center pure-g-r">
+        
+        <div class="pure-u-1-5"></div>
+        
+        <article class="pure-u-3-5 pure-center">
+            <p>
+             <a href="refs" class="pure-button pure-button-tile">Zeugen</a>
+             <a href="conflicts" class="pure-button pure-button-tile">entfernte Relationen</a>
+             <a href="components" class="pure-button pure-button-tile">Komponenten</a>
+             <a href="missing" class="pure-button pure-button-tile">Fehlendes</a>
+            </p>
+        
+        </article>
+        
+        <div class="pure-u-1-5"></div>
+
+      </section>
+    """
+    write_html(target / "index.php", report)
