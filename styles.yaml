@@ -1,9 +1,13 @@
+# Node styles. Mapping (kind -> (attribute -> value))
 node:
   date:
     shape: none
+  # additional style for highlighted nodes
   highlight:
-    fillcolor: '#FABE00'
-    style: bold
+    fillcolor: '#F0F000'  # '#FABE00'
+    style: filled
+    penwidth: 2
+# Node styles. Mapping (kind -> (attribute -> value))
 edge:
   not_before:
     color: blue
@@ -20,11 +24,15 @@ edge:
     constraint: false
   timeline:
     style: dotted
-    group: timeline
+    group: timeline   # keep edges straight etc.
+  # additional style for conflicting edges
   delete:
-    constraint: false
+    constraint: false  # do not consider them for ranking
     color: red
     style: dashed
+  # additional style for highlighted edges. Currently only used in the conflict graphs.
+  highlight:
+    penwidth: 3
 timeline:
   graph:
     color: white
