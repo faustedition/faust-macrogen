@@ -73,10 +73,18 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
             vis.nodes[node]['URL'] = node.filename.stem
             vis.nodes[node]['target'] = '_top'
 
-    if highlight is not None and 'highlight' in style['node']:
-        for key, value in style['node']['highlight'].items():
+    if highlight is not None:
+        if isinstance(highlight, tuple) and 'highlight' in style['edge']:
             try:
-                vis.nodes[highlight][key] = value
+                vis.edges[highlight].update(style['edge']['highlight'])
+                if 'highlight' in style['node']:
+                    vis.nodes[highlight[0]].update(style['node']['highlight'])
+                    vis.nodes[highlight[1]].update(style['node']['highlight'])
+            except KeyError:
+                logger.warning('Highlight key %s not found while writing %s', highlight, target)
+        elif not isinstance(highlight, tuple) and 'highlight' in style['node']:
+            try:
+                vis.nodes[highlight].update(style['node']['highlight'])
             except KeyError:
                 logger.warning('Highlight key %s not found while writing %s', highlight, target)
 
@@ -87,18 +95,15 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
         for u, v, k, attr in simplified.edges(data=True, keys=True):
             kind = attr.get('kind', None)
             if kind in style['edge']:
-                for key, value in style['edge'][kind].items():
-                    simplified.edges[u, v, k][key] = value
+                simplified.edges[u, v, k].update(style['edge'][kind])
             if attr.get('delete', False) and 'delete' in style['edge']:
-                for key, value in style['edge']['delete'].items():
-                    simplified.edges[u, v, k][key] = value
+                simplified.edges[u, v, k].update(style['edge']['delete'])
 
     if 'node' in style:
         for node, attr in simplified.nodes(data=True):
             kind = attr.get('kind', None)
             if kind in style['node']:
-                for key, value in style['node'][kind].items():
-                    simplified.nodes[node][key] = value
+                    simplified.nodes[node].update(style['node'][kind])
 
     agraph: AGraph = nx.nx_agraph.to_agraph(simplified)
     agraph.edge_attr['fontname'] = 'Ubuntu derivative Faust'
