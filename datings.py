@@ -5,6 +5,7 @@ from collections import namedtuple, defaultdict
 from typing import List, Tuple, Optional, Any, Dict
 
 import networkx as nx
+import requests
 from lxml import etree
 from more_itertools import pairwise
 
@@ -41,7 +42,7 @@ BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
 def _parse_bibliography(url):
     db: Dict[str, BibEntry] = {}
     scores = _read_scores()
-    et = etree.parse(url)
+    et = etree.fromstring(requests.get(url).content)
     for bib in et.xpath('//f:bib', namespaces=faust.namespaces):
         uri = bib.get('uri')
         citation = bib.find('f:citation', namespaces=faust.namespaces).text
@@ -65,7 +66,7 @@ def _read_scores():
     return scores
 
 
-_bib_db = _parse_bibliography('bibliography.xml')
+_bib_db = _parse_bibliography('https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml')
 
 
 class BiblSource:
