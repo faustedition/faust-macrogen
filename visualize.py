@@ -12,7 +12,7 @@ from datings import BiblSource, add_timeline_edges
 from faust_logging import logging
 from uris import Reference
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 _render_queue = []
 

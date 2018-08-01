@@ -14,7 +14,7 @@ from igraph_wrapper import to_igraph, nx_edges
 from visualize import simplify_graph, write_dot
 from uris import Reference
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 EARLIEST = date(1749, 8, 28)
 LATEST = date.today()

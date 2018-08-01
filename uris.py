@@ -20,7 +20,7 @@ from lxml import etree
 
 import faust
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def call_recorder(function=None, argument_picker=None):

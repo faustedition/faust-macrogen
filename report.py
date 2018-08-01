@@ -18,7 +18,7 @@ from datings import BiblSource
 from uris import Reference, Witness, Inscription, UnknownRef
 from visualize import write_dot, simplify_graph
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 target = Path(faust.config.get('macrogenesis', 'output-dir'))
 
 
