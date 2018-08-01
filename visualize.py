@@ -1,5 +1,4 @@
 from datetime import date
-from multiprocessing import Queue
 from multiprocessing.pool import Pool
 
 import networkx as nx
@@ -9,8 +8,8 @@ from pygraphviz import AGraph
 from tqdm import tqdm
 
 from datings import BiblSource, add_timeline_edges
-from uris import Reference
 from faust_logging import logging
+from uris import Reference
 
 logger = logging.getLogger()
 
@@ -148,3 +147,5 @@ def render_all():
         result = list(tqdm(pool.imap_unordered(render_file, dots), desc='Rendering', total=len(dots), unit=' SVGs'))
         failcount = result.count(None)
         logger.info('Rendered %d SVGs, %d failed', len(result) - failcount, failcount)
+
+

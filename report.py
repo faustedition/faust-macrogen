@@ -328,6 +328,7 @@ def report_index():
              <a href="conflicts" class="pure-button pure-button-tile">entfernte Relationen</a>
              <a href="components" class="pure-button pure-button-tile">Komponenten</a>
              <a href="missing" class="pure-button pure-button-tile">Fehlendes</a>
+             <a href="help" class="pure-button pure-button-tile">Legende</a>
             </p>
         
         </article>
@@ -337,3 +338,66 @@ def report_index():
       </section>
     """
     write_html(target / "index.php", report)
+
+
+
+def report_help():
+    def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
+        G = nx.MultiDiGraph() if extend is None else extend.copy()
+        G.add_edge(u, v, **edge_attr)
+        return G
+
+    w1 = Witness({'uri': 'faust://help/wit1', 'sigil': 'Zeuge 1', 'sigil_t': 'Zeuge_1'})
+    w2 = Witness({'uri': 'faust://help/wit2', 'sigil': 'Zeuge 2', 'sigil_t': 'Zeuge_2'})
+    d1 = date(1799, 1, 17)
+    d2 = date(1799, 2, 5)
+    d3 = date(1799, 1, 28)
+
+    g1 = demo_graph(w1, w2, kind='temp-pre', label='Quelle 1')
+    g1a = g1.copy()
+    g1a.add_edge(w2, w1, kind='temp-pre', delete=True, label='Quelle 2')
+    g2 = demo_graph(w1, w2, kind='temp-syn', label='Quelle 2')
+    g3 = demo_graph(d1 - DAY, w1, kind='not_before', source='Quelle 1')
+    g3.add_edge(w1, d2+DAY, kind='not_after', source='Quelle 1')
+    g4 = demo_graph(d1 - DAY, w1, kind='from_', source='Quelle 2')
+    g4.add_edge(w1, d2+DAY, kind='to_', source='Quelle 2')
+    g5 = demo_graph(d3 - DAY, w2, kind='when', source='Quelle 2')
+    g5.add_edge(w2, d3+DAY, kind='when', source='Quelle 2')
+
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5)
+    for name, graph in help_graphs.items():
+        write_dot(graph, str(target / f'help-{name}.dot'))
+
+    report = f"""
+    <p>Die Graphen repräsentieren Aussagen aus der Literatur zu zeitlichen Verhältnissen von Zeugen.</p>
+    <p>Die <strong>Zeugen</strong> sind durch Ovale mit der Sigle oder Inskriptionsbezeichnung repräsentiert.
+       Zeugen, die nicht in der Edition sind, steht <code>siglentyp: </code> voran. Die Zeugenbezeichnungen
+       sind klickbar und führen zur Makrogeneseseite des entsprechenden Zeugen. Verwenden Sie den Link in der
+       Spalte <em>Edition</em> der oberen Tabelle, um zur Darstellung des Zeugen in der Dokumentenansicht zu
+       gelangen.</p>
+    <p><strong>Pfeile</strong> bedeuten immer <em>zeitlich vor</em>. Im Vergleich zu termini a quo bzw. ad quem 
+    sind die Datumsangaben deshalb um einen Tag versetzt.</p>
+    <table class="pure-table">
+        <thead><th>Graph</th><th>Bedeutung</th></thead>
+        <tbody>
+        <tr><td><img src="help-pre.svg" /></td>
+            <td>Laut Quelle 1 entstand {w1} vor {w2}</td></tr>
+        <tr><td><img src="help-conflict.svg" /></td>
+            <td>Laut Quelle 1 entstand {w1} vor {w2}, 
+                laut Quelle 2 entstand {w2} vor {w1}. 
+                Diese Aussage von Quelle 2 wird nicht berücksichtigt.</td></tr>
+        <tr><td><img src="help-syn.svg"/></td>
+            <td>Laut Quelle 2 entstand {w1} etwa zeitgleich zu {w2}.</td></tr>
+        <tr><td><img src="help-dating.svg"/></td>
+            <td>Laut Quelle 1 entstand {w1} nicht vor {d1} und nicht nach {d2}.
+                Der gepunktete Pfeil repräsentiert den Zeitstrahl, er führt immer zum nächsten im Graph repräsentierten Datum.
+            </td></tr>
+        <tr><td><img src="help-interval.svg"/></td>
+            <td>Laut Quelle 2 wurde vom {d1} bis zum {d2} an {w1} gearbeitet.</td></tr>
+        <tr><td><img src="help-when.svg"/></td>
+            <td>Laut Quelle 2 entstand {w2} am {d3}.</td></tr>
+        </tbody>
+    </table>
+    """
+
+    write_html(target / 'help.php', report, 'Legende')

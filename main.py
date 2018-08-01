@@ -4,7 +4,7 @@ from faust_logging import logging
 import sys
 
 import graph
-from report import report_components, report_refs, report_missing, report_index, report_conflicts
+from report import report_components, report_refs, report_missing, report_index, report_conflicts, report_help
 from visualize import render_all
 
 logger = logging.getLogger('main')
@@ -12,6 +12,7 @@ logger = logging.getLogger('main')
 
 def _main(argv=sys.argv):
     graphs = graph.macrogenesis_graphs()
+    report_help()
     report_refs(graphs)
     report_missing(graphs)
     report_components(graphs)
