@@ -63,8 +63,8 @@ def _load_style(filename):
 
 def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record='auto'):
     logger.info('Writing %s ...', target)
-    if isinstance(target, Path):
-        target.parent.mkdir(exists_ok=True, parents=True)
+    target_path = Path(target)
+    target_path.parent.mkdir(exist_ok=True, parents=True)
     if record == 'auto':
         record = len(graph.edges) < 1000
 
