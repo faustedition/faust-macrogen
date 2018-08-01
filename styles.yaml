@@ -20,8 +20,9 @@ edge:
   when:
     color: cyan
   temp-syn:
-    dirType: none
+    dir: none
     constraint: false
+    color: gray
   timeline:
     style: dotted
     group: timeline   # keep edges straight etc.
