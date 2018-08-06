@@ -1,6 +1,6 @@
 import json
 from datetime import timedelta, date
-from itertools import chain
+from itertools import chain, repeat
 
 from faust_logging import logging
 from graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
@@ -30,6 +30,7 @@ class HtmlTable:
         self.formatters = []
         self.table_attrs = table_attrs
         self.rows = []
+        self.row_attrs = []
 
     def column(self, title='', format_spec=None, **attrs):
         self.titles.append(title)
@@ -47,17 +48,23 @@ class HtmlTable:
         self.attrs.append(attrs)
         return self
 
-    def row(self, row):
+    def row(self, row, **row_attrs):
         self.rows.append(row)
+        self.row_attrs.append(row_attrs)
         return self
 
+    @staticmethod
+    def _build_attrs(attrdict: Dict):
+        return ''.join(' {}="{}'.format(attr.strip('_'), escape(value)) for attr, value in attrdict.items())
+
     def _format_column(self, index, data):
-        attributes = ''.join(' {}="{}"'.format(attr, escape(value)) for attr, value in self.attrs[index].items())
+        attributes = self._build_attrs(self.attrs[index])
         content = self.formatters[index](data)
         return f'<td{attributes}>{content}</td>'
 
-    def _format_row(self, row: Iterable) -> str:
-        return '<tr>' + ''.join(self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+    def _format_row(self, row: Iterable, **rowattrs) -> str:
+        attributes = self._build_attrs(rowattrs)
+        return f'<tr{attributes}>' + ''.join(self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
 
     def _format_rows(self, rows: Iterable[Iterable]):
         for row in rows:
@@ -70,10 +77,13 @@ class HtmlTable:
     def _format_footer(self):
         return '</tbody></table>'
 
-    def format_table(self, rows=None):
+    def format_table(self, rows=None, row_attrs=None):
         if rows is None:
             rows = self.rows
-        return self._format_header() + ''.join(self._format_row(row) for row in rows) + self._format_footer()
+            row_attrs = self.row_attrs
+        if row_attrs is None:
+            row_attrs=repeat({})
+        return self._format_header() + ''.join((self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
 def write_html(filename, content, head=None, breadcrumbs=[]):
@@ -186,64 +196,71 @@ def report_refs(graphs: MacrogenesisInfo):
                 .column('<a href="conflicts">Konflikte</a>'))
 
     for index, ref in enumerate(refs, start=1):
-        assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
-        conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-        overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)))
-
-        DAY = timedelta(days=1)
-        basename = target / ref.filename
-        relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
-        if ref.earliest != EARLIEST:
-            relevant_nodes |= set(nx.shortest_path(graphs.base, ref.earliest-DAY, ref))
-        if ref.latest != LATEST:
-            relevant_nodes |= set(nx.shortest_path(graphs.base, ref, ref.latest+DAY))
-        ref_subgraph = graphs.base.subgraph(relevant_nodes)
-        write_dot(ref_subgraph, basename.with_name(basename.stem+'-graph.dot'), highlight=ref)
-        report =  f"<!-- {repr(ref)} -->\n"
-        report += overview.format_table(overview.rows[-1:])
-        report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
-
-        kinds = {'not_before': 'nicht vor',
-                 'not_after': 'nicht nach',
-                 'from_': 'von',
-                 'to': 'bis',
-                 'when': 'am',
-                 'temp-syn': 'ca. gleichzeitig',
-                 'temp-pre': 'entstanden nach',
-                 'orphan': '(Verweis)',
-                 None: '???'
-                 }
-        assertionTable = (HtmlTable()
-                          .column('berücksichtigt?')
-                          .column('Aussage')
-                          .column('Bezug', format_spec=_fmt_node)
-                          .column('Quelle')
-                          .column('Kommentare', format_spec="/".join)
-                          .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
-        for (u, v, attr) in graphs.base.in_edges(ref, data=True):
-            assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
-                                kinds[attr['kind']],
-                                u+DAY if isinstance(u, date) else u,
-                                attr['source'],
-                                attr.get('comments', []),
-                                attr['xml']))
-        kinds['temp-pre'] = 'entstanden vor'
-        for (u, v, attr) in graphs.base.out_edges(ref, data=True):
-            assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
-                                kinds[attr['kind']],
-                                v-DAY if isinstance(v, date) else v,
-                                attr['source'],
-                                attr.get('comments', []),
-                                attr['xml']))
-        write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
-                   breadcrumbs=[dict(caption='Referenzen', link='refs')],
-                   head=str(ref))
+        if ref in graphs.base:
+            _report_single_ref(index, ref, graphs, overview)
+        else:
+            overview.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''), class_='pure-fade-40', title='Keine Macrogenesedaten')
 
     write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
     write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
     write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
     write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
+
+
+def _report_single_ref(index, ref, graphs, overview):
+    assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
+    conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
+    overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, getattr(ref, 'min_verse', ''), len(assertions),
+                  len(conflicts)))
+    DAY = timedelta(days=1)
+    basename = target / ref.filename
+    relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
+    if ref.earliest != EARLIEST:
+        relevant_nodes |= set(nx.shortest_path(graphs.base, ref.earliest - DAY, ref))
+    if ref.latest != LATEST:
+        relevant_nodes |= set(nx.shortest_path(graphs.base, ref, ref.latest + DAY))
+    ref_subgraph = graphs.base.subgraph(relevant_nodes)
+    write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
+    report = f"<!-- {repr(ref)} -->\n"
+    report += overview.format_table(overview.rows[-1:])
+    report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
+    kinds = {'not_before': 'nicht vor',
+             'not_after': 'nicht nach',
+             'from_': 'von',
+             'to': 'bis',
+             'when': 'am',
+             'temp-syn': 'ca. gleichzeitig',
+             'temp-pre': 'entstanden nach',
+             'orphan': '(Verweis)',
+             None: '???'
+             }
+    assertionTable = (HtmlTable()
+                      .column('berücksichtigt?')
+                      .column('Aussage')
+                      .column('Bezug', format_spec=_fmt_node)
+                      .column('Quelle')
+                      .column('Kommentare', format_spec="/".join)
+                      .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+    for (u, v, attr) in graphs.base.in_edges(ref, data=True):
+        assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+                            kinds[attr['kind']],
+                            u + DAY if isinstance(u, date) else u,
+                            attr['source'],
+                            attr.get('comments', []),
+                            attr['xml']))
+    kinds['temp-pre'] = 'entstanden vor'
+    for (u, v, attr) in graphs.base.out_edges(ref, data=True):
+        assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+                            kinds[attr['kind']],
+                            v - DAY if isinstance(v, date) else v,
+                            attr['source'],
+                            attr.get('comments', []),
+                            attr['xml']))
+    write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
+               breadcrumbs=[dict(caption='Referenzen', link='refs')],
+               head=str(ref))
+
 
 def _invert_mapping(mapping: Mapping) -> Dict:
     result = defaultdict(set)

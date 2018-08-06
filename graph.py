@@ -193,16 +193,26 @@ def adopt_orphans(graph: nx.MultiDiGraph):
     Introduces auxilliary edges to witnesses that are referenced by an inscription or ambiguous ref, but are not
     used otherwise in the graph.
     """
-    for node in set(graph.nodes):
+    nodes = set(graph.nodes)
+    for node in nodes:
         if isinstance(node, Inscription):
-            if node.witness not in graph.nodes and isinstance(node.witness, Witness):
+            if node.witness not in nodes and isinstance(node.witness, Witness):
                 graph.add_edge(node, node.witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
-                logger.debug('Adopted %s from inscription %s', node.witness, node)
+                logger.info('Adopted %s from inscription %s', node.witness, node)
         if isinstance(node, AmbiguousRef):
             for witness in node.witnesses:
-                if witness not in graph.nodes:
+                if witness not in nodes:
                     graph.add_edge(node, witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
-                    logger.debug('Adopted %s from ambiguous ref %s', witness, node)
+                    logger.info('Adopted %s from ambiguous ref %s', witness, node)
+
+
+def add_missing_wits(working: nx.MultiDiGraph):
+    all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
+    known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
+    missing_wits = all_wits - known_wits
+    logger.debug('Adding %d otherwise unmentioned witnesses to the working graph', len(missing_wits))
+    working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
+
 
 def macrogenesis_graphs() -> MacrogenesisInfo:
     """
@@ -214,8 +224,9 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     """
     base = base_graph()
     adopt_orphans(base)
-    working = cleanup_graph(base)
+    working = cleanup_graph(base).copy()
     add_edge_weights(working)
+    add_missing_wits(working)
     conflicts = subgraphs_with_conflicts(working)
 
     logger.info('Calculating minimum feedback arc set for %d subgraphs', len(conflicts))
