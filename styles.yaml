@@ -7,6 +7,7 @@ node:
     fillcolor: '#F0F000'  # '#FABE00'
     style: filled
     penwidth: 2
+
 # Node styles. Mapping (kind -> (attribute -> value))
 edge:
   not_before:
@@ -26,6 +27,10 @@ edge:
   timeline:
     style: dotted
     group: timeline   # keep edges straight etc.
+  orphan:   # artificial edges from ambiguous refs / inscriptions to otherwise unused witnesses
+    style: dashed
+    color: gray
+
   # additional style for conflicting edges
   delete:
     constraint: false  # do not consider them for ranking

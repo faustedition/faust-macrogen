@@ -210,6 +210,7 @@ def report_refs(graphs: MacrogenesisInfo):
                  'when': 'am',
                  'temp-syn': 'ca. gleichzeitig',
                  'temp-pre': 'entstanden nach',
+                 'orphan': '(Verweis)',
                  None: '???'
                  }
         assertionTable = (HtmlTable()
@@ -364,7 +365,11 @@ def report_help():
     g5 = demo_graph(d3 - DAY, w2, kind='when', source='Quelle 2')
     g5.add_edge(w2, d3+DAY, kind='when', source='Quelle 2')
 
-    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5)
+    i1 = Witness.get('faust://inscription/faustedition/2_IV_H.19/i_uebrige')
+    i1w = i1.witness
+    g_orphan = demo_graph(i1, i1w, kind='orphan', source='faust://orphan/adoption')
+
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan)
     for name, graph in help_graphs.items():
         write_dot(graph, str(target / f'help-{name}.dot'))
 
@@ -396,6 +401,9 @@ def report_help():
             <td>Laut Quelle 2 wurde vom {d1} bis zum {d2} an {w1} gearbeitet.</td></tr>
         <tr><td><img src="help-when.svg"/></td>
             <td>Laut Quelle 2 entstand {w2} am {d3}.</td></tr>
+        <tr><td><img src="help-orphan.svg"/></td>
+            <td>{i1w} wird in den Makrogenesedaten nur indirekt über {i1} referenziert 
+                und über eine künstliche Kante angebunden.</td></tr>
         </tbody>
     </table>
     """

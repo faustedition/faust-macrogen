@@ -9,10 +9,10 @@ from typing import List, Callable, Any, Dict, Tuple, Type, Union
 
 import networkx as nx
 
-from datings import base_graph
+from datings import base_graph, BiblSource
 from igraph_wrapper import to_igraph, nx_edges
 from visualize import simplify_graph, write_dot
-from uris import Reference
+from uris import Reference, Inscription, Witness, AmbiguousRef
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,21 @@ class MacrogenesisInfo:
             ref.latest = min_after_date - DAY
 
 
+def adopt_orphans(graph: nx.MultiDiGraph):
+    """
+    Introduces auxilliary edges to witnesses that are referenced by an inscription or ambiguous ref, but are not
+    used otherwise in the graph.
+    """
+    for node in set(graph.nodes):
+        if isinstance(node, Inscription):
+            if node.witness not in graph.nodes and isinstance(node.witness, Witness):
+                graph.add_edge(node, node.witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
+                logger.debug('Adopted %s from inscription %s', node.witness, node)
+        if isinstance(node, AmbiguousRef):
+            for witness in node.witnesses:
+                if witness not in graph.nodes:
+                    graph.add_edge(node, witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
+                    logger.debug('Adopted %s from ambiguous ref %s', witness, node)
 
 def macrogenesis_graphs() -> MacrogenesisInfo:
     """
@@ -198,6 +213,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
 
     """
     base = base_graph()
+    adopt_orphans(base)
     working = cleanup_graph(base)
     add_edge_weights(working)
     conflicts = subgraphs_with_conflicts(working)
