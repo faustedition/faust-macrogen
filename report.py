@@ -1,6 +1,9 @@
 import json
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from itertools import chain, repeat
+
+from lxml.builder import ElementMaker
+from lxml.etree import Comment
 
 from faust_logging import logging
 from graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
@@ -426,3 +429,14 @@ def report_help():
     """
 
     write_html(target / 'help.php', report, 'Legende')
+
+
+def write_order_xml(graphs):
+    F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=faust.namespaces)
+    root = F.order(
+            Comment('This file has been generated from the macrogenesis data. Do not edit.'),
+            *[F.item(format(witness), index=format(index), uri=witness.uri, sigil_t=witness.sigil_t)
+                    for index, witness in enumerate(graphs.order_refs(), start=1)
+                    if isinstance(witness, Witness)],
+                   generated=datetime.now().isoformat())
+    root.getroottree().write(str(target / 'order.xml'), pretty_print=True)

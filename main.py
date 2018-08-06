@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+
 from faust_logging import logging
 
 import sys
 
 import graph
-from report import report_components, report_refs, report_missing, report_index, report_conflicts, report_help
+import report
 from visualize import render_all
 
 logger = logging.getLogger('main')
@@ -12,12 +13,15 @@ logger = logging.getLogger('main')
 
 def _main(argv=sys.argv):
     graphs = graph.macrogenesis_graphs()
-    report_help()
-    report_refs(graphs)
-    report_missing(graphs)
-    report_components(graphs)
-    report_conflicts(graphs)
-    report_index()
+
+    report.write_order_xml(graphs)
+
+    report.report_help()
+    report.report_refs(graphs)
+    report.report_missing(graphs)
+    report.report_components(graphs)
+    report.report_conflicts(graphs)
+    report.report_index()
     render_all()
 
 
