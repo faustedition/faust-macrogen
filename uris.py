@@ -357,7 +357,7 @@ def _assemble_report(wits):
 
 
 def _report_wits(wits, output_csv='witness-usage.csv'):
-    with codecs.open(output_csv, "wt", encoding='utf-8') as reportfile:
+    with open(output_csv, "wt", encoding='utf-8') as reportfile:
         table = csv.writer(reportfile)
         rows = _assemble_report(wits)
         table.writerow(('Zeuge / Referenz', 'Status', 'Vorkommen'))
@@ -369,15 +369,15 @@ def _report_wits(wits, output_csv='witness-usage.csv'):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logger.WARNING)
-    logger.setLevel(logging.INFO)
+#    logging.basicConfig(level=logger.WARNING)
+#    logger.setLevel(logging.INFO)
     wits = _collect_wits()
 
     resolutions = defaultdict(set)
     for uri, result in list(Witness.get.recorder.keys()):
         resolutions[result].add(uri)
 
-    with codecs.open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:
+    with open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:
         table = csv.writer(resfile)
         table.writerow(('in macrogenesis', 'normalisiert'))
 
