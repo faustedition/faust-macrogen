@@ -176,17 +176,19 @@ class Witness(Reference):
             raise TypeError('doc_record must be a mapping, not a ' + str(type(doc_record)))
 
     def uris(self):
-        result = [self.uri]
+        result = {self.uri}
         if hasattr(self, 'other_sigils'):
             for uri in self.other_sigils:
                 if self.other_sigils[uri] in {'none', 'n.s.', ''}:
                     continue
                 uri = uri.replace('-', '_')
-                result.append(uri)
+                result.add(uri)
                 if '/wa_faust/' in uri:
-                    result.append(uri.replace('/wa_faust/', '/wa/'))
+                    result.add(uri.replace('/wa_faust/', '/wa/'))
         if getattr(self, 'type', '') == 'print':
-            result.extend([uri.replace('faust://document/', 'faust://print/') for uri in result])
+            result.update([uri.replace('faust://document/', 'faust://print/') for uri in result])
+
+        result.update({re.sub('[._]{2,}', '_', uri) for uri in result})
         return result
 
     @classmethod
