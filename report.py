@@ -310,12 +310,14 @@ def _report_single_ref(index, ref, graphs, overview):
                            class_='delete' if delete_ else str(attr['kind']))
     kinds['temp-pre'] = 'entstanden vor'
     for (u, v, attr) in graphs.base.out_edges(ref, data=True):
-        assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+        delete_ = 'delete' in attr and attr['delete']
+        assertionTable.row(('nein' if delete_ else 'ja',
                             kinds[attr['kind']],
                             v - DAY if isinstance(v, date) else v,
                             attr['source'],
                             attr.get('comments', []),
-                            attr['xml']))
+                            attr['xml']),
+                           class_='delete' if delete_ else str(attr['kind']))
     write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
                breadcrumbs=[dict(caption='Referenzen', link='refs')],
                head=str(ref))
