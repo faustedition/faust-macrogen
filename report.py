@@ -498,4 +498,5 @@ def write_order_xml(graphs):
                     for index, witness in enumerate(graphs.order_refs(), start=1)
                     if isinstance(witness, Witness)],
                    generated=datetime.now().isoformat())
+    target.mkdir(parents=True, exist_ok=True)
     root.getroottree().write(str(target / 'order.xml'), pretty_print=True)
