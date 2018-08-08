@@ -18,7 +18,7 @@ import networkx as nx
 
 import faust
 from datings import BiblSource
-from uris import Reference, Witness, Inscription, UnknownRef
+from uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from visualize import write_dot, simplify_graph
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,19 @@ target = Path(faust.config.get('macrogenesis', 'output-dir'))
 
 
 class HtmlTable:
+    """
+    Helper class to create a simple HTML table from some kind of data.
+    """
 
     def __init__(self, **table_attrs):
+        """
+        Creates a new table.
+
+        Args:
+            **table_attrs: attributes for the `<table>` elements. For the attribute names, leading and trailing `_` are
+             stripped and remaining `_` are transformed to hyphens, so ``HtmlTable(class_='example', data_order='<')``
+             will generate ``<table class="example" data-order="&lt;"/>``
+        """
         self.titles = []
         self.attrs = []
         self.formatters = []
@@ -36,6 +47,18 @@ class HtmlTable:
         self.row_attrs = []
 
     def column(self, title='', format_spec=None, **attrs):
+        """
+        Adds a column to this table.
+
+        Args:
+            title: The column header as a string (possibly containing an HTML fragment)
+            format_spec: How to format each column value. This can be either a format string (see :meth:`str.format`),
+                    a format spec (see :func:`format`), a one-argument function or other callable or None (which will
+                    result in ``format(value)``)
+            **attrs: Attributes to be supplied to each `<td>`
+
+        Returns: self
+        """
         self.titles.append(title)
 
         if format_spec is None:
@@ -52,13 +75,25 @@ class HtmlTable:
         return self
 
     def row(self, row, **row_attrs):
+        """
+        Adds a row to this table's stored data. This data will be used by the zero-argument version of :meth:`format_table`
+
+        The rows are exposed as a list via the property `rows`
+
+        Args:
+            row: A tuple (or, in fact, any iterable) of values, prefereably as many as there are rows.
+            **row_attrs: HTML Attributes for the row. See the note for `__init__`
+
+        Returns:
+            self
+        """
         self.rows.append(row)
         self.row_attrs.append(row_attrs)
         return self
 
     @staticmethod
     def _build_attrs(attrdict: Dict):
-        return ''.join(' {}="{}'.format(attr.strip('_'), escape(value)) for attr, value in attrdict.items())
+        return ''.join(' {}="{}"'.format(attr.strip('_').replace('-', '_'), escape(value)) for attr, value in attrdict.items())
 
     def _format_column(self, index, data):
         attributes = self._build_attrs(self.attrs[index])
@@ -81,6 +116,19 @@ class HtmlTable:
         return '</tbody></table>'
 
     def format_table(self, rows=None, row_attrs=None):
+        """
+        Actually formats the table.
+
+        In the zero-argument form, this uses the rows added previously using the `row` method. Otherwise, the given
+        data is used.
+
+        Args:
+            rows: If given, the rows to format. This is a list of n-tuples, for n columns.
+            row_attrs: If given, this should be a list that contains a mapping with the attributes for each row.
+
+        Returns:
+            string containing HTML code for the table
+        """
         if rows is None:
             rows = self.rows
             row_attrs = self.row_attrs
@@ -172,6 +220,10 @@ def _edition_link(ref: Reference):
         return f'<a href="/document?sigil={ref.sigil_t}">{ref}</a>'
     elif isinstance(ref, Inscription):
         return f'Inskription {ref.inscription} von {_edition_link(ref.witness)}'
+    elif isinstance(ref, UnknownRef):
+        return ''
+    elif isinstance(ref, AmbiguousRef):
+        return ", ".join(_edition_link(wit) for wit in ref.witnesses)
     else:
         return format(ref)
 
@@ -202,7 +254,8 @@ def report_refs(graphs: MacrogenesisInfo):
         if ref in graphs.base:
             _report_single_ref(index, ref, graphs, overview)
         else:
-            overview.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''), class_='pure-fade-40', title='Keine Macrogenesedaten')
+            overview.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
+                         class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
@@ -214,8 +267,9 @@ def report_refs(graphs: MacrogenesisInfo):
 def _report_single_ref(index, ref, graphs, overview):
     assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
     conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-    overview.row((index, ref.rank, ref, ref, ref.earliest, ref.latest, getattr(ref, 'min_verse', ''), len(assertions),
-                  len(conflicts)))
+    overview.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
+                  getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
+                 id=f'idx{index}', class_=type(ref).__name__)
     DAY = timedelta(days=1)
     basename = target / ref.filename
     relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
@@ -246,12 +300,14 @@ def _report_single_ref(index, ref, graphs, overview):
                       .column('Kommentare', format_spec="/".join)
                       .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
     for (u, v, attr) in graphs.base.in_edges(ref, data=True):
-        assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
+        delete_ = 'delete' in attr and attr['delete']
+        assertionTable.row(('nein' if delete_ else 'ja',
                             kinds[attr['kind']],
                             u + DAY if isinstance(u, date) else u,
                             attr['source'],
                             attr.get('comments', []),
-                            attr['xml']))
+                            attr['xml']),
+                           class_='delete' if delete_ else str(attr['kind']))
     kinds['temp-pre'] = 'entstanden vor'
     for (u, v, attr) in graphs.base.out_edges(ref, data=True):
         assertionTable.row(('nein' if 'delete' in attr and attr['delete'] else 'ja',
@@ -270,6 +326,7 @@ def _invert_mapping(mapping: Mapping) -> Dict:
     for key, value in mapping.items():
         result[value].add(key)
     return result
+
 
 def report_missing(graphs: MacrogenesisInfo):
     refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
@@ -297,6 +354,7 @@ def report_missing(graphs: MacrogenesisInfo):
                      .column('URI'))
     report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
     write_html(target / 'missing.php', report, head="Fehlendes")
+
 
 def report_conflicts(graphs: MacrogenesisInfo):
 
@@ -326,7 +384,8 @@ def report_conflicts(graphs: MacrogenesisInfo):
                    v-DAY if isinstance(v, date) else v,
                    attr['source'],
                    attr.get('comments', []),
-                   attr['xml']))
+                   attr['xml']),
+                  class_=attr['kind'])
         relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                          | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
         subgraph = nx.subgraph(graphs.base, relevant_nodes)
