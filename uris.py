@@ -227,7 +227,7 @@ class Witness(Reference):
 
     @classmethod
     @call_recorder(argument_picker=itemgetter(1))
-    def get(cls, uri, allow_duplicate=False):
+    def get(cls, uri, allow_duplicate=True):
         if not cls.database:
             cls._load_database()
             cls._load_paralipomena()
