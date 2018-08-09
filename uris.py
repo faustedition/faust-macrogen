@@ -194,8 +194,18 @@ class Witness(Reference):
     @classmethod
     def _load_database(cls,
                        url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json'):
+        cls.corrections = cls._load_corrections()
         sigil_data = requests.get(url).json()
         cls.database = cls.build_database(sigil_data)
+
+    @classmethod
+    def _load_corrections(cls, path=Path('uri-corrections.csv')):
+        with path.open(encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # skip header
+            result = {row[0]: row[1] for row in reader if row[1]}
+        logger.info('Loaded %d corrections from %s', len(result), path)
+        return result
 
     @classmethod
     def _load_paralipomena(cls,
@@ -232,8 +242,17 @@ class Witness(Reference):
             cls._load_database()
             cls._load_paralipomena()
 
+        if uri in cls.corrections:
+            correction = cls.corrections[uri]
+            if correction in cls.database:
+                logger.info('Corrected %s to %s -> %s', uri, correction, cls.database[correction])
+            else:
+                logger.warning('Corrected %s to %s, but it is not in the databse', uri, correction)
+            uri = correction
+
         orig_uri = uri
         uri = uri.replace('-', '_')
+
 
         if uri in cls.database:
             result = cls.database[uri]
