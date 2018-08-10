@@ -247,7 +247,7 @@ class Witness(Reference):
             if correction in cls.database:
                 logger.info('Corrected %s to %s -> %s', uri, correction, cls.database[correction])
             else:
-                logger.warning('Corrected %s to %s, but it is not in the databse', uri, correction)
+                logger.warning('Corrected %s to %s, but it is not in the database', uri, correction)
             uri = correction
 
         orig_uri = uri

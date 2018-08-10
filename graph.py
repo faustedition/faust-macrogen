@@ -20,6 +20,7 @@ EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
 DAY = timedelta(days=1)
 
+
 def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
     """
     Extracts the smallest conflicted subgraphs of the given graph, i.e. the
@@ -182,9 +183,11 @@ class MacrogenesisInfo:
         for index, ref in enumerate(self.order_refs(), start=1):
             ref.index = index
             ref.rank = self.closure.in_degree(ref)
-            max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)), default=EARLIEST-DAY)
+            max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
+                                  default=EARLIEST - DAY)
             ref.earliest = max_before_date + DAY
-            min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)), default=LATEST+DAY)
+            min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)),
+                                 default=LATEST + DAY)
             ref.latest = min_after_date - DAY
 
 
@@ -197,12 +200,14 @@ def adopt_orphans(graph: nx.MultiDiGraph):
     for node in nodes:
         if isinstance(node, Inscription):
             if node.witness not in nodes and isinstance(node.witness, Witness):
-                graph.add_edge(node, node.witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
+                graph.add_edge(node, node.witness, kind='orphan', source=BiblSource('faust://orphan/adoption'),
+                               comments=(), xml='')
                 logger.info('Adopted %s from inscription %s', node.witness, node)
         if isinstance(node, AmbiguousRef):
             for witness in node.witnesses:
                 if witness not in nodes:
-                    graph.add_edge(node, witness, kind='orphan', source=BiblSource('faust://orphan/adoption'), comments=(), xml='')
+                    graph.add_edge(node, witness, kind='orphan', source=BiblSource('faust://orphan/adoption'),
+                                   comments=(), xml='')
                     logger.info('Adopted %s from ambiguous ref %s', witness, node)
 
 
@@ -240,7 +245,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     selfloops = list(nx.selfloop_edges(working, data=True, keys=True))
     if selfloops:
         logger.warning('Found %d self loops, will also remove those. Affected nodes: %s',
-                       len(selfloops), ", ".join(str(u) for u,v,k,attr in selfloops))
+                       len(selfloops), ", ".join(str(u) for u, v, k, attr in selfloops))
         all_conflicting_edges.extend(selfloops)
 
     logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
