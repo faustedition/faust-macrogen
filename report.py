@@ -137,19 +137,34 @@ class HtmlTable:
         return self._format_header() + ''.join((self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
-def write_html(filename, content, head=None, breadcrumbs=[]):
+def write_html(filename, content, head=None, breadcrumbs=[], graph_id=None, graph_options=dict(controlIconsEnabled=True)):
     if head is not None:
         breadcrumbs = breadcrumbs + [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese', link='/macrogenesis')] + breadcrumbs
     prefix = """<?php include "../includes/header.php"?>
      <section>"""
-    suffix = """</section>
+    if graph_id is not None:
+        require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
+        init = f"""
+        graph = document.getElementById('{graph_id}');
+        bbox = graph.getBoundingClientRect();
+        if (bbox.height > (window.innerHeight - bbox.top)) {{
+            graph.height = window.innerHeight - bbox.top;
+            graph.width = '100%';
+        }}
+        svgPanZoom('#{graph_id}', {json.dumps(graph_options)})
+        """
+    else:
+        require = "requirejs(['faust_common'], function(Faust)"
+        init = ''
+    suffix = f"""</section>
     <script type="text/javascript">
-        requirejs(['faust_common'], function(Faust) {{
-            document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs({}));
+        {require} {{
+            document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs({json.dumps(breadcrumbs)}));
+            {init}
         }});
     </script>
-    <?php include "../includes/footer.php"?>""".format(json.dumps(breadcrumbs))
+    <?php include "../includes/footer.php"?>"""
     with open(filename, 'wt', encoding='utf-8') as f:
         f.write(prefix)
         f.write(content)
@@ -281,7 +296,7 @@ def _report_single_ref(index, ref, graphs, overview):
     write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
     report = f"<!-- {repr(ref)} -->\n"
     report += overview.format_table(overview.rows[-1:])
-    report += f"""<object class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
+    report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
     kinds = {'not_before': 'nicht vor',
              'not_after': 'nicht nach',
              'from_': 'von',
@@ -320,7 +335,7 @@ def _report_single_ref(index, ref, graphs, overview):
                            class_='delete' if delete_ else str(attr['kind']))
     write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
                breadcrumbs=[dict(caption='Referenzen', link='refs')],
-               head=str(ref))
+               head=str(ref), graph_id='refgraph')
 
 
 def _invert_mapping(mapping: Mapping) -> Dict:
