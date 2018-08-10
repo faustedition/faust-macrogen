@@ -191,8 +191,8 @@ def report_components(graphs: MacrogenesisInfo):
     write_html(target / 'components.php', report, head="Komponenten")
 
 
-def _report_subgraphs(removed_edges, out, pattern):
-    table = HtmlTable().column('Nummer', format_spec='<a href="'+pattern+'.svg">{0}</a>') \
+def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern='%d'):
+    table = HtmlTable().column('Nummer', format_spec='<a href="'+pattern+'">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
         .column('Entfernte Relationen') \
@@ -206,7 +206,11 @@ def _report_subgraphs(removed_edges, out, pattern):
         sources = {attr['source'].citation for u, v, k, attr in relations if 'source' in attr}
         conflict_sources = {attr['source'].citation for u, v, k, attr in removed_edges}
         table.row((index, refs, len(relations), len(removed_edges), sources, conflict_sources))
-        write_dot(subgraph, out / (pattern+".dot").format(index))
+        write_dot(subgraph, out / (pattern+"-graph.dot").format(index))
+        write_html(out / (pattern + '.php').format(index),
+                   f"""<object id="refgraph" class="refgraph" type="image/svg+xml" 
+                          data="{pattern.format(index)}-graph.svg"></object>\n""",
+                   graph_id='refgraph', breadcrumbs=breadcrumbs, head=head_pattern.format(index))
     return table
 
 
@@ -394,8 +398,9 @@ def report_conflicts(graphs: MacrogenesisInfo):
              .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if 'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
-        graphfile = Path(f"conflict-{index:03d}.dot")
-        table.row((f"""<a href="{graphfile.with_suffix('.svg')}">{index}</a>""",
+        reportfile = Path(f"conflict-{index:03d}.php")
+        graphfile = Path(f"conflict-{index:03d}-graph.dot")
+        table.row((f"""<a href="{reportfile.stem}">{index}</a>""",
                    u+DAY if isinstance(u, date) else u,
                    attr['kind'],
                    v-DAY if isinstance(v, date) else v,
@@ -407,6 +412,10 @@ def report_conflicts(graphs: MacrogenesisInfo):
                          | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
         subgraph = nx.subgraph(graphs.base, relevant_nodes)
         write_dot(subgraph, str(target / graphfile), highlight=(u,v,k))
+        write_html(target / reportfile,
+                   f"""<object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>\n""",
+                   graph_id='refgraph',
+                   head=f'Entfernte Kante {index}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
     write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
 
 def report_index():
