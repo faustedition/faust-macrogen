@@ -21,7 +21,7 @@ def _main(argv=sys.argv):
     report.report_missing(graphs)
     report.report_components(graphs)
     report.report_conflicts(graphs)
-    report.report_index()
+    report.report_index(graphs)
     render_all()
 
 

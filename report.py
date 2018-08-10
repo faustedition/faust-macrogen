@@ -278,9 +278,9 @@ def report_refs(graphs: MacrogenesisInfo):
 
     write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
-    write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
-    write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
-    write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
+    #write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
+    #write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
+    #write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
 
 
 def _report_single_ref(index, ref, graphs, overview):
@@ -418,7 +418,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
                    head=f'Entfernte Kante {index}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
     write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
 
-def report_index():
+def report_index(graphs):
     report = f"""
       <p>
         Dieser Bereich der Edition enthält experimentelle Informationen zur Makrogenese, er wurde zuletzt
@@ -434,6 +434,8 @@ def report_index():
              <a href="conflicts" class="pure-button pure-button-tile">entfernte Relationen</a>
              <a href="components" class="pure-button pure-button-tile">Komponenten</a>
              <a href="missing" class="pure-button pure-button-tile">Fehlendes</a>
+             <a href="dag" class="pure-button pure-button-tile">sortierrelevanter Gesamtgraph</a>
+             <a href="tred" class="pure-button pure-button-tile">transitive Reduktion</a>
              <a href="help" class="pure-button pure-button-tile">Legende</a>
             </p>
         
@@ -444,6 +446,18 @@ def report_index():
       </section>
     """
     write_html(target / "index.php", report)
+    logger.info('Writing DAG ...')
+    write_dot(graphs.dag, target / 'dag-graph.dot', record=True)
+    write_html(target / 'dag.php', '<object type="image/svg+xml" data="dag-graph.svg" id="refgraph"/>',
+               graph_id='refgraph', head='Effektiver Gesamtgraph (ohne Konflikte)')
+
+    logger.info('Creating transitive reduction ...')
+    tred_base = nx.MultiDiGraph(nx.transitive_reduction(graphs.dag))
+    tred = nx.edge_subgraph(graphs.dag, tred_base.edges)
+    write_dot(tred, target / 'tred-graph.dot', record=True)
+    write_html(target / 'tred.php', '<object type="image/svg+xml" data="tred-graph.svg" id="refgraph"/>',
+               graph_id='refgraph', head='Transitive Reduktion')
+
 
 
 
