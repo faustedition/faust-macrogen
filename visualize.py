@@ -61,7 +61,7 @@ def _load_style(filename):
         return yaml.load(f)
 
 
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record='auto'):
+def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record='auto', edge_labels=True):
     logger.info('Writing %s ...', target)
     target_path = Path(target)
     target_path.parent.mkdir(exist_ok=True, parents=True)
@@ -106,6 +106,11 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
             kind = attr.get('kind', None)
             if kind in style['node']:
                     simplified.nodes[node].update(style['node'][kind])
+
+    if not edge_labels:
+        for u, v, k, attr in simplified.edges(data=True, keys=True):
+            if 'label' in attr:
+                del attr['label']
 
     agraph: AGraph = nx.nx_agraph.to_agraph(simplified)
     agraph.edge_attr['fontname'] = 'Ubuntu derivative Faust'
