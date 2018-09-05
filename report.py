@@ -137,7 +137,18 @@ class HtmlTable:
         return self._format_header() + ''.join((self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
-def write_html(filename, content, head=None, breadcrumbs=[], graph_id=None, graph_options=dict(controlIconsEnabled=True)):
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str,str]] = [], graph_id: str = None,
+               graph_options: Dict[str,object] = dict(controlIconsEnabled=True)) -> object:
+    """
+    Writes a html page.
+    Args:
+        filename: out file path
+        content: formatted contents for the main part
+        head: heading, will become the last of the breadcrumbs
+        breadcrumbs: list of dictionaries with keys _caption_ and _link_, first (macrogenesis) and last (head) omitted
+        graph_id: if present, initialize javascript for graph with the given id
+        graph_options: if present, options for the svg viewer js
+    """
     if head is not None:
         breadcrumbs = breadcrumbs + [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese', link='/macrogenesis')] + breadcrumbs
@@ -418,6 +429,49 @@ def report_conflicts(graphs: MacrogenesisInfo):
                    head=f'Entfernte Kante {index}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
     write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
 
+
+def report_sources(graphs: MacrogenesisInfo):
+    by_source = defaultdict(list)
+    for u, v, k, attr in graphs.base.edges(keys=True, data=True):
+        if 'source' in attr:
+            by_source[attr['source'].uri].append((u, v, k, attr))
+
+    def _fmt_source(uri):
+        source = BiblSource(uri)
+        return f'<a href="{source.filename}">{source}</a>'
+
+    sources_table = (HtmlTable()
+                    .column('Quelle', format_spec=_fmt_source)
+                    .column('Aussagen')
+                    .column('Zeugen'))
+    for uri, edges in sorted(by_source.items()):
+        source = BiblSource(uri)
+        filename = target / (source.filename + '.php')
+        graphfile = filename.with_name(filename.stem + '-graph.dot')
+        logger.info('%d assertions from %s', len(edges), source.citation)
+        # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
+        subgraph = graphs.base.subgraph({u for u,v,k,attr in edges} | {v for u,v,k,attr in edges})
+        write_dot(subgraph, graphfile)
+        sources_table.row((uri, len(edges), len([node for node in subgraph.nodes if isinstance(node, Reference)])))
+        current_table = (HtmlTable()
+                         .column('u', format_spec=_fmt_node)
+                         .column('Relation')
+                         .column('v', format_spec=_fmt_node)
+                         .column('Stelle(n)')
+                         .column('XML'))
+        for u, v, k, attr in edges:
+            current_table.row((u, attr['kind'], v,
+                               attr['source'], attr['xml']))
+        write_html(target / (source.filename + '.php'),
+                   f"""<object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
+                       {current_table.format_table()}""",
+                   graph_id='refgraph',
+                   breadcrumbs=[dict(caption='Quellen', link='sources')],
+                   head=source.citation)
+
+    write_html(target / 'sources.php', sources_table.format_table(), head='Quellen')
+
+
 def report_index(graphs):
     report = f"""
       <p>
@@ -434,11 +488,11 @@ def report_index(graphs):
              <a href="conflicts" class="pure-button pure-button-tile">entfernte Relationen</a>
              <a href="components" class="pure-button pure-button-tile">Komponenten</a>
              <a href="missing" class="pure-button pure-button-tile">Fehlendes</a>
+             <a href="sources" class="pure-button pure-button-tile">Quellen</a>
              <a href="dag" class="pure-button pure-button-tile">sortierrelevanter Gesamtgraph</a>
              <a href="tred" class="pure-button pure-button-tile">transitive Reduktion</a>
              <a href="help" class="pure-button pure-button-tile">Legende</a>
             </p>
-        
         </article>
         
         <div class="pure-u-1-5"></div>

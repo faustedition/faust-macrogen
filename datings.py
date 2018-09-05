@@ -95,11 +95,15 @@ class BiblSource:
         return result
 
     @property
+    def filename(self):
+        return self.uri.replace('faust://bibliography/', '')
+
+    @property
     def citation(self):
         if self.uri in _bib_db:
             return _bib_db[self.uri].citation
         else:
-            return self.uri.replace('faust://bibliography/', '')
+            return self.filename
 
 
 class _AbstractDating(metaclass=ABCMeta):
