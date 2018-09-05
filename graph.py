@@ -148,6 +148,32 @@ def collapse_edges(graph: nx.MultiDiGraph):
     return result
 
 
+def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    """
+    Returns a new graph with all parallel edges from the same source collapsed.
+    """
+    result = graph.copy()
+    edge_groups = defaultdict(list)
+    for u, v, k, attr in result.edges(keys=True, data=True):
+        if  'source' in attr:
+            edge_groups[(u, v, attr['kind'], attr['source'].uri)].append((u, v, k, attr))
+
+    for (u, v, kind, source_uri), group in edge_groups.items():
+        if len(group) > 1:
+            logger.debug('Collapsing group %s', group)
+            group_attr = dict(
+                    weight=sum(attr.get('weight', 1) for u, v, k, attr in group),
+                    kind=kind,
+                    collapsed=len(group),
+                    source=BiblSource(source_uri),
+                    sources=[attr['source'] for u, v, k, attr in group],
+                    xml=[attr['xml'] for u, v, k, attr in group]
+            )
+            result.remove_edges_from(group)
+            result.add_edge(u, v, **group_attr)
+    return result
+
+
 @dataclass
 class MacrogenesisInfo:
     base: nx.MultiDiGraph
@@ -229,8 +255,9 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     """
     base = base_graph()
     adopt_orphans(base)
+    add_edge_weights(base)
+    base = collapse_edges_by_source(base)
     working = cleanup_graph(base).copy()
-    add_edge_weights(working)
     add_missing_wits(working)
     conflicts = subgraphs_with_conflicts(working)
 
@@ -278,6 +305,3 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     without_hertz = remove_edges(A, is_hertz)
     without_syn = remove_edges(without_hertz, is_syn)
     return without_syn
-
-
-
