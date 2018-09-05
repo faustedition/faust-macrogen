@@ -449,14 +449,16 @@ def report_index(graphs):
     logger.info('Writing DAG ...')
     write_dot(graphs.dag, target / 'dag-graph.dot', record=True)
     write_html(target / 'dag.php', '<object type="image/svg+xml" data="dag-graph.svg" id="refgraph"/>',
-               graph_id='refgraph', head='Effektiver Gesamtgraph (ohne Konflikte)')
+               graph_id='refgraph', head='Effektiver Gesamtgraph (ohne Konflikte)',
+               graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
     logger.info('Creating transitive reduction ...')
     tred_base = nx.MultiDiGraph(nx.transitive_reduction(graphs.dag))
     tred = nx.edge_subgraph(graphs.dag, tred_base.edges)
     write_dot(tred, target / 'tred-graph.dot', record=True)
     write_html(target / 'tred.php', '<object type="image/svg+xml" data="tred-graph.svg" id="refgraph"/>',
-               graph_id='refgraph', head='Transitive Reduktion')
+               graph_id='refgraph', head='Transitive Reduktion',
+               graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
 
 
