@@ -268,6 +268,10 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_yaml(simplify_graph(graphs.working), str(target / 'working.yaml'))
     nx.write_yaml(simplify_graph(graphs.dag), str(target / 'dag.yaml'))
 
+    nx.write_gpickle(graphs.dag, str(target / 'dag.gpickle'))
+    nx.write_gpickle(graphs.working, str(target / 'working.gpickle'))
+    nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
+
     refs = graphs.order_refs()
     overview = (HtmlTable()
                 .column('Nr.')
