@@ -96,7 +96,10 @@ class BiblSource:
 
     @property
     def filename(self):
-        return self.uri.replace('faust://bibliography/', '')
+        if self.uri.startswith('faust://bibliography'):
+            return self.uri.replace('faust://bibliography/', '')
+        else:
+            return self.uri.replace('faust://', '').replace('/', '-')
 
     @property
     def citation(self):
