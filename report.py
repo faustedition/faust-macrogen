@@ -24,6 +24,15 @@ from visualize import write_dot, simplify_graph
 logger = logging.getLogger(__name__)
 target = Path(faust.config.get('macrogenesis', 'output-dir'))
 
+RELATION_LABELS = {'not_before': 'nicht vor',
+                   'not_after': 'nicht nach',
+                   'from_': 'von',
+                   'to': 'bis',
+                   'when': 'am',
+                   'temp-syn': 'ca. gleichzeitig',
+                   'temp-pre': 'zeitlich vor',
+                   None: '???'
+                   }
 
 class HtmlTable:
     """
@@ -335,7 +344,7 @@ def _report_single_ref(index, ref, graphs, overview):
                       .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
     for (u, v, attr) in graphs.base.in_edges(ref, data=True):
         delete_ = 'delete' in attr and attr['delete']
-        assertionTable.row(('nein' if delete_ else 'ja',
+        assertionTable.row((f'<a href="{_path_link(u, v).stem}">nein</a>' if delete_ else 'ja',
                             kinds[attr['kind']],
                             u + DAY if isinstance(u, date) else u,
                             attr['source'],
@@ -391,30 +400,70 @@ def report_missing(graphs: MacrogenesisInfo):
     report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
     write_html(target / 'missing.php', report, head="Fehlendes")
 
+def _path_link(*nodes) -> Path:
+    node_names: List[str] = []
+    for node in nodes:
+        if isinstance(node, Reference):
+            node_names.append(node.filename.stem)
+        elif isinstance(node, date):
+            node_names.append(node.isoformat())
+        else:
+            logger.warning('Unknown node type: %s (%s)', type(node), node)
+            node_names.append(str(hash(node)))
+    return Path("--".join(node_names) + '.php')
+
+
+def _report_conflict(graphs: MacrogenesisInfo, u, v):
+    reportfile = _path_link(u, v)
+    graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
+    relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
+                     | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
+    try:
+        counter_path = nx.shortest_path(graphs.dag, v, u)
+        relevant_nodes = set(counter_path)
+        counter_desc = " → ".join(map(_fmt_node, counter_path))
+        counter_html = f'<h3>Pfad in Gegenrichtung</h3><p>{counter_desc}</p>'
+    except nx.NetworkXNoPath:
+        counter_html = f'<p>kein Pfad in Gegenrichtung ({_fmt_node(v)} … {_fmt_node(u)}) im Sortiergraphen</p>'
+    except nx.NodeNotFound:
+        logger.exception('Node not found!? %s or %s', u, v)
+        counter_html = ''
+    subgraph = nx.subgraph(graphs.base, relevant_nodes)
+    write_dot(subgraph, str(target / graphfile))
+
+    table = (HtmlTable()
+             .column('u', format_spec=_fmt_node)
+             .column('Relation', format_spec=RELATION_LABELS.get)
+             .column('v', format_spec=_fmt_node)
+             .column('Quelle')
+             .column('Kommentare', format_spec="/".join)
+             .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+    for k, attr in graphs.base.get_edge_data(u, v).items():
+        table.row((u, attr['kind'], v, attr['source'], attr.get('comments', [])))
+
+    write_html(target / reportfile,
+               f"""
+               <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>
+               {counter_html}
+               {table.format_table()}
+               """,
+               graph_id='refgraph',
+               head=f'Entfernte Kante {u} → {v}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
+
+    return reportfile
 
 def report_conflicts(graphs: MacrogenesisInfo):
-
-    kinds = {'not_before': 'nicht vor',
-             'not_after': 'nicht nach',
-             'from_': 'von',
-             'to': 'bis',
-             'when': 'am',
-             'temp-syn': 'ca. gleichzeitig',
-             'temp-pre': 'zeitlich vor',
-             None: '???'
-             }
     table = (HtmlTable()
-             .column('#', format_spec=_fmt_node)
+             .column('#')
              .column('u', format_spec=_fmt_node)
-             .column('Relation', format_spec=kinds.get)
+             .column('Relation', format_spec=RELATION_LABELS.get)
              .column('v', format_spec=_fmt_node)
              .column('Quelle')
              .column('Kommentare', format_spec="/".join)
              .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if 'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
-        reportfile = Path(f"conflict-{index:03d}.php")
-        graphfile = Path(f"conflict-{index:03d}-graph.dot")
+        reportfile = _report_conflict(graphs, u, v)
         table.row((f"""<a href="{reportfile.stem}">{index}</a>""",
                    u+DAY if isinstance(u, date) else u,
                    attr['kind'],
@@ -423,14 +472,6 @@ def report_conflicts(graphs: MacrogenesisInfo):
                    attr.get('comments', []),
                    attr['xml']),
                   class_=attr['kind'])
-        relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
-                         | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
-        subgraph = nx.subgraph(graphs.base, relevant_nodes)
-        write_dot(subgraph, str(target / graphfile), highlight=(u,v,k))
-        write_html(target / reportfile,
-                   f"""<object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>\n""",
-                   graph_id='refgraph',
-                   head=f'Entfernte Kante {index}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
     write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
 
 
