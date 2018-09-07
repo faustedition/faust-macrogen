@@ -4,6 +4,7 @@ from itertools import chain, repeat
 
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
+from more_itertools import pairwise
 
 from faust_logging import logging
 from graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
@@ -418,17 +419,26 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
     relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
+    counter_path = []
     try:
         counter_path = nx.shortest_path(graphs.dag, v, u)
         relevant_nodes = set(counter_path)
         counter_desc = " → ".join(map(_fmt_node, counter_path))
-        counter_html = f'<h3>Pfad in Gegenrichtung</h3><p>{counter_desc}</p>'
+        counter_html = f'<p><strong>Pfad in Gegenrichtung:</strong> {counter_desc}</p>'
     except nx.NetworkXNoPath:
         counter_html = f'<p>kein Pfad in Gegenrichtung ({_fmt_node(v)} … {_fmt_node(u)}) im Sortiergraphen</p>'
     except nx.NodeNotFound:
         logger.exception('Node not found!? %s or %s', u, v)
         counter_html = ''
-    subgraph = nx.subgraph(graphs.base, relevant_nodes)
+    subgraph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes).copy()
+
+    # Highlight conflicting edges, counter path and the two nodes of the conflicting edge(s)
+    for v1, v2 in [(u, v)] + list(pairwise(counter_path)):
+        for k, attr in subgraph.get_edge_data(v1, v2).items():
+            attr['highlight'] = True
+    subgraph.node[u]['highlight'] = True
+    subgraph.node[v]['highlight'] = True
+
     write_dot(subgraph, str(target / graphfile))
 
     table = (HtmlTable()
@@ -443,9 +453,9 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
     write_html(target / reportfile,
                f"""
-               <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>
-               {counter_html}
                {table.format_table()}
+               {counter_html}
+               <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>
                """,
                graph_id='refgraph',
                head=f'Entfernte Kante {u} → {v}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
