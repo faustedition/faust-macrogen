@@ -35,6 +35,7 @@ RELATION_LABELS = {'not_before': 'nicht vor',
                    None: '???'
                    }
 
+
 class HtmlTable:
     """
     Helper class to create a simple HTML table from some kind of data.
@@ -103,7 +104,8 @@ class HtmlTable:
 
     @staticmethod
     def _build_attrs(attrdict: Dict):
-        return ''.join(' {}="{}"'.format(attr.strip('_').replace('-', '_'), escape(value)) for attr, value in attrdict.items())
+        return ''.join(
+                ' {}="{}"'.format(attr.strip('_').replace('-', '_'), escape(value)) for attr, value in attrdict.items())
 
     def _format_column(self, index, data):
         attributes = self._build_attrs(self.attrs[index])
@@ -112,7 +114,8 @@ class HtmlTable:
 
     def _format_row(self, row: Iterable, **rowattrs) -> str:
         attributes = self._build_attrs(rowattrs)
-        return f'<tr{attributes}>' + ''.join(self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+        return f'<tr{attributes}>' + ''.join(
+                self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
 
     def _format_rows(self, rows: Iterable[Iterable]):
         for row in rows:
@@ -143,12 +146,14 @@ class HtmlTable:
             rows = self.rows
             row_attrs = self.row_attrs
         if row_attrs is None:
-            row_attrs=repeat({})
-        return self._format_header() + ''.join((self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
+            row_attrs = repeat({})
+        return self._format_header() + ''.join(
+                (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
-def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str,str]] = [], graph_id: str = None,
-               graph_options: Dict[str,object] = dict(controlIconsEnabled=True)) -> object:
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
+               graph_id: str = None,
+               graph_options: Dict[str, object] = dict(controlIconsEnabled=True)) -> object:
     """
     Writes a html page.
     Args:
@@ -213,7 +218,7 @@ def report_components(graphs: MacrogenesisInfo):
 
 
 def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern='%d'):
-    table = HtmlTable().column('Nummer', format_spec='<a href="'+pattern+'">{0}</a>') \
+    table = HtmlTable().column('Nummer', format_spec='<a href="' + pattern + '">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
         .column('Entfernte Relationen') \
@@ -227,7 +232,7 @@ def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern=
         sources = {attr['source'].citation for u, v, k, attr in relations if 'source' in attr}
         conflict_sources = {attr['source'].citation for u, v, k, attr in removed_edges}
         table.row((index, refs, len(relations), len(removed_edges), sources, conflict_sources))
-        write_dot(subgraph, out / (pattern+"-graph.dot").format(index))
+        write_dot(subgraph, out / (pattern + "-graph.dot").format(index))
         write_html(out / (pattern + '.php').format(index),
                    f"""<object id="refgraph" class="refgraph" type="image/svg+xml" 
                           data="{pattern.format(index)}-graph.svg"></object>\n""",
@@ -255,6 +260,7 @@ def _fmt_node(node):
     else:
         return format(node)
 
+
 def _edition_link(ref: Reference):
     if isinstance(ref, Witness):
         return f'<a href="/document?sigil={ref.sigil_t}">{ref}</a>'
@@ -266,7 +272,6 @@ def _edition_link(ref: Reference):
         return ", ".join(_edition_link(wit) for wit in ref.witnesses)
     else:
         return format(ref)
-
 
 
 def report_refs(graphs: MacrogenesisInfo):
@@ -303,9 +308,9 @@ def report_refs(graphs: MacrogenesisInfo):
 
     write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
-    #write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
-    #write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
-    #write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
+    # write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
+    # write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
+    # write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
 
 
 def _report_single_ref(index, ref, graphs, overview):
@@ -393,13 +398,15 @@ def report_missing(graphs: MacrogenesisInfo):
     missing_table = (HtmlTable()
                      .column('Zeuge ohne Daten', format_spec=_edition_link)
                      .column('Inskriptionen', format_spec=lambda refs: ", ".join(map(_fmt_node, refs))))
-    report += missing_table.format_table((ref, wits_with_inscr[ref]) for ref in sorted(missing_wits, key=lambda r: r.sort_tuple()))
+    report += missing_table.format_table(
+            (ref, wits_with_inscr[ref]) for ref in sorted(missing_wits, key=lambda r: r.sort_tuple()))
     report += '\n<h3 id="unknown">Unbekannte Referenzen</h3>'
     unknown_table = (HtmlTable()
                      .column('Referenz')
                      .column('URI'))
     report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
     write_html(target / 'missing.php', report, head="Fehlendes")
+
 
 def _path_link(*nodes) -> Path:
     node_names: List[str] = []
@@ -417,7 +424,7 @@ def _path_link(*nodes) -> Path:
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
     reportfile = _path_link(u, v)
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
-    relevant_nodes =   {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
+    relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
     counter_path = []
     try:
@@ -462,6 +469,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
     return reportfile
 
+
 def report_conflicts(graphs: MacrogenesisInfo):
     table = (HtmlTable()
              .column('#')
@@ -471,13 +479,14 @@ def report_conflicts(graphs: MacrogenesisInfo):
              .column('Quelle')
              .column('Kommentare', format_spec="/".join)
              .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
-    removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if 'delete' in attr and attr['delete']]
+    removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
+                     'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
         reportfile = _report_conflict(graphs, u, v)
         table.row((f"""<a href="{reportfile.stem}">{index}</a>""",
-                   u+DAY if isinstance(u, date) else u,
+                   u + DAY if isinstance(u, date) else u,
                    attr['kind'],
-                   v-DAY if isinstance(v, date) else v,
+                   v - DAY if isinstance(v, date) else v,
                    attr['source'],
                    attr.get('comments', []),
                    attr['xml']),
@@ -496,16 +505,16 @@ def report_sources(graphs: MacrogenesisInfo):
         return f'<a href="{source.filename}">{source}</a>'
 
     sources_table = (HtmlTable()
-                    .column('Quelle', format_spec=_fmt_source)
-                    .column('Aussagen')
-                    .column('Zeugen'))
+                     .column('Quelle', format_spec=_fmt_source)
+                     .column('Aussagen')
+                     .column('Zeugen'))
     for uri, edges in sorted(by_source.items()):
         source = BiblSource(uri)
         filename = target / (source.filename + '.php')
         graphfile = filename.with_name(filename.stem + '-graph.dot')
         logger.info('%d assertions from %s', len(edges), source.citation)
         # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
-        subgraph = graphs.base.subgraph({u for u,v,k,attr in edges} | {v for u,v,k,attr in edges})
+        subgraph = graphs.base.subgraph({u for u, v, k, attr in edges} | {v for u, v, k, attr in edges})
         write_dot(subgraph, graphfile)
         sources_table.row((uri, len(edges), len([node for node in subgraph.nodes if isinstance(node, Reference)])))
         current_table = (HtmlTable()
@@ -570,8 +579,6 @@ def report_index(graphs):
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
 
-
-
 def report_help():
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
         G = nx.MultiDiGraph() if extend is None else extend.copy()
@@ -587,13 +594,14 @@ def report_help():
     g1 = demo_graph(w1, w2, kind='temp-pre', label='Quelle 1')
     g1a = g1.copy()
     g1a.add_edge(w2, w1, kind='temp-pre', delete=True, label='Quelle 2')
+    g1a.add_edge(w2, w1, kind='temp-pre', ignore=True, label='Quelle 3')
     g2 = demo_graph(w1, w2, kind='temp-syn', label='Quelle 2')
     g3 = demo_graph(d1 - DAY, w1, kind='not_before', source='Quelle 1')
-    g3.add_edge(w1, d2+DAY, kind='not_after', source='Quelle 1')
+    g3.add_edge(w1, d2 + DAY, kind='not_after', source='Quelle 1')
     g4 = demo_graph(d1 - DAY, w1, kind='from_', source='Quelle 2')
-    g4.add_edge(w1, d2+DAY, kind='to_', source='Quelle 2')
+    g4.add_edge(w1, d2 + DAY, kind='to_', source='Quelle 2')
     g5 = demo_graph(d3 - DAY, w2, kind='when', source='Quelle 2')
-    g5.add_edge(w2, d3+DAY, kind='when', source='Quelle 2')
+    g5.add_edge(w2, d3 + DAY, kind='when', source='Quelle 2')
 
     i1 = Witness.get('faust://inscription/faustedition/2_IV_H.19/i_uebrige')
     i1w = i1.witness
@@ -620,7 +628,8 @@ def report_help():
         <tr><td><img src="help-conflict.svg" /></td>
             <td>Laut Quelle 1 entstand {w1} vor {w2}, 
                 laut Quelle 2 entstand {w2} vor {w1}. 
-                Diese Aussage von Quelle 2 wird nicht berücksichtigt.</td></tr>
+                Diese Aussage von Quelle 2 wird nicht berücksichtigt.
+                Die Aussage von Quelle Quelle 3 wird von vornherein ignoriert.</td></tr>
         <tr><td><img src="help-syn.svg"/></td>
             <td>Laut Quelle 2 entstand {w1} etwa zeitgleich zu {w2}.</td></tr>
         <tr><td><img src="help-dating.svg"/></td>
@@ -646,8 +655,8 @@ def write_order_xml(graphs):
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
             *[F.item(format(witness), index=format(index), uri=witness.uri, sigil_t=witness.sigil_t)
-                    for index, witness in enumerate(graphs.order_refs(), start=1)
-                    if isinstance(witness, Witness)],
-                   generated=datetime.now().isoformat())
+              for index, witness in enumerate(graphs.order_refs(), start=1)
+              if isinstance(witness, Witness)],
+            generated=datetime.now().isoformat())
     target.mkdir(parents=True, exist_ok=True)
     root.getroottree().write(str(target / 'order.xml'), pretty_print=True)
