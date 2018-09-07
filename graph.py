@@ -286,8 +286,6 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
         cycles = list(nx.simple_cycles(dag))
         logger.error('It contains %d simple cycles', len(cycles))
 
-    deleted = base.edge_subgraph(base.edges - dag.edges).edges(keys=True, data=True)
-    mark_edges_to_delete(base, deleted)
     logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
 
     closure = nx.transitive_closure(dag)
