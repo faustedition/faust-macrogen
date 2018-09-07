@@ -35,7 +35,12 @@ edge:
   delete:
     constraint: false  # do not consider them for ranking
     color: red
+    fontcolor: red
     style: dashed
+  ignore:
+    constraint: false
+    color: '#dddddd'
+    fontcolor: '#dddddd'
   # additional style for highlighted edges. Currently only used in the conflict graphs.
   highlight:
     penwidth: 3

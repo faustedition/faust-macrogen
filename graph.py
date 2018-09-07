@@ -104,8 +104,12 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
 
 def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
     """Marks edges to delete by setting their 'delete' attribute to True. Modifies the given graph."""
-    for u, v, k, _ in edges:
-        graph.edges[u, v, k]['delete'] = True
+    mark_edges(graph, edges, delete=True)
+
+
+def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], **new_attrs):
+    for u, v, k, *_ in edges:
+        graph.edges[u, v, k].update(new_attrs)
 
 
 def add_edge_weights(graph: nx.MultiDiGraph):
@@ -302,6 +306,11 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     def is_syn(u, v, attr):
         return attr['kind'] == 'temp-syn'
 
-    without_hertz = remove_edges(A, is_hertz)
-    without_syn = remove_edges(without_hertz, is_syn)
-    return without_syn
+    def is_ignored(u, v, attr):
+        return attr.get('ignore', False)
+
+    for u, v, k, attr in A.edges(keys=True, data=True):
+        if is_hertz(u, v, attr) or is_syn(u, v, attr):
+            attr['ignore'] = True
+
+    return remove_edges(A, is_ignored)
