@@ -98,14 +98,18 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
             kind = attr.get('kind', None)
             if kind in style['edge']:
                 simplified.edges[u, v, k].update(style['edge'][kind])
-            if attr.get('delete', False) and 'delete' in style['edge']:
-                simplified.edges[u, v, k].update(style['edge']['delete'])
+            for styled_attr in attr.keys() & style['edge']:
+                if attr[styled_attr]:
+                    simplified.edges[u, v, k].update(style['edge'][styled_attr])
 
     if 'node' in style:
         for node, attr in simplified.nodes(data=True):
             kind = attr.get('kind', None)
             if kind in style['node']:
-                    simplified.nodes[node].update(style['node'][kind])
+                simplified.nodes[node].update(style['node'][kind])
+            for styled_attr in attr.keys() & style['node']:
+                if attr[styled_attr]:
+                    attr.update(style['node'][styled_attr])
 
     if not edge_labels:
         for u, v, k, attr in simplified.edges(data=True, keys=True):
