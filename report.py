@@ -312,7 +312,6 @@ def report_refs(graphs: MacrogenesisInfo):
     # write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
     # write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
 
-
 def _report_single_ref(index, ref, graphs, overview):
     assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
     conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
@@ -578,7 +577,6 @@ def report_index(graphs):
                graph_id='refgraph', head='Transitive Reduktion',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
-
 def report_help():
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
         G = nx.MultiDiGraph() if extend is None else extend.copy()
@@ -649,12 +647,32 @@ def report_help():
 
     write_html(target / 'help.php', report, 'Legende')
 
+def _yearlabel(ref: Reference):
+    earliest_year = ref.earliest.year
+    latest_year = ref.latest.year
+    if earliest_year == latest_year:
+        return str(earliest_year)
+    else:
+        sep = " … "
+        result = ""
+        if ref.earliest != EARLIEST:
+            result += str(earliest_year)
+        result += sep
+        if ref.latest != LATEST:
+            result += str(latest_year)
+        return result if result != sep else ""
 
 def write_order_xml(graphs):
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=faust.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
-            *[F.item(format(witness), index=format(index), uri=witness.uri, sigil_t=witness.sigil_t)
+            *[F.item(format(witness),
+                     index=format(index),
+                     uri=witness.uri,
+                     sigil_t=witness.sigil_t,
+                     earliest=witness.earliest.isoformat() if witness.earliest != EARLIEST else '',
+                     latest=witness.latest.isoformat() if witness.latest != LATEST else '',
+                     yearlabel=_yearlabel(witness))
               for index, witness in enumerate(graphs.order_refs(), start=1)
               if isinstance(witness, Witness)],
             generated=datetime.now().isoformat())
