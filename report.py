@@ -702,7 +702,12 @@ class ByScene:
             scene_wits = [(index, wit) for index, wit in self.ordering if self.relevant(wit, start, end)]
             for index, witness in scene_wits:
                 witnessTable.reference(witness, index)
-            scene_subgraph = self.graphs.base.subgraph([wit for _, wit in scene_wits])
+            scene_wits = {wit for _, wit in scene_wits}
+            scene_nodes = scene_wits | {node   for wit in scene_wits if wit in self.graphs.base
+                                        for node in chain(self.graphs.base.predecessors(wit),
+                                                          self.graphs.base.successors(wit))
+                                        if isinstance(node, date)}
+            scene_subgraph = self.graphs.base.subgraph(scene_nodes)
             basename = 'scene_' + scene.get('n').replace('.', '-')
             subgraph_page = Path(basename + '-subgraph.php')
             graph_name = Path(basename + '-graph.dot')
