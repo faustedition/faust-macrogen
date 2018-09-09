@@ -206,6 +206,9 @@ class MacrogenesisInfo:
         nodes = nx.lexicographical_topological_sort(self.dag, key=secondary_key)
         refs = [node for node in nodes if isinstance(node, Reference)]
         self._order = refs
+        for index, ref in enumerate(refs):
+            if ref in self.base.node:
+                self.base.node[ref]['index'] = index
         return refs
 
     def _augment_details(self):

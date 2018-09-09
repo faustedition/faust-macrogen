@@ -2,6 +2,8 @@ import json
 from datetime import timedelta, date, datetime
 from itertools import chain, repeat
 
+import requests
+from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
@@ -98,6 +100,8 @@ class HtmlTable:
         Returns:
             self
         """
+        if len(row) > len(self.formatters):
+            raise IndexError('{} values in row, but only {} formatters: {}', len(row), len(self.formatters), row)
         self.rows.append(row)
         self.row_attrs.append(row_attrs)
         return self
@@ -151,9 +155,9 @@ class HtmlTable:
                 (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
-def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str,str]] = [],
                graph_id: str = None,
-               graph_options: Dict[str, object] = dict(controlIconsEnabled=True)) -> object:
+               graph_options: Dict[str,object] = dict(controlIconsEnabled=True)) -> None:
     """
     Writes a html page.
     Args:
@@ -274,6 +278,91 @@ def _edition_link(ref: Reference):
         return format(ref)
 
 
+class RefTable(HtmlTable):
+
+    def __init__(self, base: nx.MultiDiGraph, **table_attrs):
+        super().__init__(**table_attrs)
+        (self.column('Nr.')
+             .column('Knoten davor')
+             .column('Objekt', format_spec=_fmt_node)
+             .column('Typ / Edition', format_spec=_edition_link)
+             .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "")
+             .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "")
+             .column('erster Vers')
+             .column('Aussagen')
+             .column('<a href="conflicts">Konflikte</a>'))
+        self.base = base
+
+
+    def reference(self, ref, index=None, write_subpage=False):
+        if ref in self.base:
+            if index is None:
+                index = self.base.node[ref]['index']
+            assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
+            conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
+            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
+                          getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
+                         id=f'idx{index}', class_=type(ref).__name__)
+            if write_subpage:
+                self._last_ref_subpage(DAY, ref)
+        else:
+            self.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
+                         class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
+
+    def _last_ref_subpage(self, DAY, ref):
+        """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
+        basename = target / ref.filename
+        relevant_nodes = {ref} | set(self.base.predecessors(ref)) | set(self.base.successors(ref))
+        if ref.earliest != EARLIEST:
+            relevant_nodes |= set(nx.shortest_path(self.base, ref.earliest - DAY, ref))
+        if ref.latest != LATEST:
+            relevant_nodes |= set(nx.shortest_path(self.base, ref, ref.latest + DAY))
+        ref_subgraph = self.base.subgraph(relevant_nodes)
+        write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
+        report = f"<!-- {repr(ref)} -->\n"
+        report += self.format_table(self.rows[-1:])
+        report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
+        kinds = {'not_before': 'nicht vor',
+                 'not_after': 'nicht nach',
+                 'from_': 'von',
+                 'to': 'bis',
+                 'when': 'am',
+                 'temp-syn': 'ca. gleichzeitig',
+                 'temp-pre': 'entstanden nach',
+                 'orphan': '(Verweis)',
+                 None: '???'
+                 }
+        assertionTable = (HtmlTable()
+                          .column('berücksichtigt?')
+                          .column('Aussage')
+                          .column('Bezug', format_spec=_fmt_node)
+                          .column('Quelle')
+                          .column('Kommentare', format_spec="/".join)
+                          .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+        for (u, v, attr) in self.base.in_edges(ref, data=True):
+            delete_ = 'delete' in attr and attr['delete']
+            assertionTable.row((f'<a href="{_path_link(u, v).stem}">nein</a>' if delete_ else 'ja',
+                                kinds[attr['kind']],
+                                u + DAY if isinstance(u, date) else u,
+                                attr['source'],
+                                attr.get('comments', []),
+                                attr['xml']),
+                               class_='delete' if delete_ else str(attr['kind']))
+        kinds['temp-pre'] = 'entstanden vor'
+        for (u, v, attr) in self.base.out_edges(ref, data=True):
+            delete_ = 'delete' in attr and attr['delete']
+            assertionTable.row(('nein' if delete_ else 'ja',
+                                kinds[attr['kind']],
+                                v - DAY if isinstance(v, date) else v,
+                                attr['source'],
+                                attr.get('comments', []),
+                                attr['xml']),
+                               class_='delete' if delete_ else str(attr['kind']))
+        write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
+                   breadcrumbs=[dict(caption='Referenzen', link='refs')],
+                   head=str(ref), graph_id='refgraph')
+
+
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
 
@@ -288,88 +377,16 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
 
     refs = graphs.order_refs()
-    overview = (HtmlTable()
-                .column('Nr.')
-                .column('Knoten davor')
-                .column('Objekt', format_spec=_fmt_node)
-                .column('Typ / Edition', format_spec=_edition_link)
-                .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "")
-                .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "")
-                .column('erster Vers')
-                .column('Aussagen')
-                .column('<a href="conflicts">Konflikte</a>'))
+    overview = RefTable(graphs.base)
 
     for index, ref in enumerate(refs, start=1):
-        if ref in graphs.base:
-            _report_single_ref(index, ref, graphs, overview)
-        else:
-            overview.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
-                         class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
+        overview.reference(ref, index, write_subpage=True)
 
     write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
 
     # write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
     # write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
     # write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
-
-def _report_single_ref(index, ref, graphs, overview):
-    assertions = list(chain(graphs.base.in_edges(ref, data=True), graphs.base.out_edges(ref, data=True)))
-    conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-    overview.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
-                  getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
-                 id=f'idx{index}', class_=type(ref).__name__)
-    DAY = timedelta(days=1)
-    basename = target / ref.filename
-    relevant_nodes = {ref} | set(graphs.base.predecessors(ref)) | set(graphs.base.successors(ref))
-    if ref.earliest != EARLIEST:
-        relevant_nodes |= set(nx.shortest_path(graphs.base, ref.earliest - DAY, ref))
-    if ref.latest != LATEST:
-        relevant_nodes |= set(nx.shortest_path(graphs.base, ref, ref.latest + DAY))
-    ref_subgraph = graphs.base.subgraph(relevant_nodes)
-    write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
-    report = f"<!-- {repr(ref)} -->\n"
-    report += overview.format_table(overview.rows[-1:])
-    report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
-    kinds = {'not_before': 'nicht vor',
-             'not_after': 'nicht nach',
-             'from_': 'von',
-             'to': 'bis',
-             'when': 'am',
-             'temp-syn': 'ca. gleichzeitig',
-             'temp-pre': 'entstanden nach',
-             'orphan': '(Verweis)',
-             None: '???'
-             }
-    assertionTable = (HtmlTable()
-                      .column('berücksichtigt?')
-                      .column('Aussage')
-                      .column('Bezug', format_spec=_fmt_node)
-                      .column('Quelle')
-                      .column('Kommentare', format_spec="/".join)
-                      .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
-    for (u, v, attr) in graphs.base.in_edges(ref, data=True):
-        delete_ = 'delete' in attr and attr['delete']
-        assertionTable.row((f'<a href="{_path_link(u, v).stem}">nein</a>' if delete_ else 'ja',
-                            kinds[attr['kind']],
-                            u + DAY if isinstance(u, date) else u,
-                            attr['source'],
-                            attr.get('comments', []),
-                            attr['xml']),
-                           class_='delete' if delete_ else str(attr['kind']))
-    kinds['temp-pre'] = 'entstanden vor'
-    for (u, v, attr) in graphs.base.out_edges(ref, data=True):
-        delete_ = 'delete' in attr and attr['delete']
-        assertionTable.row(('nein' if delete_ else 'ja',
-                            kinds[attr['kind']],
-                            v - DAY if isinstance(v, date) else v,
-                            attr['source'],
-                            attr.get('comments', []),
-                            attr['xml']),
-                           class_='delete' if delete_ else str(attr['kind']))
-    write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
-               breadcrumbs=[dict(caption='Referenzen', link='refs')],
-               head=str(ref), graph_id='refgraph')
-
 
 def _invert_mapping(mapping: Mapping) -> Dict:
     result = defaultdict(set)
@@ -661,6 +678,63 @@ def _yearlabel(ref: Reference):
         if ref.latest != LATEST:
             result += str(latest_year)
         return result if result != sep else ""
+
+
+class ByScene:
+    def __init__(self, graphs: MacrogenesisInfo):
+        scene_xml = etree.parse('scenes.xml')
+        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=faust.namespaces)
+        bargraph_info = requests.get('http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
+        self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in bargraph_info}
+        self.ordering = list(enumerate(graphs.order_refs()))
+        self.graphs = graphs
+
+    def report(self):
+        sceneTable = (HtmlTable()
+                      .column('#')
+                      .column('Szene')
+                      .column('Verse', format_spec=lambda t: '{} – {}'.format(*t))
+                      .column('Zeugen'))
+        for scene in self.scenes:
+            witnessTable = RefTable(self.graphs.base)
+            title = scene.xpath('f:title/text()', namespaces=faust.namespaces)[0]
+            start, end = int(scene.get('first-verse')), int(scene.get('last-verse'))
+            scene_wits = [(index, wit) for index, wit in self.ordering if self.relevant(wit, start, end)]
+            for index, witness in scene_wits:
+                witnessTable.reference(witness, index)
+            scene_subgraph = self.graphs.base.subgraph([wit for _, wit in scene_wits])
+            basename = 'scene_' + scene.get('n').replace('.', '-')
+            subgraph_page = Path(basename + '-subgraph.php')
+            graph_name = Path(basename + '-graph.dot')
+            sceneTable.row((scene.get('n'), f'<a href="{basename}">{title}</a>', (start, end), len(scene_wits)))
+            write_dot(scene_subgraph, target / graph_name)
+            write_html(target / subgraph_page,
+                       f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix('.svg')}"></object>""",
+                       graph_id='refgraph',
+                       head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
+                                                        dict(caption=title, link=basename)])
+            write_html(target / (basename + '.php'),
+                       f"""
+                       <p><a href="{subgraph_page.stem}">Szenengraph</a> · 
+                       <a href="/genesis_bargraph?rangeStart={start}&amp;rangeEnd={end}">Balkendiagramm</a></p>
+                       {witnessTable.format_table()}""",
+                       head=title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
+        write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
+
+    def relevant(self, witness: Reference, first_verse: int, last_verse: int) -> bool:
+        try:
+            for interval in self.intervals[witness]:
+                if first_verse <= interval['start'] <= last_verse or \
+                        first_verse <= interval['end'] <= last_verse or \
+                        interval['start'] <= first_verse <= interval['end']  or \
+                        interval['start'] <= last_verse <= interval['end']:
+                    return True
+        except KeyError:
+            return False
+        return False
+
+def report_scenes(graphs):
+    ByScene(graphs).report()
 
 def write_order_xml(graphs):
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=faust.namespaces)

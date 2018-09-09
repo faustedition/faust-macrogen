@@ -18,6 +18,7 @@ def _main(argv=sys.argv):
 
     report.report_help()
     report.report_refs(graphs)
+    report.report_scenes(graphs)
     report.report_missing(graphs)
     report.report_components(graphs)
     report.report_conflicts(graphs)
@@ -27,6 +28,6 @@ def _main(argv=sys.argv):
 
 
 if __name__ == '__main__':
-#    import requests_cache
-#    requests_cache.install_cache(expire_after=86400)
+    import requests_cache
+    requests_cache.install_cache(expire_after=86400)
     _main()
