@@ -76,6 +76,8 @@ class BiblSource:
 
     def __init__(self, uri, detail=''):
         self.uri = uri
+        if detail is None:
+            detail = ''
         self.detail = detail
         self.weight = _bib_db[uri].weight if uri in _bib_db else 1
 

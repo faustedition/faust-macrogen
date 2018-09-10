@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta, date, datetime
-from itertools import chain, repeat
+from itertools import chain, repeat, groupby
+from operator import itemgetter
 
 import requests
 from lxml import etree
@@ -15,7 +16,7 @@ import csv
 from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union
 
 import networkx as nx
 
@@ -363,6 +364,52 @@ class RefTable(HtmlTable):
                    head=str(ref), graph_id='refgraph')
 
 
+class AssertionTable(HtmlTable):
+
+    def __init__(self, **table_attrs):
+        super().__init__(**table_attrs)
+        (self.column('berücksichtigt?')
+             .column('Subjekt', _fmt_node)
+             .column('Relation', RELATION_LABELS.get)
+             .column('Objekt', _fmt_node)
+             .column('Quelle', self._fmt_source)
+             .column('Kommentare', ' / '.join)
+             .column('XML', _fmt_xml))
+
+    def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
+        self.row((
+            f'<a href="{_path_link(u, v)}">nein</a>' if attr.get('delete', False) else \
+                'ignoriert' if attr.get('ignore', False) else 'ja',
+            u,
+            attr['kind'],
+            v,
+            attr,
+            attr.get('comment', ''),
+            attr.get('xml', '')
+        ))
+
+    @staticmethod
+    def _fmt_source(attrs):
+        source: BiblSource = attrs['source']
+        result = f'<a href="{source.filename}">{source.citation}</a>'
+        if 'sources' in attrs:
+            result += ' ' + '; '.join(s.detail for s in attrs['sources'])
+        return result
+
+
+def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
+    if not xml:
+        return ""
+    if isinstance(xml[0], str):
+        return f"{xml[0].replace('macrogenesis/', '')}: {xml[1]}"
+    else:
+        result = []
+        for file, lines in groupby(xml, itemgetter(0)):
+            result.append(file.replace('macrogenesis/', '') + ': ' + ", ".join(map(str, map(itemgetter(1), lines))))
+        return "; ".join(result)
+
+
+
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
 
@@ -464,15 +511,9 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
     write_dot(subgraph, str(target / graphfile))
 
-    table = (HtmlTable()
-             .column('u', format_spec=_fmt_node)
-             .column('Relation', format_spec=RELATION_LABELS.get)
-             .column('v', format_spec=_fmt_node)
-             .column('Quelle')
-             .column('Kommentare', format_spec="/".join)
-             .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+    table = AssertionTable()
     for k, attr in graphs.base.get_edge_data(u, v).items():
-        table.row((u, attr['kind'], v, attr['source'], attr.get('comments', [])))
+        table.edge(u, v, attr)
 
     write_html(target / reportfile,
                f"""
@@ -487,26 +528,12 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
 
 def report_conflicts(graphs: MacrogenesisInfo):
-    table = (HtmlTable()
-             .column('#')
-             .column('u', format_spec=_fmt_node)
-             .column('Relation', format_spec=RELATION_LABELS.get)
-             .column('v', format_spec=_fmt_node)
-             .column('Quelle')
-             .column('Kommentare', format_spec="/".join)
-             .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+    table = AssertionTable()
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
                      'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
         reportfile = _report_conflict(graphs, u, v)
-        table.row((f"""<a href="{reportfile.stem}">{index}</a>""",
-                   u + DAY if isinstance(u, date) else u,
-                   attr['kind'],
-                   v - DAY if isinstance(v, date) else v,
-                   attr['source'],
-                   attr.get('comments', []),
-                   attr['xml']),
-                  class_=attr['kind'])
+        table.edge(u, v, attr)
     write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
 
 
@@ -533,15 +560,9 @@ def report_sources(graphs: MacrogenesisInfo):
         subgraph = graphs.base.subgraph({u for u, v, k, attr in edges} | {v for u, v, k, attr in edges})
         write_dot(subgraph, graphfile)
         sources_table.row((uri, len(edges), len([node for node in subgraph.nodes if isinstance(node, Reference)])))
-        current_table = (HtmlTable()
-                         .column('u', format_spec=_fmt_node)
-                         .column('Relation')
-                         .column('v', format_spec=_fmt_node)
-                         .column('Stelle(n)')
-                         .column('XML'))
+        current_table = AssertionTable()
         for u, v, k, attr in edges:
-            current_table.row((u, attr['kind'], v,
-                               attr['source'], attr['xml']))
+            current_table.edge(u, v, attr)
         write_html(target / (source.filename + '.php'),
                    f"""<object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
                        {current_table.format_table()}""",
