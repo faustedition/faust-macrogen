@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="scenes.rnc" type="application/relax-ng-compact-syntax"?>
+<scene-info xmlns="http://www.faustedition.net/ns">
+   <scene n="1.0.1" first-verse="1" last-verse="32">
+      <title>Zueignung</title>
+   </scene>
+   <scene n="1.0.2" first-verse="33" last-verse="242">
+      <title>Vorspiel auf dem Theater</title>
+   </scene>
+   <scene n="1.0.3" first-verse="243" last-verse="353">
+      <title>Prolog im Himmel</title>
+   </scene>   
+   <part n="1.1">
+      <title>Der Tragödie erster Teil</title>
+      <scene n="1.1.1" first-verse="354" last-verse="807">
+         <title>Nacht</title>
+      </scene>
+      <scene n="1.1.2" first-verse="808" last-verse="1177">
+         <title>Vor dem Tor</title>
+      </scene>
+      <scene n="1.1.3" first-verse="1178" last-verse="1529">
+         <title>Studierzimmer I</title>
+      </scene>
+      <scene n="1.1.4" first-verse="1530" last-verse="2072">
+         <title>Studierzimmer II</title>
+      </scene>
+      <scene n="1.1.5" first-verse="2073" last-verse="2336">
+         <title>Auerbachs Keller</title>
+      </scene>
+      <scene n="1.1.6" first-verse="2337" last-verse="2604">
+         <title>Hexenküche</title>
+      </scene>
+      <scene n="1.1.7" first-verse="2605" last-verse="2677">
+         <title>Straße</title>
+      </scene>
+      <scene n="1.1.8" first-verse="2678" last-verse="2804">
+         <title>Abend</title>
+      </scene>
+      <scene n="1.1.9" first-verse="2805" last-verse="2864">
+         <title>Spaziergang</title>
+      </scene>
+      <scene n="1.1.10" first-verse="2865" last-verse="3024">
+         <title>Der Nachbarin Haus</title>
+      </scene>
+      <scene n="1.1.11" first-verse="3025" last-verse="3072">
+         <title>Straße</title>
+      </scene>
+      <scene n="1.1.12" first-verse="3073" last-verse="3204">
+         <title>Garten</title>
+      </scene>
+      <scene n="1.1.13" first-verse="3205" last-verse="3216">
+         <title>Ein Gartenhäuschen</title>
+      </scene>
+      <scene n="1.1.14" first-verse="3217" last-verse="3373">
+         <title>Wald und Höhle</title>
+      </scene>
+      <scene n="1.1.15" first-verse="3374" last-verse="3413">
+         <title>Gretchens Stube</title>
+      </scene>
+      <scene n="1.1.16" first-verse="3414" last-verse="3543">
+         <title>Marthens Garten</title>
+      </scene>
+      <scene n="1.1.17" first-verse="3544" last-verse="3586">
+         <title>Am Brunnen</title>
+      </scene>
+      <scene n="1.1.18" first-verse="3587" last-verse="3619">
+         <title>Zwinger</title>
+      </scene>
+      <scene n="1.1.19" first-verse="3620" last-verse="3775">
+         <title>Nacht</title>
+      </scene>
+      <scene n="1.1.20" first-verse="3776" last-verse="3834">
+         <title>Dom</title>
+      </scene>
+      <scene n="1.1.21" first-verse="3835" last-verse="4222">
+         <title>Walpurgisnacht</title>
+      </scene>
+      <scene n="1.1.22" first-verse="4223" last-verse="4398">
+         <title>Walpurgisnachtstraum</title>
+      </scene>
+      <scene n="1.1.23">
+         <title>Trüber Tag. Feld</title>
+      </scene>
+      <scene n="1.1.24" first-verse="4399" last-verse="4404">
+         <title>Nacht, offen Feld</title>
+      </scene>
+      <scene n="1.1.25" first-verse="4405" last-verse="4612">
+         <title>Kerker</title>
+      </scene>
+   </part>
+   <part n="2">
+      <title>Der Tragödie zweiter Teil</title>
+      <act n="2.1">
+         <title>Erster Akt</title>
+         <scene n="2.1.1" first-verse="4613" last-verse="4727">
+            <title>Anmutige Gegend</title>
+         </scene>
+         <scene n="2.1.2">
+            <title>Kaiserliche Pfalz</title>
+            <scene n="2.1.2.1" first-verse="4728" last-verse="5064">
+               <title>Saal des Thrones</title>
+            </scene>
+            <scene n="2.1.2.2" first-verse="5065" last-verse="5986">
+               <title>Weitläufiger Saal</title>
+            </scene>
+            <scene n="2.1.2.3" first-verse="5987" last-verse="6172">
+               <title>Lustgarten</title>
+            </scene>
+            <scene n="2.1.2.4" first-verse="6173" last-verse="6306">
+               <title>Finstere Galerie</title>
+            </scene>
+            <scene n="2.1.2.5" first-verse="6307" last-verse="6376">
+               <title>Hell erleuchtete Säle</title>
+            </scene>
+            <scene n="2.1.2.6" first-verse="6377" last-verse="6565">
+               <title>Rittersaal</title>
+            </scene>
+         </scene>
+      </act>
+      <act n="2.2">
+         <title>Zweiter Akt</title>
+         <scene n="2.2.1" first-verse="6566" last-verse="6818">
+            <title>Hochgewölbtes Zimmer</title>
+         </scene>
+         <scene n="2.2.2" first-verse="6819" last-verse="7004">
+            <title>Laboratorium</title>
+         </scene>
+         <scene n="2.2.3">
+            <title>Klassische Walpurgisnacht</title>
+            <scene n="2.2.3.1" first-verse="7005" last-verse="7248">
+               <title>Pharsalische Felder</title>
+            </scene>
+            <scene n="2.2.3.2" first-verse="7249" last-verse="7494">
+               <title>Peneius</title>
+            </scene>
+            <scene n="2.2.3.3" first-verse="7495" last-verse="8033">
+               <title>Am obern Peneios</title>
+            </scene>
+            <scene n="2.2.3.4" first-verse="8034" last-verse="8274">
+               <title>Felsbuchten des ägäischen Meers</title>
+            </scene>
+            <scene n="2.2.3.5" first-verse="8275" last-verse="8487">
+               <title>Telchinen von Rhodus</title>
+            </scene>
+         </scene>
+      </act>
+      <act n="2.3">
+         <title>Dritter Akt</title>
+         <scene n="2.3.1" first-verse="8488" last-verse="9126">
+            <title>Vor dem Palaste des Menelas</title>
+         </scene>
+         <scene n="2.3.2" first-verse="9127" last-verse="9573">
+            <title>Innerer Burghof</title>
+         </scene>
+         <scene n="2.3.3" first-verse="9574" last-verse="10038">
+            <title>Schattiger Hain</title>
+         </scene>
+      </act>
+      <act n="2.4">
+         <title>Vierter Akt</title>
+         <scene n="2.4.1" first-verse="10039" last-verse="10344">
+            <title>Hochgebirg</title>
+         </scene>
+         <scene n="2.4.2" first-verse="10345" last-verse="10782">
+            <title>Auf dem Vorgebirg</title>
+         </scene>
+         <scene n="2.4.3" first-verse="10783" last-verse="11042">
+            <title>Des Gegenkaisers Zelt</title>
+         </scene>
+      </act>
+      <act n="2.5">
+         <title>Fünfter Akt</title>
+         <scene n="2.5.1" first-verse="11043" last-verse="11142">
+            <title>Offene Gegend</title>
+         </scene>
+         <scene n="2.5.2" first-verse="11143" last-verse="11287">
+            <title>Palast</title>
+         </scene>
+         <scene n="2.5.3" first-verse="11288" last-verse="11383">
+            <title>Tiefe Nacht</title>
+         </scene>
+         <scene n="2.5.3.1" first-verse="11384" last-verse="11510">
+            <title>Mitternacht</title>
+         </scene>
+         <scene n="2.5.4" first-verse="11511" last-verse="11603">
+            <title>Großer Vorhof des Palasts</title>
+         </scene>
+         <scene n="2.5.4.1" first-verse="11604" last-verse="11843">
+            <title>Grablegung</title>
+         </scene>
+         <scene n="2.5.5" first-verse="11844" last-verse="12111">
+            <title>Bergschluchten</title>
+         </scene>
+      </act>
+   </part>
+</scene-info>
