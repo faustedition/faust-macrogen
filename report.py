@@ -472,6 +472,15 @@ def report_missing(graphs: MacrogenesisInfo):
                      .column('URI'))
     report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
     write_html(target / 'missing.php', report, head="Fehlendes")
+    for ref in missing_wits:
+        missing_path = target / ref.filename.with_suffix('.php')
+        logger.info('Writing missing page for %s to %s', ref, missing_path)
+        write_html(missing_path,
+                   f"""
+                   <p class="pure-alert pure-alert-warning"><strong>Für {ref} liegen noch keine Makrogenesedaten vor.</strong>
+                   Ggf. fehlt auch nur die Zuordnung zur richtigen Sigle – siehe in der <a href="refs">Liste der Referenzen</a>.</p>
+                   """,
+                   head=format(ref))
 
 
 def _path_link(*nodes) -> Path:
@@ -582,7 +591,7 @@ def report_index(graphs):
              ('scenes', 'nach Szene', 'Die relevanten Zeugen für jede Szene'),
              ('conflicts', 'entfernte Aussagen', 'Aussagen, die algorithmisch als Konflikt identifiziert und entfernt wurden'),
              ('components', 'Komponenten', 'stark und schwach zusammenhängende Komponenten des Ausgangsgraphen'),
-             ('missing', 'Fehlendes', 'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen'),
+             ('missing', 'Fehlendes', 'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen, und unbekannte Zeugen'),
              ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
              ('dag', 'sortierrelevanter Gesamtgraph', 'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion', '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
