@@ -377,6 +377,9 @@ class AssertionTable(HtmlTable):
              .column('XML', _fmt_xml))
 
     def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
+        classes = [attr['kind']] if 'kind' in attr else []
+        if attr.get('ignore', False): classes.append('ignore')
+        if attr.get('delete', False): classes.append('delete')
         self.row((
             f'<a href="{_path_link(u, v)}">nein</a>' if attr.get('delete', False) else \
                 'ignoriert' if attr.get('ignore', False) else 'ja',
@@ -385,8 +388,8 @@ class AssertionTable(HtmlTable):
             v,
             attr,
             attr.get('comment', ''),
-            attr.get('xml', '')
-        ))
+            attr.get('xml', '')),
+        class_=' '.join(classes))
 
     @staticmethod
     def _fmt_source(attrs):
