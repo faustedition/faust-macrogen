@@ -577,32 +577,34 @@ def report_sources(graphs: MacrogenesisInfo):
 
 
 def report_index(graphs):
+
+    pages = [('refs', 'Zeugen', 'Alle referenzierten Dokumente in der erschlossenen Reihenfolge'),
+             ('scenes', 'nach Szene', 'Die relevanten Zeugen für jede Szene'),
+             ('conflicts', 'entfernte Aussagen', 'Aussagen, die algorithmisch als Konflikt identifiziert und entfernt wurden'),
+             ('components', 'Komponenten', 'stark und schwach zusammenhängende Komponenten des Ausgangsgraphen'),
+             ('missing', 'Fehlendes', 'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen'),
+             ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
+             ('dag', 'sortierrelevanter Gesamtgraph', 'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
+             ('tred', 'transitive Reduktion', '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
+             ('help', 'Legende', 'Legende zu den Graphen')]
+    links = "\n".join(('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page in pages))
     report = f"""
       <p>
         Dieser Bereich der Edition enthält experimentelle Informationen zur Makrogenese, er wurde zuletzt
-        am {date.today()} generiert.
+        am {datetime.now()} generiert.
       </p>
       <section class="center pure-g-r">
         
-        <div class="pure-u-1-5"></div>
-        
-        <article class="pure-u-3-5 pure-center">
-            <p>
-             <a href="refs" class="pure-button pure-button-tile">Zeugen</a>
-             <a href="conflicts" class="pure-button pure-button-tile">entfernte Relationen</a>
-             <a href="components" class="pure-button pure-button-tile">Komponenten</a>
-             <a href="missing" class="pure-button pure-button-tile">Fehlendes</a>
-             <a href="sources" class="pure-button pure-button-tile">Quellen</a>
-             <a href="dag" class="pure-button pure-button-tile">sortierrelevanter Gesamtgraph</a>
-             <a href="tred" class="pure-button pure-button-tile">transitive Reduktion</a>
-             <a href="help" class="pure-button pure-button-tile">Legende</a>
-            </p>
+        <article class="pure-u-1">
+            <table class="pure-table">
+                {links}
+            </table>
         </article>
         
-        <div class="pure-u-1-5"></div>
-
       </section>
     """
+
+
     write_html(target / "index.php", report)
     logger.info('Writing DAG ...')
     write_dot(graphs.dag, target / 'dag-graph.dot', record=True)
