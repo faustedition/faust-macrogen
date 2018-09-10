@@ -377,7 +377,7 @@ class AssertionTable(HtmlTable):
              .column('XML', _fmt_xml))
 
     def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
-        classes = [attr['kind']] if 'kind' in attr else []
+        classes = [attr['kind']] if 'kind' in attr and attr['kind'] is not None else ['unknown-kind']
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((

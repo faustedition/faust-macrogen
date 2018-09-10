@@ -282,16 +282,27 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
                        len(selfloops), ", ".join(str(u) for u, v, k, attr in selfloops))
         all_conflicting_edges.extend(selfloops)
 
-    logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
-    mark_edges_to_delete(base, all_conflicting_edges)
-
     logger.info('Building DAG from remaining data')
     dag = working.copy()
     dag.remove_edges_from(all_conflicting_edges)
+
     if not nx.is_directed_acyclic_graph(dag):
         logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_conflicting_edges))
         cycles = list(nx.simple_cycles(dag))
         logger.error('It contains %d simple cycles', len(cycles))
+    else:
+        logging.info('Double-checking removed edges ...')
+        for u, v, k, attr in list(all_conflicting_edges):
+            dag.add_edge(u, v, **attr)
+            if nx.is_directed_acyclic_graph(dag):
+                all_conflicting_edges.remove((u,v,k,attr))
+                logging.info('Added edge %s -> %s back without introducing a cycle.', u, v)
+            else:
+                dag.remove_edge(u, v)
+
+    logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
+    mark_edges_to_delete(base, all_conflicting_edges)
+
 
     logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
 
