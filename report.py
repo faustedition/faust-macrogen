@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta, date, datetime
+from datetime import date, datetime
 from itertools import chain, repeat, groupby
 from operator import itemgetter
 
@@ -10,7 +10,6 @@ from lxml.etree import Comment
 from more_itertools import pairwise
 
 from faust_logging import logging
-from graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
 
 import csv
 from collections.__init__ import defaultdict, Counter
@@ -22,6 +21,7 @@ import networkx as nx
 
 import faust
 from datings import BiblSource
+from graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
 from uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from visualize import write_dot, simplify_graph
 
@@ -342,7 +342,7 @@ class RefTable(HtmlTable):
                           .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
         for (u, v, attr) in self.base.in_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
-            assertionTable.row((f'<a href="{_path_link(u, v).stem}">nein</a>' if delete_ else 'ja',
+            assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
                                 kinds[attr['kind']],
                                 u + DAY if isinstance(u, date) else u,
                                 attr['source'],
@@ -352,7 +352,7 @@ class RefTable(HtmlTable):
         kinds['temp-pre'] = 'entstanden vor'
         for (u, v, attr) in self.base.out_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
-            assertionTable.row(('nein' if delete_ else 'ja',
+            assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
                                 kinds[attr['kind']],
                                 v - DAY if isinstance(v, date) else v,
                                 attr['source'],
@@ -381,7 +381,7 @@ class AssertionTable(HtmlTable):
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{_path_link(u, v)}">nein</a>' if attr.get('delete', False) else \
+            f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
                 'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
@@ -483,21 +483,8 @@ def report_missing(graphs: MacrogenesisInfo):
                    head=format(ref))
 
 
-def _path_link(*nodes) -> Path:
-    node_names: List[str] = []
-    for node in nodes:
-        if isinstance(node, Reference):
-            node_names.append(node.filename.stem)
-        elif isinstance(node, date):
-            node_names.append(node.isoformat())
-        else:
-            logger.warning('Unknown node type: %s (%s)', type(node), node)
-            node_names.append(str(hash(node)))
-    return Path("--".join(node_names) + '.php')
-
-
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
-    reportfile = _path_link(u, v)
+    reportfile = pathlink(u, v)
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))

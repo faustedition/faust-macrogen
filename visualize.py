@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from datings import BiblSource, add_timeline_edges
 from faust_logging import logging
+from graph import pathlink
 from uris import Reference
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,9 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
     if 'edge' in style:
         for u, v, k, attr in simplified.edges(data=True, keys=True):
             kind = attr.get('kind', None)
+            if attr.get('delete', False):
+                attr['URL'] = pathlink(u, v).stem
+                attr['target'] = '_top'
             if kind in style['edge']:
                 simplified.edges[u, v, k].update(style['edge'][kind])
             for styled_attr in attr.keys() & style['edge']:

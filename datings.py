@@ -16,7 +16,7 @@ from uris import Witness, Reference
 logger = logging.getLogger(__name__)
 
 
-def _parse_datestr(datestr: str) -> datetime.date:
+def parse_datestr(datestr: str) -> datetime.date:
     if datestr is None:
         return None
 
@@ -137,11 +137,11 @@ class AbsoluteDating(_AbstractDating):
 
     def __init__(self, el: etree._Element):
         super().__init__(el)
-        self.from_ = _parse_datestr(el.get('from', None))
-        self.to = _parse_datestr(el.get('to', None))
-        self.not_before = _parse_datestr(el.get('notBefore', None))
-        self.not_after = _parse_datestr(el.get('notAfter', None))
-        self.when = _parse_datestr(el.get('when', None))
+        self.from_ = parse_datestr(el.get('from', None))
+        self.to = parse_datestr(el.get('to', None))
+        self.not_before = parse_datestr(el.get('notBefore', None))
+        self.not_after = parse_datestr(el.get('notAfter', None))
+        self.when = parse_datestr(el.get('when', None))
         self.normalized = el.get('type', '') == 'normalized'
 
         if self.start is None and self.end is None:

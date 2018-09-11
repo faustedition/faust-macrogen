@@ -1,17 +1,16 @@
+import csv
+from collections import defaultdict
 from datetime import date, timedelta
+from pathlib import Path
+from typing import List, Callable, Any, Dict, Tuple, Union
 
+import dateutil
+import networkx as nx
 from dataclasses import dataclass
 
+from datings import base_graph, BiblSource, parse_datestr
 from faust_logging import logging
-import csv
-from collections import defaultdict, namedtuple
-from typing import List, Callable, Any, Dict, Tuple, Type, Union
-
-import networkx as nx
-
-from datings import base_graph, BiblSource
 from igraph_wrapper import to_igraph, nx_edges
-from visualize import simplify_graph, write_dot
 from uris import Reference, Inscription, Witness, AmbiguousRef
 
 logger = logging.getLogger(__name__)
@@ -19,6 +18,28 @@ logger = logging.getLogger(__name__)
 EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
 DAY = timedelta(days=1)
+
+
+def pathlink(*nodes) -> Path:
+    node_names: List[str] = []
+    for node in nodes:
+        if isinstance(node, str):
+            if node.startswith('faust://'):
+                node = Witness.get(node)
+            else:
+                try:
+                    node = parse_datestr(node)
+                except ValueError:
+                    pass
+
+        if isinstance(node, Reference):
+            node_names.append(node.filename.stem)
+        elif isinstance(node, date):
+            node_names.append(node.isoformat())
+        else:
+            logger.warning('Unknown node type: %s (%s)', type(node), node)
+            node_names.append(str(hash(node)))
+    return Path("--".join(node_names) + '.php')
 
 
 def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
@@ -61,8 +82,6 @@ def analyse_conflicts(graph):
                          " / ".join(map(str, nodes))])
                 conflicts_file.flush()
                 mark_edges_to_delete(subgraph, edges_to_remove)
-                write_dot(subgraph, f"conflict-{index:02d}.dot")
-                nx.write_graphml(simplify_graph(subgraph), f"conflict-{index:02d}.graphml")
     return [('List of conflicts', conflicts_file_name)]
 
 
