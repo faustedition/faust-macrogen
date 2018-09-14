@@ -267,7 +267,7 @@ class Witness(Reference):
             if wa_h.group(4):
                 return Inscription(wit, wa_h.group(5))
             else:
-                return wit
+                return Inscription(wit, wa_h.group(3))
 
         wa_pseudo_inscr = re.match('faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
         if wa_pseudo_inscr is not None:
