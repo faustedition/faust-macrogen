@@ -237,10 +237,16 @@ class MacrogenesisInfo:
             ref.rank = self.closure.in_degree(ref)
             max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
                                   default=EARLIEST - DAY)
+            max_abs_before_date = max((d for d, _ in self.dag.in_edges(ref) if isinstance(d, date)),
+                                  default=None)
             ref.earliest = max_before_date + DAY
+            ref.earliest_abs = max_abs_before_date + DAY if max_abs_before_date is not None else None
             min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)),
                                  default=LATEST + DAY)
+            min_abs_after_date = min((d for _, d in self.dag.out_edges(ref) if isinstance(d, date)),
+                                 default=None)
             ref.latest = min_after_date - DAY
+            ref.latest_abs = min_abs_after_date - DAY if min_abs_after_date is not None else None
 
 
 def adopt_orphans(graph: nx.MultiDiGraph):
