@@ -18,6 +18,7 @@ colorlog = "*"
 tqdm = "*"
 python-igraph = "*"
 dataclasses = "*"
+xlrd = "*"
 
 [dev-packages]
 pytest = "*"
