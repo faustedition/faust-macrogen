@@ -25,8 +25,8 @@ faust://document/fischer_lamberg/2_III_H.2_a_3,faust://document/fischer_lamberg/
 faust://document/fischer_lamberg/2_III_H.2_a_4,faust://document/fischer_lamberg/2_III_H.2a_4,unknown,"fischer-lamberg/III.xml:341, fischer-lamberg/III.xml:355, fischer-lamberg/III.xml:1547"
 faust://document/fischer_lamberg/2_III_H.2_a_5,faust://document/fischer_lamberg/2_III_H.2a_5,unknown,"fischer-lamberg/III.xml:119, fischer-lamberg/III.xml:128"
 faust://document/fischer_lamberg/2_III_H.2_a_6,faust://document/fischer_lamberg/2_III_H.2a_6,unknown,"fischer-lamberg/III.xml:65, fischer-lamberg/III.xml:81"
-faust://document/fischer_lamberg/2_III_H.30_1,,unknown,"fischer-lamberg/III.xml:481, fischer-lamberg/III.xml:502, fischer-lamberg/III.xml:527, fischer-lamberg/III.xml:541, fischer-lamberg/III.xml:625, fischer-lamberg/III.xml:638"
-faust://document/fischer_lamberg/2_III_H.30_2,,unknown,fischer-lamberg/III.xml:482
+faust://document/fischer_lamberg/2_III_H.30_1,faust://document/wa/2_III_H.30,unknown,"fischer-lamberg/III.xml:481, fischer-lamberg/III.xml:502, fischer-lamberg/III.xml:527, fischer-lamberg/III.xml:541, fischer-lamberg/III.xml:625, fischer-lamberg/III.xml:638"
+faust://document/fischer_lamberg/2_III_H.30_2,faust://document/wa/2_III_H.30,unknown,fischer-lamberg/III.xml:482
 faust://document/fischer_lamberg/2_III_H.49_a,faust://document/fischer_lamberg/2_III_H.49a,unknown,"fischer-lamberg/III.xml:1169, fischer-lamberg/III.xml:1180, fischer-lamberg/III.xml:1191, fischer-lamberg/III.xml:1201, fischer-lamberg/III.xml:1210"
 faust://document/fischer_lamberg/2_III_H.58_a,faust://document/fischer_lamberg/2_III_H.58a,unknown,"fischer-lamberg/III.xml:1057, fischer-lamberg/III.xml:1104, fischer-lamberg/III.xml:1119"
 faust://document/fischer_lamberg/2_III_H.59_a,faust://document/fischer_lamberg/2_III_H.59a,unknown,"fischer-lamberg/III.xml:1083, fischer-lamberg/III.xml:1095, fischer-lamberg/III.xml:1106, fischer-lamberg/III.xml:1113, fischer-lamberg/III.xml:1121"
@@ -35,18 +35,18 @@ faust://document/fischer_lamberg/2_III_H.69_a,faust://document/fischer_lamberg/2
 faust://document/fischer_lamberg/2_III_H.6_a,faust://document/fischer_lamberg/2_III_H.6a,unknown,fischer-lamberg/III.xml:349
 faust://document/fischer_lamberg/2_III_H.72_a,faust://document/fischer_lamberg/2_III_H.72a,unknown,fischer-lamberg/III.xml:1767
 faust://document/fischer_lamberg/2_III_H.75_a,faust://document/fischer_lamberg/2_III_H.75a,unknown,"fischer-lamberg/III.xml:1358, fischer-lamberg/III.xml:1374, fischer-lamberg/III.xml:1780"
-faust://document/fischer_lamberg/2_III_H.7_2,,unknown,fischer-lamberg/III.xml:120
-faust://document/fischer_lamberg/2_III_H.7_3,,unknown,"fischer-lamberg/III.xml:129, fischer-lamberg/III.xml:138"
-faust://document/fischer_lamberg/2_III_H.b,,unknown,handschriftendatierung_iii.xml:1188
+faust://document/fischer_lamberg/2_III_H.7_2,faust://document/fischer_lamberg/2_III_H.7__2-3,unknown,fischer-lamberg/III.xml:120
+faust://document/fischer_lamberg/2_III_H.7_3,faust://document/fischer_lamberg/2_III_H.7__2-3,unknown,"fischer-lamberg/III.xml:129, fischer-lamberg/III.xml:138"
+faust://document/fischer_lamberg/2_III_H.b,faust://document/wa/2_III_H.b,unknown,handschriftendatierung_iii.xml:1188
 faust://document/fischer_lamberg/2_II_H.27_a,faust://document/fischer_lamberg/2_II_H.27a,unknown,"fischer-lamberg/II.xml:289, fischer-lamberg/II.xml:761"
 faust://document/fischer_lamberg/2_II_H.2_b,faust://document/fischer_lamberg/2_II_H.2b,unknown,"fischer-lamberg/II.xml:18, fischer-lamberg/II.xml:651"
 faust://document/fischer_lamberg/2_II_H.2_d,faust://document/fischer_lamberg/2_II_H.2d,unknown,fischer-lamberg/II.xml:657
 faust://document/fischer_lamberg/2_II_H.4_a,faust://document/fischer_lamberg/2_II_H.4a,unknown,"fischer-lamberg/II.xml:49, fischer-lamberg/II.xml:662"
-faust://document/fischer_lamberg/2_II_H.69_1,,unknown,"fischer-lamberg/II.xml:613, fischer-lamberg/II.xml:628"
-faust://document/fischer_lamberg/2_II_H.69_2,,unknown,"fischer-lamberg/II.xml:636, fischer-lamberg/II.xml:644"
+faust://document/fischer_lamberg/2_II_H.69_1,faust://document/wa/2_II_H.69,unknown,"fischer-lamberg/II.xml:613, fischer-lamberg/II.xml:628"
+faust://document/fischer_lamberg/2_II_H.69_2,faust://document/wa/2_II_H.69,unknown,"fischer-lamberg/II.xml:636, fischer-lamberg/II.xml:644"
 faust://document/fischer_lamberg/2_II_H.8_a,faust://document/fischer_lamberg/2_II_H.8a,unknown,"fischer-lamberg/II.xml:87, fischer-lamberg/II.xml:95, fischer-lamberg/II.xml:104, fischer-lamberg/II.xml:113, fischer-lamberg/II.xml:124, fischer-lamberg/II.xml:133, fischer-lamberg/II.xml:143, fischer-lamberg/II.xml:160, fischer-lamberg/II.xml:168, fischer-lamberg/II.xml:177, fischer-lamberg/II.xml:184, fischer-lamberg/II.xml:668"
 faust://document/fischer_lamberg/2_II_H.9_a,faust://document/fischer_lamberg/2_II_H.9a,unknown,"fischer-lamberg/II.xml:190, fischer-lamberg/II.xml:688"
-faust://document/fischer_lamberg/2_II_H.a,,unknown,fischer-lamberg/II.xml:61
+faust://document/fischer_lamberg/2_II_H.a,faust://document/wa/2_II_H.a,unknown,fischer-lamberg/II.xml:61
 "faust://document/gsa_1/GSA_25_XIX,4",,unknown,handschriftendatierung_pre1800.xml:335
 faust://document/gsa_1/GSA_25_XVII_1_1a,,unknown,handschriftendatierung_pre1800.xml:147
 faust://document/gsa_2/GSA_25_W_1575,,unknown,handschriftendatierung_iii.xml:81
@@ -64,67 +64,67 @@ faust://document/landeck/2_V_H.gI,,unknown,"handschriftendatierung_v.xml:2067, h
 faust://document/landeck/2_V_H.gII,,unknown,"handschriftendatierung_v.xml:2068, handschriftendatierung_v.xml:2078, handschriftendatierung_v.xml:2085, handschriftendatierung_v.xml:2093, handschriftendatierung_v.xml:2111, handschriftendatierung_v.xml:2130"
 faust://document/landeck/2_V_H.h,,unknown,handschriftendatierung_v.xml:2105
 faust://document/wa/2_(oS),,unknown,handschriftendatierung_uncertain.xml:134
-faust://document/wa/2_H.m,,unknown,handschriftendatierung_v.xml:1952
-faust://document/wa/2_II.H2b,,unknown,handschriftendatierung_uncertain.xml:126
-faust://document/wa/2_II.H2c,,unknown,handschriftendatierung_uncertain.xml:83
+faust://document/wa/2_H.m,faust://document/wa/2_H_m,unknown,handschriftendatierung_v.xml:1952
+faust://document/wa/2_II.H2b,faust://document/fischer_lamberg/2_II.H2b,unknown,handschriftendatierung_uncertain.xml:126
+faust://document/wa/2_II.H2c,faust://document/fischer_lamberg/2_II.H2c,unknown,handschriftendatierung_uncertain.xml:83
 faust://document/wa/2_II.H6,faust://document/wa/2_II_H.6,unknown,handschriftendatierung_uncertain.xml:99
 faust://document/wa/2_III_H,,unknown,"fischer-lamberg/III.xml:12, fischer-lamberg/III.xml:20, fischer-lamberg/III.xml:28, fischer-lamberg/III.xml:38, fischer-lamberg/III.xml:46, fischer-lamberg/III.xml:56, fischer-lamberg/III.xml:70, fischer-lamberg/III.xml:87, fischer-lamberg/III.xml:99, fischer-lamberg/III.xml:112, fischer-lamberg/III.xml:122, fischer-lamberg/III.xml:131, fischer-lamberg/III.xml:140, fischer-lamberg/III.xml:148, fischer-lamberg/III.xml:158, fischer-lamberg/III.xml:168, fischer-lamberg/III.xml:179, fischer-lamberg/III.xml:190, fischer-lamberg/III.xml:200, fischer-lamberg/III.xml:210, fischer-lamberg/III.xml:219, fischer-lamberg/III.xml:229, fischer-lamberg/III.xml:238, fischer-lamberg/III.xml:246, fischer-lamberg/III.xml:255, fischer-lamberg/III.xml:268, fischer-lamberg/III.xml:280, fischer-lamberg/III.xml:291, fischer-lamberg/III.xml:304, fischer-lamberg/III.xml:317, fischer-lamberg/III.xml:330, fischer-lamberg/III.xml:343, fischer-lamberg/III.xml:357, fischer-lamberg/III.xml:367, fischer-lamberg/III.xml:378, fischer-lamberg/III.xml:391, fischer-lamberg/III.xml:402, fischer-lamberg/III.xml:415, fischer-lamberg/III.xml:425, fischer-lamberg/III.xml:437, fischer-lamberg/III.xml:449, fischer-lamberg/III.xml:460, fischer-lamberg/III.xml:472, fischer-lamberg/III.xml:487, fischer-lamberg/III.xml:496, fischer-lamberg/III.xml:508, fischer-lamberg/III.xml:520, fischer-lamberg/III.xml:533, fischer-lamberg/III.xml:557, fischer-lamberg/III.xml:568, fischer-lamberg/III.xml:579, fischer-lamberg/III.xml:593, fischer-lamberg/III.xml:606, fischer-lamberg/III.xml:619, fischer-lamberg/III.xml:632, fischer-lamberg/III.xml:651, fischer-lamberg/III.xml:664, fischer-lamberg/III.xml:675, fischer-lamberg/III.xml:697, fischer-lamberg/III.xml:708, fischer-lamberg/III.xml:717, fischer-lamberg/III.xml:726, fischer-lamberg/III.xml:736, fischer-lamberg/III.xml:770, fischer-lamberg/III.xml:783, fischer-lamberg/III.xml:794, fischer-lamberg/III.xml:1143, fischer-lamberg/III.xml:1162, fischer-lamberg/III.xml:1174, fischer-lamberg/III.xml:1185, fischer-lamberg/III.xml:1196, fischer-lamberg/III.xml:1244, fischer-lamberg/III.xml:1256, fischer-lamberg/III.xml:1266, fischer-lamberg/III.xml:1273, fischer-lamberg/III.xml:1307, fischer-lamberg/III.xml:1359, fischer-lamberg/III.xml:1372, fischer-lamberg/III.xml:1385, fischer-lamberg/III.xml:1422, fischer-lamberg/III.xml:1435, fischer-lamberg/III.xml:1447, fischer-lamberg/III.xml:1536, wa/15_2/III.xml:13, wa/15_2/III.xml:25, wa/15_2/III.xml:33, wa/15_2/III.xml:50, wa/15_2/III.xml:57, wa/15_2/III.xml:64, wa/15_2/III.xml:79, wa/15_2/III.xml:112, wa/15_2/III.xml:130, wa/15_2/III.xml:253, wa/15_2/III.xml:272, wa/15_2/III.xml:291, wa/15_2/III.xml:309, wa/15_2/III.xml:330, wa/15_2/III.xml:355, wa/15_2/III.xml:371, wa/15_2/III.xml:380, wa/15_2/III.xml:446, wa/15_2/III.xml:455, wa/15_2/III.xml:486, wa/15_2/III.xml:493, wa/15_2/III.xml:546, wa/15_2/III.xml:553, wa/15_2/III.xml:601, wa/15_2/III.xml:650, wa/15_2/III.xml:657"
 faust://document/wa/2_III_H.15II,,unknown,"wa/15_2/III.xml:104, wa/15_2/III.xml:109, wa/15_2/III.xml:124, wa/15_2/III.xml:138"
-faust://document/wa/2_III_H.22_1,,unknown,"fischer-lamberg/III.xml:339, fischer-lamberg/III.xml:353, fischer-lamberg/III.xml:1007, fischer-lamberg/III.xml:1017, fischer-lamberg/III.xml:1027, fischer-lamberg/III.xml:1037, fischer-lamberg/III.xml:1048, fischer-lamberg/III.xml:1600"
-faust://document/wa/2_III_H.22_2,,unknown,"fischer-lamberg/III.xml:686, fischer-lamberg/III.xml:694, fischer-lamberg/III.xml:1605"
-faust://document/wa/2_III_H.22_3,,unknown,"fischer-lamberg/III.xml:705, fischer-lamberg/III.xml:768, fischer-lamberg/III.xml:1610"
-faust://document/wa/2_III_H.22_4,,unknown,"fischer-lamberg/III.xml:870, fischer-lamberg/III.xml:892, fischer-lamberg/III.xml:912, fischer-lamberg/III.xml:923, fischer-lamberg/III.xml:1614"
-faust://document/wa/2_III_H.22_5,,unknown,"fischer-lamberg/III.xml:1171, fischer-lamberg/III.xml:1182, fischer-lamberg/III.xml:1193, fischer-lamberg/III.xml:1203, fischer-lamberg/III.xml:1212"
+faust://document/wa/2_III_H.22_1,faust://document/fischer_lamberg/2_III_H.22_1,unknown,"fischer-lamberg/III.xml:339, fischer-lamberg/III.xml:353, fischer-lamberg/III.xml:1007, fischer-lamberg/III.xml:1017, fischer-lamberg/III.xml:1027, fischer-lamberg/III.xml:1037, fischer-lamberg/III.xml:1048, fischer-lamberg/III.xml:1600"
+faust://document/wa/2_III_H.22_2,faust://document/fischer_lamberg/2_III_H.22_2,unknown,"fischer-lamberg/III.xml:686, fischer-lamberg/III.xml:694, fischer-lamberg/III.xml:1605"
+faust://document/wa/2_III_H.22_3,faust://document/fischer_lamberg/2_III_H.22_3,unknown,"fischer-lamberg/III.xml:705, fischer-lamberg/III.xml:768, fischer-lamberg/III.xml:1610"
+faust://document/wa/2_III_H.22_4,faust://document/fischer_lamberg/2_III_H.22_4,unknown,"fischer-lamberg/III.xml:870, fischer-lamberg/III.xml:892, fischer-lamberg/III.xml:912, fischer-lamberg/III.xml:923, fischer-lamberg/III.xml:1614"
+faust://document/wa/2_III_H.22_5,faust://document/fischer_lamberg/2_III_H.22_5,unknown,"fischer-lamberg/III.xml:1171, fischer-lamberg/III.xml:1182, fischer-lamberg/III.xml:1193, fischer-lamberg/III.xml:1203, fischer-lamberg/III.xml:1212"
 faust://document/wa/2_III_H.2_alpha,,unknown,fischer-lamberg/III.xml:997
 faust://document/wa/2_III_H.33_a,faust://document/wa/2_III_H.33a,unknown,"fischer-lamberg/III.xml:554, fischer-lamberg/III.xml:565, fischer-lamberg/III.xml:576, fischer-lamberg/III.xml:590, fischer-lamberg/III.xml:603, fischer-lamberg/III.xml:1643"
-faust://document/wa/2_III_H.7/1,,unknown,"handschriftendatierung_iii.xml:198, handschriftendatierung_iii.xml:204, handschriftendatierung_iii.xml:210"
-faust://document/wa/2_III_H.7/2,,unknown,handschriftendatierung_iii.xml:217
-faust://document/wa/2_III_H.7/3,,unknown,handschriftendatierung_iii.xml:223
-faust://document/wa/2_III_H.7/4,,unknown,"handschriftendatierung_iii.xml:231, handschriftendatierung_iii.xml:236, handschriftendatierung_iii.xml:243"
-faust://document/wa/2_III_H.7/5,,unknown,"handschriftendatierung_iii.xml:252, handschriftendatierung_iii.xml:260"
-faust://document/wa/2_III_H.7/6,,unknown,"handschriftendatierung_iii.xml:267, handschriftendatierung_iii.xml:272"
+faust://document/wa/2_III_H.7/1,faust://document/fischer_lamberg/2_III_H.7_1,unknown,"handschriftendatierung_iii.xml:198, handschriftendatierung_iii.xml:204, handschriftendatierung_iii.xml:210"
+faust://document/wa/2_III_H.7/2,faust://document/fischer_lamberg/2_III_H.7__2-3,unknown,handschriftendatierung_iii.xml:217
+faust://document/wa/2_III_H.7/3,faust://document/fischer_lamberg/2_III_H.7__2-3,unknown,handschriftendatierung_iii.xml:223
+faust://document/wa/2_III_H.7/4,faust://document/fischer_lamberg/2_III_H.7_4,unknown,"handschriftendatierung_iii.xml:231, handschriftendatierung_iii.xml:236, handschriftendatierung_iii.xml:243"
+faust://document/wa/2_III_H.7/5,faust://document/fischer_lamberg/2_III_H.7_5,unknown,"handschriftendatierung_iii.xml:252, handschriftendatierung_iii.xml:260"
+faust://document/wa/2_III_H.7/6,faust://documentfischer_lamberg/2_III_H.7_6,unknown,"handschriftendatierung_iii.xml:267, handschriftendatierung_iii.xml:272"
 faust://document/wa/2_III_H.78_a,faust://document/wa/2_III_H.78a,unknown,"fischer-lamberg/III.xml:1455, fischer-lamberg/III.xml:1795"
 faust://document/wa/2_III_H.8/i_r,,unknown,handschriftendatierung_iii.xml:146
-faust://document/wa/2_III_H.n,,unknown,"fischer-lamberg/III.xml:946, fischer-lamberg/III.xml:954, fischer-lamberg/III.xml:975, fischer-lamberg/III.xml:986, fischer-lamberg/III.xml:1836, handschriftendatierung_iii.xml:881"
-faust://document/wa/2_III_H.q,,unknown,handschriftendatierung_iii.xml:874
-faust://document/wa/2_II_H,,unknown,"fischer-lamberg/II.xml:10, fischer-lamberg/II.xml:19, fischer-lamberg/II.xml:26, fischer-lamberg/II.xml:32, fischer-lamberg/II.xml:38, fischer-lamberg/II.xml:44, fischer-lamberg/II.xml:50, fischer-lamberg/II.xml:56, fischer-lamberg/II.xml:62, fischer-lamberg/II.xml:68, fischer-lamberg/II.xml:74, fischer-lamberg/II.xml:81, fischer-lamberg/II.xml:115, fischer-lamberg/II.xml:307, fischer-lamberg/II.xml:314, fischer-lamberg/II.xml:323, fischer-lamberg/II.xml:332, fischer-lamberg/II.xml:341, fischer-lamberg/II.xml:406, fischer-lamberg/II.xml:500, fischer-lamberg/II.xml:509, fischer-lamberg/II.xml:615, fischer-lamberg/II.xml:622, fischer-lamberg/II.xml:631, wa/15_2/II.xml:9, wa/15_2/II.xml:14, wa/15_2/II.xml:19, wa/15_2/II.xml:24, wa/15_2/II.xml:29, wa/15_2/II.xml:40, wa/15_2/II.xml:122, wa/15_2/II.xml:129, wa/15_2/II.xml:137, wa/15_2/II.xml:170, wa/15_2/II.xml:181, wa/15_2/II.xml:190, wa/15_2/II.xml:225, wa/15_2/II.xml:230, wa/15_2/II.xml:236, wa/15_2/II.xml:242, wa/15_2/II.xml:249, wa/15_2/II.xml:276, wa/15_2/II.xml:327, wa/15_2/II.xml:356, wa/15_2/II.xml:362, wa/15_2/II.xml:415, wa/15_2/II.xml:421, wa/15_2/II.xml:428, wa/15_2/II.xml:434, wa/15_2/II.xml:446, wa/15_2/II.xml:458, wa/15_2/II.xml:479, wa/15_2/II.xml:498, wa/15_2/II.xml:503"
+faust://document/wa/2_III_H.n,faust://document/fischer_lamberg/2_III_H.n,unknown,"fischer-lamberg/III.xml:946, fischer-lamberg/III.xml:954, fischer-lamberg/III.xml:975, fischer-lamberg/III.xml:986, fischer-lamberg/III.xml:1836, handschriftendatierung_iii.xml:881"
+faust://document/wa/2_III_H.q,faust://document/bohnenkamp/2_III_H.q,unknown,handschriftendatierung_iii.xml:874
+faust://document/wa/2_II_H,faust://document/wa/2_H,unknown,"fischer-lamberg/II.xml:10, fischer-lamberg/II.xml:19, fischer-lamberg/II.xml:26, fischer-lamberg/II.xml:32, fischer-lamberg/II.xml:38, fischer-lamberg/II.xml:44, fischer-lamberg/II.xml:50, fischer-lamberg/II.xml:56, fischer-lamberg/II.xml:62, fischer-lamberg/II.xml:68, fischer-lamberg/II.xml:74, fischer-lamberg/II.xml:81, fischer-lamberg/II.xml:115, fischer-lamberg/II.xml:307, fischer-lamberg/II.xml:314, fischer-lamberg/II.xml:323, fischer-lamberg/II.xml:332, fischer-lamberg/II.xml:341, fischer-lamberg/II.xml:406, fischer-lamberg/II.xml:500, fischer-lamberg/II.xml:509, fischer-lamberg/II.xml:615, fischer-lamberg/II.xml:622, fischer-lamberg/II.xml:631, wa/15_2/II.xml:9, wa/15_2/II.xml:14, wa/15_2/II.xml:19, wa/15_2/II.xml:24, wa/15_2/II.xml:29, wa/15_2/II.xml:40, wa/15_2/II.xml:122, wa/15_2/II.xml:129, wa/15_2/II.xml:137, wa/15_2/II.xml:170, wa/15_2/II.xml:181, wa/15_2/II.xml:190, wa/15_2/II.xml:225, wa/15_2/II.xml:230, wa/15_2/II.xml:236, wa/15_2/II.xml:242, wa/15_2/II.xml:249, wa/15_2/II.xml:276, wa/15_2/II.xml:327, wa/15_2/II.xml:356, wa/15_2/II.xml:362, wa/15_2/II.xml:415, wa/15_2/II.xml:421, wa/15_2/II.xml:428, wa/15_2/II.xml:434, wa/15_2/II.xml:446, wa/15_2/II.xml:458, wa/15_2/II.xml:479, wa/15_2/II.xml:498, wa/15_2/II.xml:503"
 faust://document/wa/2_II_H.31_a,faust://document/wa/2_II_H.31a,unknown,fischer-lamberg/II.xml:768
 faust://document/wa/2_II_H.31_alpha,,unknown,fischer-lamberg/II.xml:306
-faust://document/wa/2_II_H.8a,,unknown,handschriftendatierung_ii.xml:128
+faust://document/wa/2_II_H.8a,faust://document/fischer_lamberg/2_II_H.8a,unknown,handschriftendatierung_ii.xml:128
 faust://document/wa/2_II_H.alpha,,unknown,"wa/15_2/II.xml:23, wa/15_2/II.xml:259, wa/15_2/II.xml:304, wa/15_2/II.xml:310"
-faust://document/wa/2_II_IH.56,,unknown,wa/15_2/II.xml:44
-faust://document/wa/2_II_IH.i,,unknown,wa/15_2/II.xml:13
-faust://document/wa/2_IV_H,,unknown,"wa/15_2/IV.xml:15, wa/15_2/IV.xml:21, wa/15_2/IV.xml:27, wa/15_2/IV.xml:42, wa/15_2/IV.xml:48, wa/15_2/IV.xml:53, wa/15_2/IV.xml:59, wa/15_2/IV.xml:65, wa/15_2/IV.xml:70, wa/15_2/IV.xml:76, wa/15_2/IV.xml:91, wa/15_2/IV.xml:108, wa/15_2/IV.xml:114, wa/15_2/IV.xml:120, wa/15_2/IV.xml:131, wa/15_2/IV.xml:148, wa/15_2/IV.xml:153, wa/15_2/IV.xml:158, wa/15_2/IV.xml:164, wa/15_2/IV.xml:176, wa/15_2/IV.xml:187, wa/15_2/IV.xml:192, wa/15_2/IV.xml:202, wa/15_2/IV.xml:213"
+faust://document/wa/2_II_IH.56,faust://document/wa/2_I_H.56,unknown,wa/15_2/II.xml:44
+faust://document/wa/2_II_IH.i,faust://document/wa/2_I_H.1,unknown,wa/15_2/II.xml:13
+faust://document/wa/2_IV_H,faust://document/wa/2_H,unknown,"wa/15_2/IV.xml:15, wa/15_2/IV.xml:21, wa/15_2/IV.xml:27, wa/15_2/IV.xml:42, wa/15_2/IV.xml:48, wa/15_2/IV.xml:53, wa/15_2/IV.xml:59, wa/15_2/IV.xml:65, wa/15_2/IV.xml:70, wa/15_2/IV.xml:76, wa/15_2/IV.xml:91, wa/15_2/IV.xml:108, wa/15_2/IV.xml:114, wa/15_2/IV.xml:120, wa/15_2/IV.xml:131, wa/15_2/IV.xml:148, wa/15_2/IV.xml:153, wa/15_2/IV.xml:158, wa/15_2/IV.xml:164, wa/15_2/IV.xml:176, wa/15_2/IV.xml:187, wa/15_2/IV.xml:192, wa/15_2/IV.xml:202, wa/15_2/IV.xml:213"
 faust://document/wa/2_IV_H.11/,faust://document/wa/2_IV_H.11,unknown,handschriftendatierung_iv.xml:291
 faust://document/wa/2_IV_H.9/,faust://document/wa/2_IV_H.9,unknown,handschriftendatierung_iv.xml:283
 faust://document/wa/2_I_H.alpha,,unknown,"wa/15_2/I.xml:29, wa/15_2/I.xml:62, wa/15_2/I.xml:293"
 faust://document/wa/2_I_H_i,faust://document/wa/2_I_H.i,unknown,fischer-lamberg/II.xml:31
 faust://document/wa/2_V_H.11/,faust://document/wa/2_V_H.11,unknown,handschriftendatierung_v.xml:534
-faust://document/wa/2_V_H.2b,,unknown,wa/15_2/V.xml:168
-faust://document/wa/2_V_H.33I,,unknown,"handschriftendatierung_v.xml:1640, handschriftendatierung_v.xml:1647, handschriftendatierung_v.xml:1655"
-faust://document/wa/2_V_H.39,,unknown,handschriftendatierung_v.xml:1885
+faust://document/wa/2_V_H.2b,faust://document/wa/2_V_H.b,unknown,wa/15_2/V.xml:168
+faust://document/wa/2_V_H.33I,faust://document/landeck/2_V_H.33I,unknown,"handschriftendatierung_v.xml:1640, handschriftendatierung_v.xml:1647, handschriftendatierung_v.xml:1655"
+faust://document/wa/2_V_H.39,faust://document/landeck/2_V_H.39,unknown,handschriftendatierung_v.xml:1885
 faust://document/wa/2_V_H.alpha,,unknown,wa/15_2/V.xml:25
 faust://document/wa/C.1_4,,unknown,"wa/15_2/III.xml:51, wa/15_2/III.xml:602"
 faust://document/wa/C.1_41,,unknown,"wa/15_2/I.xml:24, wa/15_2/II.xml:263, wa/15_2/III.xml:447, wa/15_2/IV.xml:38, wa/15_2/IV.xml:102, wa/15_2/V.xml:8"
 faust://document/wa/C_12,,unknown,"wa/15_2/I.xml:9, wa/15_2/I.xml:68, wa/15_2/I.xml:88, wa/15_2/I.xml:103, wa/15_2/I.xml:128, wa/15_2/I.xml:336"
 faust://document/wa/C_4,,unknown,"wa/15_2/III.xml:131, wa/15_2/III.xml:332"
 faust://document/wa/C_41,,unknown,"wa/15_2/I.xml:14, wa/15_2/I.xml:36, wa/15_2/I.xml:46, wa/15_2/I.xml:134, wa/15_2/I.xml:153, wa/15_2/I.xml:311, wa/15_2/I.xml:331, wa/15_2/I.xml:356, wa/15_2/I.xml:413, wa/15_2/I.xml:430, wa/15_2/II.xml:33, wa/15_2/II.xml:82, wa/15_2/II.xml:130, wa/15_2/II.xml:143, wa/15_2/II.xml:175, wa/15_2/II.xml:191, wa/15_2/II.xml:265, wa/15_2/II.xml:435, wa/15_2/III.xml:132, wa/15_2/III.xml:258, wa/15_2/III.xml:331, wa/15_2/III.xml:435, wa/15_2/III.xml:448, wa/15_2/III.xml:603, wa/15_2/III.xml:608, wa/15_2/III.xml:678, wa/15_2/IV.xml:22, wa/15_2/IV.xml:43, wa/15_2/IV.xml:92, wa/15_2/IV.xml:132, wa/15_2/IV.xml:208, wa/15_2/V.xml:20, wa/15_2/V.xml:71, wa/15_2/V.xml:117, wa/15_2/V.xml:136, wa/15_2/V.xml:226, wa/15_2/V.xml:266, wa/15_2/V.xml:316"
-faust://document/wa/H_P104,,unknown,"handschriftendatierung_i.xml:772, handschriftendatierung_i.xml:800"
-faust://document/wa/H_P105,,unknown,handschriftendatierung_i.xml:779
-faust://document/wa/H_P125,,unknown,handschriftendatierung_ii.xml:217
-faust://document/wa/H_P165,,unknown,"handschriftendatierung_iii.xml:589, handschriftendatierung_iii.xml:649"
-faust://document/wa/H_P166a,,unknown,"handschriftendatierung_iii.xml:773, handschriftendatierung_iii.xml:1391, handschriftendatierung_iii.xml:1399, handschriftendatierung_iii.xml:1413"
-faust://document/wa/H_P176a,,unknown,handschriftendatierung_iii.xml:1445
-faust://document/wa/H_P194,,unknown,handschriftendatierung_v.xml:2152
-faust://document/wa/H_P63,,unknown,handschriftendatierung_i.xml:848
-faust://document/wa/H_P65,,unknown,"handschriftendatierung_i.xml:847, handschriftendatierung_i.xml:862"
-faust://document/wa/H_P69,,unknown,handschriftendatierung_i.xml:863
-faust://document/wa/P129Var,,unknown,handschriftendatierung_uncertain.xml:91
-faust://document/wa/P164,,unknown,"handschriftendatierung_iii.xml:183, handschriftendatierung_iii.xml:1326"
-faust://document/wa/P181,,unknown,"handschriftendatierung_iv.xml:157, handschriftendatierung_iv.xml:410"
-faust://document/wa/P190a,,unknown,handschriftendatierung_uncertain.xml:108
-faust://document/wa/P194,,unknown,handschriftendatierung_v.xml:145
-faust://document/wa/P195,,unknown,"handschriftendatierung_v.xml:2168, handschriftendatierung_v.xml:2175"
+faust://document/wa/H_P104,faust://document/bohnenkamp/H_P104,unknown,"handschriftendatierung_i.xml:772, handschriftendatierung_i.xml:800"
+faust://document/wa/H_P105,faust://document/bohnenkamp/H_P105,unknown,handschriftendatierung_i.xml:779
+faust://document/wa/H_P125,faust://document/bohnenkamp/H_P125,unknown,handschriftendatierung_ii.xml:217
+faust://document/wa/H_P165,faust://document/bohnenkamp/H_P165,unknown,"handschriftendatierung_iii.xml:589, handschriftendatierung_iii.xml:649"
+faust://document/wa/H_P166a,faust://document/bohnenkamp/H_P166a,unknown,"handschriftendatierung_iii.xml:773, handschriftendatierung_iii.xml:1391, handschriftendatierung_iii.xml:1399, handschriftendatierung_iii.xml:1413"
+faust://document/wa/H_P176a,faust://document/bohnenkamp/H_P176a,unknown,handschriftendatierung_iii.xml:1445
+faust://document/wa/H_P194,faust://document/bohnenkamp/H_P194,unknown,handschriftendatierung_v.xml:2152
+faust://document/wa/H_P63,faust://document/bohnenkamp/H_P63,unknown,handschriftendatierung_i.xml:848
+faust://document/wa/H_P65,faust://document/bohnenkamp/H_P65,unknown,"handschriftendatierung_i.xml:847, handschriftendatierung_i.xml:862"
+faust://document/wa/H_P69,faust://document/bohnenkamp/H_P69,unknown,handschriftendatierung_i.xml:863
+faust://document/wa/P129Var,faust://document/fischer-lamberg/2_II_H.2d,unknown,handschriftendatierung_uncertain.xml:91
+faust://document/wa/P164,faust://document/wa/2_III_H.6,unknown,"handschriftendatierung_iii.xml:183, handschriftendatierung_iii.xml:1326"
+faust://document/wa/P181,faust://document/bohnenkamp/P181,unknown,"handschriftendatierung_iv.xml:157, handschriftendatierung_iv.xml:410"
+faust://document/wa/P190a,faust://document/bohnenkamp/P190a,unknown,handschriftendatierung_uncertain.xml:108
+faust://document/wa/P194,faust://document/bohnenkamp/P194,unknown,handschriftendatierung_v.xml:145
+faust://document/wa/P195,faust://document/bohnenkamp/P195,unknown,"handschriftendatierung_v.xml:2168, handschriftendatierung_v.xml:2175"
 faust://document/wa/Q,,unknown,"wa/15_2/II.xml:34, wa/15_2/II.xml:264, wa/15_2/III.xml:133, wa/15_2/V.xml:9"
 faust://inscription/bohnenkamp/P10/i_3_u,,unknown,handschriftendatierung_pre1800.xml:554
 faust://inscription/fischer_lamberg/2_III_H.15/,,unknown,"fischer-lamberg/III.xml:261, fischer-lamberg/III.xml:262, fischer-lamberg/III.xml:273, fischer-lamberg/III.xml:274, fischer-lamberg/III.xml:285"
