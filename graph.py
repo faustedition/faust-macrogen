@@ -178,7 +178,7 @@ def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     result = graph.copy()
     edge_groups = defaultdict(list)
     for u, v, k, attr in result.edges(keys=True, data=True):
-        if  'source' in attr:
+        if 'source' in attr:
             edge_groups[(u, v, attr['kind'], attr['source'].uri)].append((u, v, k, attr))
 
     for (u, v, kind, source_uri), group in edge_groups.items():
@@ -238,15 +238,37 @@ class MacrogenesisInfo:
             max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
                                   default=EARLIEST - DAY)
             max_abs_before_date = max((d for d, _ in self.dag.in_edges(ref) if isinstance(d, date)),
-                                  default=None)
+                                      default=None)
             ref.earliest = max_before_date + DAY
             ref.earliest_abs = max_abs_before_date + DAY if max_abs_before_date is not None else None
             min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)),
                                  default=LATEST + DAY)
             min_abs_after_date = min((d for _, d in self.dag.out_edges(ref) if isinstance(d, date)),
-                                 default=None)
+                                     default=None)
             ref.latest = min_after_date - DAY
             ref.latest_abs = min_abs_after_date - DAY if min_abs_after_date is not None else None
+
+
+def resolve_ambiguities(graph: nx.MultiDiGraph):
+    """
+    Replaces ambiguous refs with the referenced nodes, possibly duplicating edges.
+
+    Args:
+        graph: The graph in which we work (inplace)
+    """
+    ambiguities = [node for node in graph.nodes if isinstance(node, AmbiguousRef)]
+    for ambiguity in ambiguities:
+        for u, _, k, attr in list(graph.in_edges(ambiguity, keys=True, data=True)):
+            for witness in ambiguity.witnesses:
+                attr['from_ambiguity']=ambiguity
+                graph.add_edge(u, witness, k, **attr)
+            graph.remove_edge(u, ambiguity, k)
+        for _, v, k, attr in list(graph.out_edges(ambiguity, keys=True, data=True)):
+            for witness in ambiguity.witnesses:
+                attr['from_ambiguity']=ambiguity
+                graph.add_edge(witness, v, k, **attr)
+            graph.remove_edge(ambiguity, v, k)
+        graph.remove_node(ambiguity)
 
 
 def adopt_orphans(graph: nx.MultiDiGraph):
@@ -288,6 +310,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     base = base_graph()
     adopt_orphans(base)
     add_edge_weights(base)
+    resolve_ambiguities(base)
     base = collapse_edges_by_source(base)
     working = cleanup_graph(base).copy()
     add_missing_wits(working)
@@ -320,14 +343,13 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
         for u, v, k, attr in list(all_conflicting_edges):
             dag.add_edge(u, v, **attr)
             if nx.is_directed_acyclic_graph(dag):
-                all_conflicting_edges.remove((u,v,k,attr))
+                all_conflicting_edges.remove((u, v, k, attr))
                 logging.info('Added edge %s -> %s back without introducing a cycle.', u, v)
             else:
                 dag.remove_edge(u, v)
 
     logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
     mark_edges_to_delete(base, all_conflicting_edges)
-
 
     logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
 
