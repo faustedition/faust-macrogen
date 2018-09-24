@@ -291,6 +291,11 @@ def adopt_orphans(graph: nx.MultiDiGraph):
                     logger.info('Adopted %s from ambiguous ref %s', witness, node)
 
 
+def add_inscription_links(base: nx.MultiDiGraph):
+    for node in list(base.nodes):
+        if isinstance(node, Inscription):
+            base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
+
 def add_missing_wits(working: nx.MultiDiGraph):
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
@@ -354,6 +359,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
 
     closure = nx.transitive_closure(dag)
+    add_inscription_links(base)
 
     return MacrogenesisInfo(base, working, dag, closure, conflicts)
 

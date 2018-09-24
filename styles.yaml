@@ -30,6 +30,11 @@ edge:
   orphan:   # artificial edges from ambiguous refs / inscriptions to otherwise unused witnesses
     style: dashed
     color: gray
+  inscription:
+    dir: none
+    color: gray
+    constraint: false
+    style: dashed
 
   # additional style for conflicting edges
   delete:

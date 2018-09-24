@@ -331,6 +331,7 @@ class RefTable(HtmlTable):
                  'temp-syn': 'ca. gleichzeitig',
                  'temp-pre': 'entstanden nach',
                  'orphan': '(Verweis)',
+                 'inscription': 'Inskription von',
                  None: '???'
                  }
         assertionTable = (HtmlTable()
@@ -347,7 +348,7 @@ class RefTable(HtmlTable):
                                 u + DAY if isinstance(u, date) else u,
                                 attr['source'],
                                 attr.get('comments', []),
-                                attr['xml']),
+                                attr.get('xml', [])),
                                class_='delete' if delete_ else str(attr['kind']))
         kinds['temp-pre'] = 'entstanden vor'
         for (u, v, attr) in self.base.out_edges(ref, data=True):
@@ -357,7 +358,7 @@ class RefTable(HtmlTable):
                                 v - DAY if isinstance(v, date) else v,
                                 attr['source'],
                                 attr.get('comments', []),
-                                attr['xml']),
+                                attr.get('xml', [])),
                                class_='delete' if delete_ else str(attr['kind']))
         write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
                    breadcrumbs=[dict(caption='Referenzen', link='refs')],
