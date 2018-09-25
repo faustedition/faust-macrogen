@@ -345,11 +345,11 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
         logger.error('It contains %d simple cycles', len(cycles))
     else:
         logging.info('Double-checking removed edges ...')
-        for u, v, k, attr in list(all_conflicting_edges):
+        for u, v, k, attr in sorted(all_conflicting_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
             dag.add_edge(u, v, **attr)
             if nx.is_directed_acyclic_graph(dag):
                 all_conflicting_edges.remove((u, v, k, attr))
-                logging.info('Added edge %s -> %s back without introducing a cycle.', u, v)
+                logging.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v, attr.get('weight', 1))
             else:
                 dag.remove_edge(u, v)
 
