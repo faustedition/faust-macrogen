@@ -365,10 +365,10 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
 
 
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
-    logger.info('Removing hertz and temp-syn')
+    logger.info('Removing edges to ignore')
 
-    def is_hertz(u, v, attr):
-        return 'source' in attr and 'hertz' in attr['source'].uri
+    def zero_weight(u, v, attr):
+        return attr.get('weight', 1) == 0
 
     def is_syn(u, v, attr):
         return attr['kind'] == 'temp-syn'
@@ -377,7 +377,7 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
         return attr.get('ignore', False)
 
     for u, v, k, attr in A.edges(keys=True, data=True):
-        if is_hertz(u, v, attr) or is_syn(u, v, attr):
+        if zero_weight(u, v, attr) or is_syn(u, v, attr):
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
