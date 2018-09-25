@@ -171,7 +171,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
     """
     if head is not None:
         breadcrumbs = breadcrumbs + [dict(caption=head)]
-    breadcrumbs = [dict(caption='Makrogenese', link='/macrogenesis')] + breadcrumbs
+    breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
     prefix = """<?php include "../includes/header.php"?>
      <section>"""
     if graph_id is not None:
@@ -207,7 +207,7 @@ def report_components(graphs: MacrogenesisInfo):
     target.mkdir(parents=True, exist_ok=True)
     report = f"""<h3>{len(graphs.conflicts)} stark zusammenhängende Komponenten</h3>
     <p>Stark zusammenhängende Komponenten sind Teilgraphen, in denen jeder Knoten von
-    jedem anderen erreichbar ist. Hier ist keine Ordnung möglich, ohne dass Kanten entfernt 
+    jedem anderen erreichbar ist. Hier ist keine Ordnung möglich, ohne dass Kanten entfernt
     werden.</p>
     """
     scc_table = _report_subgraphs(graphs.conflicts, target, 'scc-{0:02d}')
@@ -239,7 +239,7 @@ def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern=
         table.row((index, refs, len(relations), len(removed_edges), sources, conflict_sources))
         write_dot(subgraph, out / (pattern + "-graph.dot").format(index))
         write_html(out / (pattern + '.php').format(index),
-                   f"""<object id="refgraph" class="refgraph" type="image/svg+xml" 
+                   f"""<object id="refgraph" class="refgraph" type="image/svg+xml"
                           data="{pattern.format(index)}-graph.svg"></object>\n""",
                    graph_id='refgraph', breadcrumbs=breadcrumbs, head=head_pattern.format(index))
     return table
@@ -338,15 +338,17 @@ class RefTable(HtmlTable):
                           .column('berücksichtigt?')
                           .column('Aussage')
                           .column('Bezug', format_spec=_fmt_node)
-                          .column('Quelle')
+                          .column('Quelle', format_spec=_fmt_source)
                           .column('Kommentare', format_spec="/".join)
-                          .column('XML', format_spec=lambda xml: ":".join(map(str, xml))))
+                          .column('XML', format_spec=_fmt_xml))
         for (u, v, attr) in self.base.in_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
-            assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
+            assertionTable.row((
+                f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
+                    'ignoriert' if attr.get('ignore', False) else 'ja',
                                 kinds[attr['kind']],
                                 u + DAY if isinstance(u, date) else u,
-                                attr['source'],
+                                attr,
                                 attr.get('comments', []),
                                 attr.get('xml', [])),
                                class_='delete' if delete_ else str(attr['kind']))
@@ -356,7 +358,7 @@ class RefTable(HtmlTable):
             assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
                                 kinds[attr['kind']],
                                 v - DAY if isinstance(v, date) else v,
-                                attr['source'],
+                                attr,
                                 attr.get('comments', []),
                                 attr.get('xml', [])),
                                class_='delete' if delete_ else str(attr['kind']))
@@ -373,7 +375,7 @@ class AssertionTable(HtmlTable):
              .column('Subjekt', _fmt_node)
              .column('Relation', RELATION_LABELS.get)
              .column('Objekt', _fmt_node)
-             .column('Quelle', self._fmt_source)
+             .column('Quelle', _fmt_source)
              .column('Kommentare', ' / '.join)
              .column('XML', _fmt_xml))
 
@@ -388,17 +390,18 @@ class AssertionTable(HtmlTable):
             attr['kind'],
             v,
             attr,
-            attr.get('comment', ''),
+            attr.get('comments', []),
             attr.get('xml', '')),
         class_=' '.join(classes))
 
-    @staticmethod
-    def _fmt_source(attrs):
-        source: BiblSource = attrs['source']
-        result = f'<a href="{source.filename}">{source.citation}</a>'
-        if 'sources' in attrs:
-            result += ' ' + '; '.join(s.detail for s in attrs['sources'])
-        return result
+def _fmt_source(attrs):
+    source: BiblSource = attrs['source']
+    result = f'<a href="{source.filename}">{source.citation}</a>'
+    if 'sources' in attrs:
+        result += ' ' + '; '.join(s.detail for s in attrs['sources'])
+    elif source.detail:
+        result += ' ' + source.detail
+    return result
 
 
 def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
@@ -457,8 +460,8 @@ def report_missing(graphs: MacrogenesisInfo):
     report = f"""
     <h2>Fehlende Zeugen</h2>
     <p>Für {len(missing_wits)} von insgesamt {len(used_wits)} Zeugen <a href="#missing">liegen keine Makrogenesedaten
-       vor</a>. Bei {len(missing_wits & wits_with_inscr.keys())} davon sind zumindest Informationen über 
-       Inskriptionen hinterlegt. Umgekehrt gibt es <a href="#unknown">zu {len(unknown_refs)} Referenzen in der 
+       vor</a>. Bei {len(missing_wits & wits_with_inscr.keys())} davon sind zumindest Informationen über
+       Inskriptionen hinterlegt. Umgekehrt gibt es <a href="#unknown">zu {len(unknown_refs)} Referenzen in der
        Makrogenese</a> keine Entsprechung in der Edition.</p>
     <h3 id="missing">Zeugen ohne Makrogenesedaten</h3>
     """
@@ -591,13 +594,13 @@ def report_index(graphs):
         am {datetime.now()} generiert.
       </p>
       <section class="center pure-g-r">
-        
+
         <article class="pure-u-1">
             <table class="pure-table">
                 {links}
             </table>
         </article>
-        
+
       </section>
     """
 
@@ -656,7 +659,7 @@ def report_help():
        sind klickbar und führen zur Makrogeneseseite des entsprechenden Zeugen. Verwenden Sie den Link in der
        Spalte <em>Edition</em> der oberen Tabelle, um zur Darstellung des Zeugen in der Dokumentenansicht zu
        gelangen.</p>
-    <p><strong>Pfeile</strong> bedeuten immer <em>zeitlich vor</em>. Im Vergleich zu termini a quo bzw. ad quem 
+    <p><strong>Pfeile</strong> bedeuten immer <em>zeitlich vor</em>. Im Vergleich zu termini a quo bzw. ad quem
     sind die Datumsangaben deshalb um einen Tag versetzt.</p>
     <table class="pure-table">
         <thead><th>Graph</th><th>Bedeutung</th></thead>
@@ -664,8 +667,8 @@ def report_help():
         <tr><td><img src="help-pre.svg" /></td>
             <td>Laut Quelle 1 entstand {w1} vor {w2}</td></tr>
         <tr><td><img src="help-conflict.svg" /></td>
-            <td>Laut Quelle 1 entstand {w1} vor {w2}, 
-                laut Quelle 2 entstand {w2} vor {w1}. 
+            <td>Laut Quelle 1 entstand {w1} vor {w2},
+                laut Quelle 2 entstand {w2} vor {w1}.
                 Diese Aussage von Quelle 2 wird nicht berücksichtigt.
                 Die Aussage von Quelle Quelle 3 wird von vornherein ignoriert.</td></tr>
         <tr><td><img src="help-syn.svg"/></td>
@@ -679,7 +682,7 @@ def report_help():
         <tr><td><img src="help-when.svg"/></td>
             <td>Laut Quelle 2 entstand {w2} am {d3}.</td></tr>
         <tr><td><img src="help-orphan.svg"/></td>
-            <td>{i1w} wird in den Makrogenesedaten nur indirekt über {i1} referenziert 
+            <td>{i1w} wird in den Makrogenesedaten nur indirekt über {i1} referenziert
                 und über eine künstliche Kante angebunden.</td></tr>
         </tbody>
     </table>
@@ -743,7 +746,7 @@ class ByScene:
                                                         dict(caption=title, link=basename)])
             write_html(target / (basename + '.php'),
                        f"""
-                       <p><a href="{subgraph_page.stem}">Szenengraph</a> · 
+                       <p><a href="{subgraph_page.stem}">Szenengraph</a> ·
                        <a href="/genesis_bargraph?rangeStart={start}&amp;rangeEnd={end}">Balkendiagramm</a></p>
                        {witnessTable.format_table()}""",
                        head=title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])

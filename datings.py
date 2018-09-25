@@ -189,11 +189,11 @@ class AbsoluteDating(_AbstractDating):
         for item in self.items:
             for source in self.sources:
                 if self.start is not None:
-                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore)
+                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.end is None and not self.ignore:
                         G.add_edge(item, self.date_before + HALF_INTERVAL_CORRECTION, kind='not_after', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
-                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore)
+                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.start is None and not self.ignore:
                         G.add_edge(self.date_after - HALF_INTERVAL_CORRECTION, item, kind='not_before', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
 
