@@ -120,6 +120,7 @@ class _AbstractDating(metaclass=ABCMeta):
                              for source in el.xpath('f:source', namespaces=faust.namespaces))
         self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces))
         self.xmlsource: Tuple[str, int] = (faust.relative_path(el.getroottree().docinfo.URL), el.sourceline)
+        self.ignore = el.get('ignore', 'no') == 'yes'
 
     @abstractmethod
     def add_to_graph(self, G: nx.MultiDiGraph):
@@ -188,12 +189,12 @@ class AbsoluteDating(_AbstractDating):
         for item in self.items:
             for source in self.sources:
                 if self.start is not None:
-                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource)
-                    if self.end is None:
+                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore)
+                    if self.end is None and not self.ignore:
                         G.add_edge(item, self.date_before + HALF_INTERVAL_CORRECTION, kind='not_after', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
-                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource)
-                    if self.start is None:
+                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore)
+                    if self.start is None and not self.ignore:
                         G.add_edge(self.date_after - HALF_INTERVAL_CORRECTION, item, kind='not_before', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
 
 
@@ -218,7 +219,8 @@ class RelativeDating(_AbstractDating):
                              source=source,
                              comments=self.comments,
                              dating=self,
-                             xml=self.xmlsource)
+                             xml=self.xmlsource,
+                             ignore=self.ignore)
 
 
 def _parse_file(filename: str):
