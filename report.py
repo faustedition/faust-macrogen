@@ -55,12 +55,13 @@ class HtmlTable:
         """
         self.titles = []
         self.attrs = []
+        self.header_attrs = []
         self.formatters = []
         self.table_attrs = table_attrs
         self.rows = []
         self.row_attrs = []
 
-    def column(self, title='', format_spec=None, **attrs):
+    def column(self, title='', format_spec=None, attrs={}, **header_attrs):
         """
         Adds a column to this table.
 
@@ -86,6 +87,7 @@ class HtmlTable:
 
         self.formatters.append(formatter)
         self.attrs.append(attrs)
+        self.header_attrs.append(header_attrs)
         return self
 
     def row(self, row, **row_attrs):
@@ -110,7 +112,7 @@ class HtmlTable:
     @staticmethod
     def _build_attrs(attrdict: Dict):
         return ''.join(
-                ' {}="{}"'.format(attr.strip('_').replace('-', '_'), escape(value)) for attr, value in attrdict.items())
+                ' {}="{}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
 
     def _format_column(self, index, data):
         attributes = self._build_attrs(self.attrs[index])
@@ -127,8 +129,9 @@ class HtmlTable:
             yield self._format_row(row)
 
     def _format_header(self):
-        column_headers = ''.join('<th>{}</th>'.format(title) for title in self.titles)
-        return '<table class="pure-table"><thead>{}</thead><tbody>'.format(column_headers)
+        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
+                                  for title, attrs in zip(self.titles, self.header_attrs)])
+        return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers, self._build_attrs(self.table_attrs))
 
     def _format_footer(self):
         return '</tbody></table>'
@@ -174,8 +177,8 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
     breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
     prefix = """<?php include "../includes/header.php"?>
      <section>"""
+    require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
     if graph_id is not None:
-        require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
         init = f"""
         graph = document.getElementById('{graph_id}');
         bbox = graph.getBoundingClientRect();
@@ -186,13 +189,15 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
         svgPanZoom('#{graph_id}', {json.dumps(graph_options)})
         """
     else:
-        require = "requirejs(['faust_common'], function(Faust)"
         init = ''
     suffix = f"""</section>
     <script type="text/javascript">
-        {require} {{
+        requirejs(['faust_common', 'svg-pan-zoom', 'sortable', 'jquery', 'jquery.table'],
+        function(Faust, svgPanZoom, Sortable, $, $table) {{
             document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs({json.dumps(breadcrumbs)}));
             {init}
+            Sortable.init();
+            $("table[data-fixed-header]").fixedtableheader();
         }});
     </script>
     <?php include "../includes/footer.php"?>"""
@@ -282,16 +287,16 @@ def _edition_link(ref: Reference):
 class RefTable(HtmlTable):
 
     def __init__(self, base: nx.MultiDiGraph, **table_attrs):
-        super().__init__(**table_attrs)
-        (self.column('Nr.')
-             .column('Knoten davor')
-             .column('Objekt', format_spec=_fmt_node)
-             .column('Typ / Edition', format_spec=_edition_link)
-             .column('nicht vor', format_spec=lambda d: format(d) if d != EARLIEST else "")
-             .column('nicht nach', format_spec=lambda d: format(d) if d != LATEST else "")
-             .column('erster Vers')
-             .column('Aussagen')
-             .column('<a href="conflicts">Konflikte</a>'))
+        super().__init__(data_sortable="true", **table_attrs)
+        (self.column('Nr.', data_sortable="numericplus")
+             .column('Knoten davor', data_sortable="numericplus")
+             .column('Objekt', data_sortable="sigil", format_spec=_fmt_node)
+             .column('Typ / Edition', data_sortable="sigil", format_spec=_edition_link)
+             .column('nicht vor', data_sortable="alpha", format_spec=lambda d: format(d) if d != EARLIEST else "")
+             .column('nicht nach', data_sortable="alpha", format_spec=lambda d: format(d) if d != LATEST else "")
+             .column('erster Vers', data_sortable="numericplus")
+             .column('Aussagen', data_sortable="numericplus")
+             .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
         self.base = base
 
 
@@ -334,11 +339,11 @@ class RefTable(HtmlTable):
                  'inscription': 'Inskription von',
                  None: '???'
                  }
-        assertionTable = (HtmlTable()
-                          .column('berücksichtigt?')
-                          .column('Aussage')
-                          .column('Bezug', format_spec=_fmt_node)
-                          .column('Quelle', format_spec=_fmt_source)
+        assertionTable = (HtmlTable(data_sortable='true')
+                          .column('berücksichtigt?', data_sortable_type='alpha')
+                          .column('Aussage', data_sortable_type='alpha')
+                          .column('Bezug', data_sortable_type='sigil', format_spec=_fmt_node)
+                          .column('Quelle', data_sortable_type='bibliography', format_spec=_fmt_source)
                           .column('Kommentare', format_spec="/".join)
                           .column('XML', format_spec=_fmt_xml))
         for (u, v, attr) in self.base.in_edges(ref, data=True):
@@ -370,14 +375,14 @@ class RefTable(HtmlTable):
 class AssertionTable(HtmlTable):
 
     def __init__(self, **table_attrs):
-        super().__init__(**table_attrs)
-        (self.column('berücksichtigt?')
-             .column('Subjekt', _fmt_node)
-             .column('Relation', RELATION_LABELS.get)
-             .column('Objekt', _fmt_node)
-             .column('Quelle', _fmt_source)
-             .column('Kommentare', ' / '.join)
-             .column('XML', _fmt_xml))
+        super().__init__(data_sortable='true', **table_attrs)
+        (self.column('berücksichtigt?', data_sortable_type="alpha")
+             .column('Subjekt',  _fmt_node, data_sortable_type="sigil")
+             .column('Relation',  RELATION_LABELS.get, data_sortable_type="alpha")
+             .column('Objekt', _fmt_node, data_sortable_type="sigil")
+             .column('Quelle', _fmt_source, data_sortable_type="bibliography")
+             .column('Kommentare', ' / '.join, data_sortable_type="alpha")
+             .column('XML', _fmt_xml, data_sortable_type="alpha"))
 
     def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
         classes = [attr['kind']] if 'kind' in attr and attr['kind'] is not None else ['unknown-kind']
