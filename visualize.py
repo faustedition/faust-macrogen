@@ -126,6 +126,7 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
     agraph.node_attr['fontname'] = 'Ubuntu derivative Faust'
     agraph.node_attr['fontsize'] = 12
     agraph.graph_attr['rankdir'] = 'LR'
+    agraph.graph_attr['stylesheet'] = '/css/webfonts.css'
 
     # extract the timeline
     timeline = agraph.add_subgraph([node for node in agraph.nodes() if node.attr['kind'] == 'date'],
