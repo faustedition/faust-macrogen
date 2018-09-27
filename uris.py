@@ -363,10 +363,10 @@ def _collect_wits():
 
 
 def _assemble_report(wits):
-    referenced = [(str(wit), wit.status, ", ".join([file + ":" + str(line) for file, line in wits[wit]]))
-                  for wit in sorted(wits, key=str)]
+    referenced = [(wit.uri, Witness.corrections.get(wit.uri, ''), wit.status, ", ".join([file + ":" + str(line) for file, line in wits[wit]]))
+                  for wit in sorted(wits, key=lambda wit: wit.uri)]
 
-    unused = [(str(wit), "no macrogenesis data", "")
+    unused = [(str(wit), "", "no macrogenesis data", "")
               for wit in sorted(set(Witness.database.values()), key=str)
               if wit not in wits and isinstance(wit, Witness)]
 
@@ -379,7 +379,7 @@ def _report_wits(wits, output_csv='witness-usage.csv'):
     with open(output_csv, "wt", encoding='utf-8') as reportfile:
         table = csv.writer(reportfile)
         rows = _assemble_report(wits)
-        table.writerow(('Zeuge / Referenz', 'Status', 'Vorkommen'))
+        table.writerow(('Zeuge / Referenz', 'korrigierte URI (oder leer)' ,'Status', 'Vorkommen'))
         for row in rows:
             table.writerow(row)
         stats = Counter([row[1].split(':')[0] for row in rows])
