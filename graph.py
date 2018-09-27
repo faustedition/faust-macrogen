@@ -2,7 +2,7 @@ import csv
 from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Callable, Any, Dict, Tuple, Union
+from typing import List, Callable, Any, Dict, Tuple, Union, Hashable, Set
 
 import dateutil
 import networkx as nx
@@ -271,6 +271,27 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
         graph.remove_node(ambiguity)
 
 
+def datings_from_inscriptions(base: nx.MultiDiGraph):
+    logger.info('Copying datings from inscriptions to witnesses')
+    inscriptions_by_wit: Dict[Witness, List[Inscription]] = defaultdict(list)
+    for inscription in [node for node in base.nodes if isinstance(node, Inscription)]:
+        if inscription.witness in base.nodes:
+            inscriptions_by_wit[inscription.witness].append(inscription)
+    for witness, inscriptions in inscriptions_by_wit.items():
+        iin = [edge for i in inscriptions for edge in base.in_edges(i, data=True, keys=True)]
+        before = [edge for edge in iin if isinstance(edge[0], date)]
+        iout = [edge for i in inscriptions for edge in base.out_edges(i, data=True, keys=True)]
+        after = [edge for edge in iout if isinstance(edge[1], date)]
+        if before and not any(isinstance(pred, date) for pred in base.predecessors(witness)):
+            for d, i, k, attr in before:
+                base.add_edge(d, witness, copy=(d, i, k), **attr)
+        if after and not any(isinstance(succ, date) for succ in base.successors(witness)):
+            for i, d, k, attr in after:
+                base.add_edge(witness, d, copy=(d, i, k), **attr)
+
+
+
+
 def adopt_orphans(graph: nx.MultiDiGraph):
     """
     Introduces auxilliary edges to witnesses that are referenced by an inscription or ambiguous ref, but are not
@@ -313,6 +334,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
 
     """
     base = base_graph()
+    datings_from_inscriptions(base)
     adopt_orphans(base)
     add_edge_weights(base)
     resolve_ambiguities(base)
