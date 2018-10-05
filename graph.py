@@ -335,9 +335,9 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     """
     base = base_graph()
     datings_from_inscriptions(base)
-    adopt_orphans(base)
     add_edge_weights(base)
     resolve_ambiguities(base)
+    adopt_orphans(base)
     base = collapse_edges_by_source(base)
     working = cleanup_graph(base).copy()
     add_missing_wits(working)
