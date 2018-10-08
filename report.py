@@ -115,14 +115,21 @@ class HtmlTable:
                 ' {}="{}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
 
     def _format_column(self, index, data):
-        attributes = self._build_attrs(self.attrs[index])
-        content = self.formatters[index](data)
-        return f'<td{attributes}>{content}</td>'
+        try:
+            attributes = self._build_attrs(self.attrs[index])
+            content = self.formatters[index](data)
+            return f'<td{attributes}>{content}</td>'
+        except Exception as e:
+            raise ValueError('Error formatting column %s' % self.titles[index]) from e
 
     def _format_row(self, row: Iterable, **rowattrs) -> str:
         attributes = self._build_attrs(rowattrs)
-        return f'<tr{attributes}>' + ''.join(
-                self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+        try:
+            return f'<tr{attributes}>' + ''.join(
+                    self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+        except:
+            logger.exception('Error formatting row %s', row)
+            return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
 
     def _format_rows(self, rows: Iterable[Iterable]):
         for row in rows:
