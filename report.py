@@ -681,8 +681,8 @@ def report_help():
         <tr><td><img src="help-conflict.svg" /></td>
             <td>Laut Quelle 1 entstand {w1} vor {w2},
                 laut Quelle 2 entstand {w2} vor {w1}.
-                Diese Aussage von Quelle 2 wird nicht berücksichtigt.
-                Die Aussage von Quelle 3 wird von vornherein ignoriert.</td></tr>
+                Diese Aussage von Quelle 2 wird bei der heuristischen Konfliktbeseitugung aus dem Graphen entfernt.
+                Die Aussage von Quelle 3 wird von vornherein ignoriert (Quelle allgemein unglaubwürdig oder konkrete Aussage unbegründet).</td></tr>
         <tr><td><img src="help-syn.svg"/></td>
             <td>Laut Quelle 2 entstand {w1} etwa gleichzeitig mit {w2}.</td></tr>
         <tr><td><img src="help-dating.svg"/></td>
