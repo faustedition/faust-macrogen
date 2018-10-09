@@ -579,7 +579,8 @@ def report_sources(graphs: MacrogenesisInfo):
         for u, v, k, attr in edges:
             current_table.edge(u, v, attr)
         write_html(target / (source.filename + '.php'),
-                   f"""<object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
+                   f"""<p><a href="/bibliography#{source.filename}">{source.citation} in der Bibliographie</a></p>
+                   <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
                        {current_table.format_table()}""",
                    graph_id='refgraph',
                    breadcrumbs=[dict(caption='Quellen', link='sources')],
@@ -795,3 +796,8 @@ def write_order_xml(graphs):
             generated=datetime.now().isoformat())
     target.mkdir(parents=True, exist_ok=True)
     root.getroottree().write(str(target / 'order.xml'), pretty_print=True)
+
+    stats = graphs.year_stats()
+    data = dict(max=max(stats.values()), counts=stats)
+    with (target / 'witness-stats.json').open('wt', encoding='utf-8') as out:
+        json.dump(data, out)

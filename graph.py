@@ -1,5 +1,5 @@
 import csv
-from collections import defaultdict
+from collections import defaultdict, Counter
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List, Callable, Any, Dict, Tuple, Union, Hashable, Set
@@ -248,6 +248,19 @@ class MacrogenesisInfo:
             ref.latest = min_after_date - DAY
             ref.latest_abs = min_abs_after_date - DAY if min_abs_after_date is not None else None
 
+            if ref.earliest != EARLIEST and ref.latest != LATEST:
+                avg_date = ref.earliest + (ref.latest - ref.earliest) / 2
+                ref.avg_year = avg_date.year
+            elif ref.latest != LATEST:
+                ref.avg_year = ref.latest.year
+            elif ref.earliest != EARLIEST:
+                ref.avg_year = ref.earliest.year
+            else:
+                ref.avg_year = None
+
+    def year_stats(self):
+        years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
+        return Counter(years)
 
 def resolve_ambiguities(graph: nx.MultiDiGraph):
     """
