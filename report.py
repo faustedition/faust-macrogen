@@ -682,9 +682,9 @@ def report_help():
             <td>Laut Quelle 1 entstand {w1} vor {w2},
                 laut Quelle 2 entstand {w2} vor {w1}.
                 Diese Aussage von Quelle 2 wird nicht berücksichtigt.
-                Die Aussage von Quelle Quelle 3 wird von vornherein ignoriert.</td></tr>
+                Die Aussage von Quelle 3 wird von vornherein ignoriert.</td></tr>
         <tr><td><img src="help-syn.svg"/></td>
-            <td>Laut Quelle 2 entstand {w1} etwa zeitgleich zu {w2}.</td></tr>
+            <td>Laut Quelle 2 entstand {w1} etwa gleichzeitig mit {w2}.</td></tr>
         <tr><td><img src="help-dating.svg"/></td>
             <td>Laut Quelle 1 entstand {w1} nicht vor {d1} und nicht nach {d2}.
                 Der gepunktete Pfeil repräsentiert den Zeitstrahl, er führt immer zum nächsten im Graph repräsentierten Datum.
