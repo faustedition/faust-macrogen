@@ -204,7 +204,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
             document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs({json.dumps(breadcrumbs)}));
             {init}
             Sortable.init();
-            $("table[data-fixed-header]").fixedtableheader();
+            $("table[data-sortable]").fixedtableheader();
         }});
     </script>
     <?php include "../includes/footer.php"?>"""
