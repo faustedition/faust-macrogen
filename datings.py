@@ -69,6 +69,12 @@ def _read_scores():
 
 _bib_db = _parse_bibliography('https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml')
 
+_bib_labels = {
+    'faust://self': 'Faustedition',
+    'faust://model/inscription': 'Inskription von',
+    'faust://orphan/adoption': 'Datierungsinhalt für',
+    'faust://heuristic': 'künstliche Datierung'
+}
 
 class BiblSource:
     """
@@ -108,6 +114,8 @@ class BiblSource:
     def citation(self):
         if self.uri in _bib_db:
             return _bib_db[self.uri].citation
+        elif self.uri in _bib_labels:
+            return _bib_labels[self.uri]
         else:
             return self.filename
 
