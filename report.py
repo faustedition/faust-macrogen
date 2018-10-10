@@ -674,6 +674,7 @@ def report_help():
        gelangen.</p>
     <p><strong>Pfeile</strong> bedeuten immer <em>zeitlich vor</em>. Im Vergleich zu termini a quo bzw. ad quem
     sind die Datumsangaben deshalb um einen Tag versetzt.</p>
+    <p><a href="/intro_macrogenesis">Lesen Sie eine ausführlichere Einführung zum Makrogenese-Lab.</a></p>
     <table class="pure-table">
         <thead><th>Graph</th><th>Bedeutung</th></thead>
         <tbody>
