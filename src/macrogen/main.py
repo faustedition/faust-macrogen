@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from faust_logging import logging
+from .faust_logging import logging
 
 import sys
 
-import graph
-import report
-from visualize import render_all
+from . import graph
+from . import report
+from .visualize import render_all
 
 logger = logging.getLogger('main')
 

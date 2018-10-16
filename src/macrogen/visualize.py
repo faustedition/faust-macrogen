@@ -8,10 +8,10 @@ from networkx import MultiDiGraph
 from pygraphviz import AGraph
 from tqdm import tqdm
 
-from datings import BiblSource, add_timeline_edges
-from faust_logging import logging
-from graph import pathlink
-from uris import Reference
+from .datings import BiblSource, add_timeline_edges
+from .faust_logging import logging
+from .graph import pathlink
+from .uris import Reference
 
 logger = logging.getLogger(__name__)
 

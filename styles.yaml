@@ -10,16 +10,16 @@ node:
 
 # Node styles. Mapping (kind -> (attribute -> value))
 edge:
-  not_before:
-    color: blue
-  not_after:
-    color: blue
-  from_:
-    color: green
-  to_:
-    color: green
-  when:
-    color: cyan
+#  not_before:
+#    color: blue
+#  not_after:
+#    color: blue
+#  from_:
+#    color: green
+#  to_:
+#    color: green
+#  when:
+#    color: cyan
   temp-syn:
     dir: none
     constraint: false
@@ -34,8 +34,8 @@ edge:
     color: gray
     constraint: false
     style: dashed
-  copy:
-    color: lightblue
+#  copy:
+#    color: lightblue
 
   # additional style for conflicting edges
   delete:

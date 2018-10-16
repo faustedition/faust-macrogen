@@ -8,10 +8,10 @@ import dateutil
 import networkx as nx
 from dataclasses import dataclass
 
-from datings import base_graph, BiblSource, parse_datestr
-from faust_logging import logging
-from igraph_wrapper import to_igraph, nx_edges
-from uris import Reference, Inscription, Witness, AmbiguousRef
+from .datings import base_graph, BiblSource, parse_datestr
+from .faust_logging import logging
+from .igraph_wrapper import to_igraph, nx_edges
+from .uris import Reference, Inscription, Witness, AmbiguousRef
 
 logger = logging.getLogger(__name__)
 

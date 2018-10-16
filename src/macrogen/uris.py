@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from pathlib import Path
 
-from faust_logging import logging
+from .faust_logging import logging
 
 import codecs
 import csv

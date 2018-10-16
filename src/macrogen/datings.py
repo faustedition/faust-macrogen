@@ -10,8 +10,8 @@ from lxml import etree
 from more_itertools import pairwise
 
 import faust
-from faust_logging import logging
-from uris import Witness, Reference
+from .faust_logging import logging
+from .uris import Witness, Reference
 
 logger = logging.getLogger(__name__)
 

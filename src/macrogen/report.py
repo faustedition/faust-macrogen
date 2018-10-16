@@ -9,7 +9,7 @@ from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
 
-from faust_logging import logging
+from .faust_logging import logging
 
 import csv
 from collections.__init__ import defaultdict, Counter
@@ -19,11 +19,11 @@ from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union
 
 import networkx as nx
 
-import faust
-from datings import BiblSource
-from graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
-from uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
-from visualize import write_dot, simplify_graph
+from . import faust
+from .datings import BiblSource
+from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
+from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
+from .visualize import write_dot, simplify_graph
 
 logger = logging.getLogger(__name__)
 target = Path(faust.config.get('macrogenesis', 'output-dir'))
