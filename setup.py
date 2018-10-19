@@ -15,7 +15,7 @@ setup(
                 'networkx>=2.1',
                 'python-igraph',
                 'pygraphviz',
-                'yaml',
+                'pyyaml',
                 'pandas',
                 'openpyxl',
                 'xlrd',
