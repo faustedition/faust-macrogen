@@ -3,7 +3,7 @@ from datetime import date
 import networkx as nx
 import pytest
 
-from igraph_wrapper import _convert_attr_list, to_igraph, nx_edges
+from macrogen.igraph_wrapper import _convert_attr_list, to_igraph, nx_edges
 
 
 @pytest.fixture(scope='session')

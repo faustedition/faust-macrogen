@@ -18,7 +18,7 @@ import pandas as pd
 import requests
 from lxml import etree
 
-import faust
+from . import faust
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +261,7 @@ class Witness(Reference):
             else:
                 return result
 
-        wa_h = re.match('faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
+        wa_h = re.match(r'faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
         if wa_h is not None:
             wit = cls.get('faust://document/faustedition/2_H')
             if wa_h.group(4):
@@ -269,7 +269,7 @@ class Witness(Reference):
             else:
                 return Inscription(wit, wa_h.group(3))
 
-        wa_pseudo_inscr = re.match('faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
+        wa_pseudo_inscr = re.match(r'faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
         if wa_pseudo_inscr is not None:
             docuri = 'faust://document/wa_faust/' + wa_pseudo_inscr.group(2)
             wit = cls.get(docuri)
@@ -278,7 +278,7 @@ class Witness(Reference):
             else:
                 logger.warning('Could not fix WA pseudo inscription candidate %s (%s)', uri, wit)
 
-        space_inscr = re.match('faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
+        space_inscr = re.match(r'faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
         if space_inscr is not None:
             uri = 'faust://inscription/' + space_inscr.group(2) + '/' + space_inscr.group(3) + '/' + space_inscr.group(
                     4)

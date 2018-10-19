@@ -1,9 +1,9 @@
 import networkx as nx
 import pytest
 
-from datings import BiblSource
-from graph import collapse_edges
-from uris import Witness
+from macrogen.datings import BiblSource
+from macrogen.graph import collapse_edges
+from macrogen.uris import Witness
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 import pytest
 
-from uris import Witness, Inscription, UnknownRef, AmbiguousRef
+from macrogen.uris import Witness, Inscription, UnknownRef, AmbiguousRef
 
 
 @pytest.fixture
@@ -51,6 +51,7 @@ def test_known_wit(fake_db):
     assert h.status == '(ok)'
 
 
+@pytest.mark.skip('Doesn’t work with AmbiguousRef model -- need other example')
 def test_other_uri(fake_db):
     Witness.database = fake_db
     h = Witness.get('faust://document/wa/2_H')
@@ -69,14 +70,14 @@ def test_ex_inscription(fake_db):
     Witness.database = fake_db
     i = Witness.get('faust://inscription/wa/2_H/i_uebrige')
     assert isinstance(i, Inscription)
-    assert i.status == '(ok)'
+    # assert i.status == '(ok)' -> it’s an inscription of an ambiguous reeference now
 
 
 def test_missing_inscription(fake_db):
     Witness.database = fake_db
     i = Witness.get('faust://inscription/wa/2_H/gipsnich')
     assert isinstance(i, Inscription)
-    assert i.status == 'unknown-inscription'
+    assert i.status == 'unknown'
 
 
 def test_missing_inscription_wit(fake_db):

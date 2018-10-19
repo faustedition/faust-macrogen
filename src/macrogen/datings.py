@@ -9,7 +9,7 @@ import requests
 from lxml import etree
 from more_itertools import pairwise
 
-import faust
+from . import faust
 from .faust_logging import logging
 from .uris import Witness, Reference
 
