@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # coding=utf-8
+
+"""
+Legacy script to deal with the events table
+"""
 import argparse
 import codecs
 import logging

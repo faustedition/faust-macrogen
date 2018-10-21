@@ -148,6 +148,9 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
 
 
 def render_file(filename):
+    """
+    Renders the given dot file to an svg file using dot.
+    """
     graph = AGraph(filename=filename)
     try:
         resultfn = filename[:-3] + 'svg'

@@ -15,7 +15,7 @@ import csv
 from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Any, Optional
 
 import networkx as nx
 
@@ -111,10 +111,24 @@ class HtmlTable:
 
     @staticmethod
     def _build_attrs(attrdict: Dict):
+        """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
         return ''.join(
                 ' {}="{}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
 
-    def _format_column(self, index, data):
+    def _format_column(self, index, data) -> str:
+        """
+        Returns the HTML for the given cell.
+
+        This looks up the configured formatter for the column and calls it to
+        rendr the data, and it will also configure the cell attributes.
+
+        Args:
+            index: index of the column
+            data:  data to display
+
+        Returns:
+            String containing HTML `<td>` element
+        """
         try:
             attributes = self._build_attrs(self.attrs[index])
             content = self.formatters[index](data)
@@ -123,6 +137,15 @@ class HtmlTable:
             raise ValueError('Error formatting column %s' % self.titles[index]) from e
 
     def _format_row(self, row: Iterable, **rowattrs) -> str:
+        """
+        Returns the HTML for a column with the given row.
+        Args:
+            row: the row to format
+            **rowattrs: attributes for the row
+
+        Returns: a string containing an HTML `<tr>` element
+
+        """
         attributes = self._build_attrs(rowattrs)
         try:
             return f'<tr{attributes}>' + ''.join(
@@ -131,11 +154,15 @@ class HtmlTable:
             logger.exception('Error formatting row %s', row)
             return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
 
-    def _format_rows(self, rows: Iterable[Iterable]):
+    def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str]:
+        """Formats the given rows."""
         for row in rows:
             yield self._format_row(row)
 
     def _format_header(self):
+        """
+        Formats the table header.
+        """
         column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
                                   for title, attrs in zip(self.titles, self.header_attrs)])
         return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers, self._build_attrs(self.table_attrs))
@@ -270,8 +297,8 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
-
-def _fmt_node(node):
+def _fmt_node(node: Union[Reference, object]):
+    """Formats a node by creating a link of possible"""
     if isinstance(node, Reference):
         return f'<a href="{node.filename.stem}">{node}</a>'
     else:
@@ -279,6 +306,7 @@ def _fmt_node(node):
 
 
 def _edition_link(ref: Reference):
+    """Creates a link or links into the edition for the node."""
     if isinstance(ref, Witness):
         return f'<a href="/document?sigil={ref.sigil_t}">{ref}</a>'
     elif isinstance(ref, Inscription):
@@ -292,6 +320,9 @@ def _edition_link(ref: Reference):
 
 
 class RefTable(HtmlTable):
+    """
+    Builds a table of references.
+    """
 
     def __init__(self, base: nx.MultiDiGraph, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
@@ -307,7 +338,15 @@ class RefTable(HtmlTable):
         self.base = base
 
 
-    def reference(self, ref, index=None, write_subpage=False):
+    def reference(self, ref: Reference, index: Optional[int] = None, write_subpage: bool = False):
+        """
+        Adds the given reference to the table.
+
+        Args:
+            ref: the object for which the row will be created
+            index: if present, the index to display for the node.
+            write_subpage: if true, create a subpage with all assertions for the referende
+        """
         if ref in self.base:
             if index is None:
                 index = self.base.node[ref]['index']

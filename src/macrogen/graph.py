@@ -1,3 +1,8 @@
+"""
+Functions to build the graphs and perform their analyses.
+"""
+
+
 import csv
 from collections import defaultdict, Counter
 from datetime import date, timedelta
@@ -21,6 +26,11 @@ DAY = timedelta(days=1)
 
 
 def pathlink(*nodes) -> Path:
+    """
+    Creates a file name for the given path.
+
+    The file name consists of the file names for the given nodes, in order, joined by `--`
+    """
     node_names: List[str] = []
     for node in nodes:
         if isinstance(node, str):
@@ -61,6 +71,16 @@ def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
 
 
 def analyse_conflicts(graph):
+    """
+    Dumps some statistics on the conflicts in the given graph.
+
+    Args:
+        graph:
+
+
+    Todo: is this still up to date?
+    """
+
     conflicts_file_name = 'conflicts.tsv'
     with open(conflicts_file_name, "wt") as conflicts_file:
         writer = csv.writer(conflicts_file, delimiter='\t')
@@ -127,6 +147,7 @@ def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int
 
 
 def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], **new_attrs):
+    """Mark all edges in the given graph by updating their attributes with the keyword arguments. """
     for u, v, k, *_ in edges:
         graph.edges[u, v, k].update(new_attrs)
 
@@ -147,8 +168,7 @@ def collapse_edges(graph: nx.MultiDiGraph):
 
     Note:
         This is not able to reduce the number of edges enough to let the
-        feedback_arc_set method 'ip' work with the
-
+        feedback_arc_set method 'ip' work with the largest component
     """
     result = graph.copy()
     multiedges = defaultdict(list)
@@ -285,6 +305,15 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
 
 
 def datings_from_inscriptions(base: nx.MultiDiGraph):
+    """
+    Copy datings from inscriptions to witnesses.
+
+    Args:
+        base:
+
+    Returns:
+
+    """
     logger.info('Copying datings from inscriptions to witnesses')
     inscriptions_by_wit: Dict[Witness, List[Inscription]] = defaultdict(list)
     for inscription in [node for node in base.nodes if isinstance(node, Inscription)]:
@@ -326,11 +355,20 @@ def adopt_orphans(graph: nx.MultiDiGraph):
 
 
 def add_inscription_links(base: nx.MultiDiGraph):
+    """
+    Add an edge from each inscription to its parent witness.
+    """
     for node in list(base.nodes):
         if isinstance(node, Inscription):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
 
 def add_missing_wits(working: nx.MultiDiGraph):
+    """
+    Add known witnesses that are not in the graph yet.
+
+    The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
+    but it makes these nodes appear in the topological order.
+    """
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
     missing_wits = all_wits - known_wits

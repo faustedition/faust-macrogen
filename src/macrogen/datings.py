@@ -1,8 +1,11 @@
+"""
+Functions to parse the XML datings and build a graph out of them
+"""
 import csv
 import datetime
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, defaultdict
-from typing import List, Tuple, Optional, Any, Dict
+from typing import List, Tuple, Optional, Any, Dict, Generator
 
 import networkx as nx
 import requests
@@ -15,9 +18,16 @@ from .uris import Witness, Reference
 
 logger = logging.getLogger(__name__)
 
+# When there is only one notbefore/notafter border -- how much should we adjust
 HALF_INTERVAL_CORRECTION = datetime.timedelta(365/2)
 
 def parse_datestr(datestr: str) -> datetime.date:
+    """
+    Parses a date str like 1799-01-01 to a date.
+
+    Returns:
+        None if the string could not be parsed
+    """
     if datestr is None:
         return None
 
@@ -29,6 +39,7 @@ def parse_datestr(datestr: str) -> datetime.date:
 
 
 class InvalidDatingError(ValueError):
+    """The given dating is invalid."""
 
     def __init__(self, msg, element: Optional[etree._Element] = None):
         if element is not None:
@@ -37,10 +48,12 @@ class InvalidDatingError(ValueError):
         super().__init__(msg)
 
 
+# Entry in the bibliography
 BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
 
 
-def _parse_bibliography(url):
+def _parse_bibliography(url: str) -> Dict[str, BibEntry]:
+    """Parses the bibliography file at url. Returns a dictionary mapping an URI to a corresponding bibliography entry."""
     db: Dict[str, BibEntry] = {}
     scores = _read_scores()
     et = etree.fromstring(requests.get(url).content)
@@ -53,6 +66,13 @@ def _parse_bibliography(url):
 
 
 def _read_scores():
+    """
+    Parses the bibliography score file.
+
+    Returns:
+        Map uri -> score
+
+    """
     scores = defaultdict(lambda: 1)
     try:
         with open('bibscores.tsv', encoding='utf-8') as scorefile:
@@ -78,10 +98,16 @@ _bib_labels = {
 
 class BiblSource:
     """
-    A bibliographic source
+    A bibliographic source in a macrogenesis XML file.
     """
 
     def __init__(self, uri, detail=''):
+        """
+        Creates a bibliographic source.
+        Args:
+            uri: should be a faust://bibliography/ URI or one of the special values
+            detail: detail string like pages
+        """
         self.uri = uri
         if detail is None:
             detail = ''
@@ -105,6 +131,9 @@ class BiblSource:
 
     @property
     def filename(self):
+        """
+        A string representation of the source (w/o detail) that is usable as part of a filename.
+        """
         if self.uri.startswith('faust://bibliography'):
             return self.uri.replace('faust://bibliography/', '')
         else:
@@ -112,6 +141,12 @@ class BiblSource:
 
     @property
     def citation(self):
+        """
+        String representation of only the citation, w/o detail.
+
+        Example:
+            Bohnenkamp 19994
+        """
         if self.uri in _bib_db:
             return _bib_db[self.uri].citation
         elif self.uri in _bib_labels:
@@ -121,8 +156,19 @@ class BiblSource:
 
 
 class _AbstractDating(metaclass=ABCMeta):
+    """
+    Abstract base class for assertions on datings.
+    """
 
     def __init__(self, el: etree._Element):
+        """
+        Initializes the assertion from the given XML element.
+
+        This base class methods mainly initializes the properties items, sources, comments, xmlsource, and details
+
+        Args:
+            el: The basic assertion element. This will usually be <relation> or <date>.
+        """
         self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=faust.namespaces)]
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
                              for source in el.xpath('f:source', namespaces=faust.namespaces))
@@ -132,10 +178,30 @@ class _AbstractDating(metaclass=ABCMeta):
 
     @abstractmethod
     def add_to_graph(self, G: nx.MultiDiGraph):
+        """
+        Add the dating to the given graph.
+
+        Implementations should create and add all nodes and edges required to represent this dating.
+
+        Args:
+            G: the graph to create.
+        """
         ...
 
 
 def _firstattr(object, *args: Tuple[str]) -> Optional[Tuple[str, Any]]:
+    """
+    Returns the first of the given attributes together with its value. E.g., when an object o has the attributes bar=1
+    and baz=2 and none else and you call ``_firstattr(o, 'foo', 'bar', 'baz')`` it will return ``'bar', 1``
+
+    Args:
+        object: The object to query
+        *args: The attribute names to query, in order
+
+    Returns:
+        key, value if found, `None, None` otherwise
+
+    """
     for attribute in args:
         value = getattr(object, attribute, None)
         if value is not None:
@@ -144,6 +210,9 @@ def _firstattr(object, *args: Tuple[str]) -> Optional[Tuple[str, Any]]:
 
 
 class AbsoluteDating(_AbstractDating):
+    """
+    An absolute dating. Create this from the `<date>` elements
+    """
 
     def __init__(self, el: etree._Element):
         super().__init__(el)
@@ -160,19 +229,33 @@ class AbsoluteDating(_AbstractDating):
             raise InvalidDatingError('Backwards dating (%s), this would have caused a conflict' % self, el)
 
     @property
-    def start_attr(self):
+    def start_attr(self) -> Tuple[str, datetime.date]:
+        """
+        The attribute representing the start of the interval.
+
+        Returns:
+            Tuple attribute name, parsed date
+        """
         return _firstattr(self, 'from_', 'when', 'not_before')
 
     @property
-    def end_attr(self):
+    def end_attr(self) -> Tuple[str, datetime.date]:
+        """
+        The attribute representing the end of the interval.
+
+        Returns:
+            Tuple attribute name, parsed date
+        """
         return _firstattr(self, 'to', 'when', 'not_after')
 
     @property
     def start(self) -> Optional[datetime.date]:
+        """The start date, regardless of the detailed semantics"""
         return self.start_attr[1]
 
     @property
     def end(self) -> Optional[datetime.date]:
+        """The end date, regardless of the detailed semantics"""
         return self.end_attr[1]
 
     @property
@@ -208,6 +291,9 @@ class AbsoluteDating(_AbstractDating):
 
 
 class RelativeDating(_AbstractDating):
+    """
+    A relative dating. Represents a sequence of items which are in a kind of relation.
+    """
 
     def __init__(self, el: etree._Element):
         super().__init__(el)
@@ -231,7 +317,15 @@ class RelativeDating(_AbstractDating):
                              ignore=self.ignore)
 
 
-def _parse_file(filename: str):
+def _parse_file(filename: str) -> Generator[_AbstractDating]:
+    """
+    Parses the given macrogenesis XML file and returns the datings from there.
+    Args:
+        filename: name or uri to the xml file to parse.
+
+    Returns:
+
+    """
     tree = etree.parse(filename)
     for element in tree.xpath('//f:relation', namespaces=faust.namespaces):
         yield RelativeDating(element)
@@ -242,19 +336,61 @@ def _parse_file(filename: str):
             logger.error(str(e))
 
 
-def _parse_files():
+def _parse_files() -> Generator[_AbstractDating]:
+    """
+    Parses the files in the macrogenesis folder and returns the datings from there.
+    Returns:
+
+    """
+
     for file in faust.macrogenesis_files():
         yield from _parse_file(file)
 
 
 def add_timeline_edges(graph):
+    """
+    Add missing timeline edges to the graph.
+
+    Afterwards, each date node in the graph will have an edge to the next date represented in the graph.
+    """
     date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
     for earlier, later in pairwise(date_nodes):
         if earlier != later and (earlier, later) not in graph.edges:
             graph.add_edge(earlier, later, kind='timeline')
 
 
-def base_graph():
+def simplify_timeline(graph: nx.MultiDiGraph):
+    """
+    Remove superfluous date nodes (and timeline edges) from the graph.
+
+    When creating subgraphs of the base graph, the subgraph will sometimes contain date nodes that
+    are not linked to references remaining in the subgraph. This function will remove those nodes
+    and link the remaining date nodes instead. So, it will reduce
+
+                    1798-01-01  ->   1709-01-15   ->   1798-02-01
+                       `-------------> H.x ---------------^
+
+    to
+
+                    1798-01-01  ->  1798-02-01
+                       `-----> H.x -----^
+    """
+    date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
+    prev = None
+    for node in date_nodes:
+        if prev is not None and graph.in_degree(node) == graph.out_degree(node) == 1 and isinstance(graph.successors(node)[0], datetime.date):
+            graph.remove_node(node)
+        else:
+            if prev is not None:
+                graph.add_edge(prev, node, kind='timeline')
+            prev = node
+
+
+def base_graph() -> nx.MultiDiGraph:
+    """
+    Builds the base graph by parsing the datings from all macrogenesis files from the default directory,
+    adding them to a new graph and adjusting the timeline.
+    """
     graph = nx.MultiDiGraph()
     logger.info('Reading data to build base graph ...')
     for dating in _parse_files():
@@ -263,7 +399,7 @@ def base_graph():
     return graph
 
 
-def cycle_subgraphs(graph: nx.Graph):
+def strongly_connected_subgraphs(graph: nx.Graph):
     """
     Extracts the strongly connected components of the given graph. Those components
     that consist of more than one nodes are then returned, sorted by size (in nodes,
@@ -275,6 +411,6 @@ def cycle_subgraphs(graph: nx.Graph):
     Returns:
         list of subgraphs
     """
-    cycles = [cycle for cycle in nx.strongly_connected_components(graph) if len(cycle) > 1]
-    sorted_cycles = sorted(cycles, key=len, reverse=True)
-    return [graph.subgraph(cycle) for cycle in sorted_cycles]
+    sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
+    sorted_sccs = sorted(sccs, key=len, reverse=True)
+    return [graph.subgraph(scc) for scc in sorted_sccs]
