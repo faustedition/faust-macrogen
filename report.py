@@ -15,7 +15,7 @@ import csv
 from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Optional, Any
 
 import networkx as nx
 
@@ -37,6 +37,8 @@ RELATION_LABELS = {'not_before': 'nicht vor',
                    'temp-pre': 'zeitlich vor',
                    None: '???'
                    }
+
+XML_ROOT: str = 'https://github.com/faustedition/faust-xml/blob/master/xml/macrogenesis/'
 
 
 class HtmlTable:
@@ -416,17 +418,28 @@ def _fmt_source(attrs):
     return result
 
 
+def _source_link(file: str, line: Optional[Union[int, str]] = None, text: Optional[Union[int, str]] = None) -> str:
+    file = file.replace('macrogenesis/', '')
+    if text is None:
+        text = file
+        if line is not None:
+            text += ': ' + str(line)
+    href = XML_ROOT + file
+    if line is not None:
+        href += '#L' + str(line)
+    return f'<a href="{href}">{text}</a>'
+
+
 def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
     if not xml:
         return ""
     if isinstance(xml[0], str):
-        return f"{xml[0].replace('macrogenesis/', '')}: {xml[1]}"
+        return _source_link(xml[0], xml[1])
     else:
         result = []
         for file, lines in groupby(xml, itemgetter(0)):
-            result.append(file.replace('macrogenesis/', '') + ': ' + ", ".join(map(str, map(itemgetter(1), lines))))
+            result.append(_source_link(file) + ': ' + ", ".join(_source_link(file, line, line) for (_, line) in lines))
         return "; ".join(result)
-
 
 
 def report_refs(graphs: MacrogenesisInfo):
