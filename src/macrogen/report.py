@@ -154,7 +154,7 @@ class HtmlTable:
             logger.exception('Error formatting row %s', row)
             return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
 
-    def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str]:
+    def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str, None, None]:
         """Formats the given rows."""
         for row in rows:
             yield self._format_row(row)

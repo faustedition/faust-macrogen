@@ -87,7 +87,7 @@ def _read_scores():
     return scores
 
 
-_bib_db = _parse_bibliography('https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml')
+bibliography = _parse_bibliography('https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml')
 
 _bib_labels = {
     'faust://self': 'Faustedition',
@@ -112,7 +112,7 @@ class BiblSource:
         if detail is None:
             detail = ''
         self.detail = detail
-        self.weight = _bib_db[uri].weight if uri in _bib_db else 1
+        self.weight = bibliography[uri].weight if uri in bibliography else 1
 
     def __eq__(self, other):
         if isinstance(other, BiblSource):
@@ -147,12 +147,19 @@ class BiblSource:
         Example:
             Bohnenkamp 19994
         """
-        if self.uri in _bib_db:
-            return _bib_db[self.uri].citation
+        if self.uri in bibliography:
+            return bibliography[self.uri].citation
         elif self.uri in _bib_labels:
             return _bib_labels[self.uri]
         else:
             return self.filename
+
+    @property
+    def long_citation(self):
+        if self.uri in bibliography:
+            return bibliography[self.uri].reference
+        else:
+            return self.citation
 
 
 class _AbstractDating(metaclass=ABCMeta):
@@ -317,7 +324,7 @@ class RelativeDating(_AbstractDating):
                              ignore=self.ignore)
 
 
-def _parse_file(filename: str) -> Generator[_AbstractDating]:
+def _parse_file(filename: str) -> Generator[_AbstractDating, None, None]:
     """
     Parses the given macrogenesis XML file and returns the datings from there.
     Args:
@@ -336,7 +343,7 @@ def _parse_file(filename: str) -> Generator[_AbstractDating]:
             logger.error(str(e))
 
 
-def _parse_files() -> Generator[_AbstractDating]:
+def _parse_files() -> Generator[_AbstractDating, None, None]:
     """
     Parses the files in the macrogenesis folder and returns the datings from there.
     Returns:
