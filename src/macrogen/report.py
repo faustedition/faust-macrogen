@@ -467,6 +467,86 @@ def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
         return "; ".join(result)
 
 
+def report_downloads(graphs: MacrogenesisInfo):
+    target.mkdir(exist_ok=True, parents=True)
+
+    simplified = simplify_graph(graphs.base)
+    nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
+    nx.write_gexf(simplified, str(target / 'base.gexf'))
+    nx.write_edgelist(simplified, str(target / 'base.edges'))
+
+    write_html(target / 'downloads.php', """
+    <section>
+    <p>Downloadable files for the base graph in various formats:</p>
+    <ul>
+        <li><a href='base.gpickle'>NetworkX GPickle, requires the faust-macrogen library</a></li>
+        <li><a href='base.gexf'>GEXF</a></li>
+        <li><a href='base.edges'>Edge List</a></li>
+    <ul>
+    </section>
+    <h4>Nodes</h4>
+    <p>The <strong>nodes</strong> are either URIs or dates in ISO 8601 format. URIs of the form
+       <code>faust://document/<var>scheme</var>/<var>sigil</var></code> denote a witness (document)
+       that has the identifier <var>sigil</var> in the respective identifier scheme. 
+       <code>faust://inscription/<var>scheme</var>/<var>sigil</var>/<var>id</var></code> denote an 
+       inscription (single “writing event”) on the respective document.</p>
+        <p>If some URI has a <var>scheme</var> ≠ <code>faustedition</code>, then it was not possible to map it to
+       a document in the edition. You may still try the sigil with the search. Otherwise, the document can be
+       displayed at <code>http://faustedition.net/document?sigil=<var>sigil</var></code>.
+       </p>
+    <p>Dates are always of the form YYYY-MM-DD.</p>
+    
+    <h4>Edges</h4>
+    <p>The edges have attributes that describe them further:</p>
+    <table class="pure-table">
+      <tr>
+        <th>Attribute</th><th>Value(s)</th><th>Meaning (<var>u</var> → <var>v</var>)</th>
+      </tr>
+      <tr>
+        <td rowspan="3">kind</td>
+        <td>
+            <code>not_before</code>, <code>not_after</code>, <code>from_</code>, <code>to_</code>, <code>when</code>,
+            <code>timeline</code>
+        </td>
+        <td>These all essentially mean <var>u</var> happened before <var>v</var></td>
+      </tr>
+      <tr>
+        <td><code>timeline</code></td>
+        <td><var>v</var> is the next date after date node <var>u</var></td>
+      </tr>
+      <tr>
+        <td><code>temp-syn</code></td>
+        <td><var>u</var> and <var>v</var> happened about at the same time
+      </tr>
+      <tr>
+        <td>ignore</td>
+        <td>boolean</td>
+        <td>if present and true, this edge is to be ignored for philological reasons</td>
+      </tr>
+      <tr>
+         <td>delete</td>
+         <td>boolean</td>
+         <td>if present and true, this edge has been removed by the minimum feedback edge set heuristics</td>
+      </tr>
+      <tr>
+          <td>weight</td>
+          <td>positive integer</td>
+          <td>trust in edge, generated mainly from sources</td>
+      </tr>
+      <tr>
+        <td>source</td>
+        <td>URI</td>
+        <td>URI identifying the source for this assertion</td>
+      </tr>
+      <tr>
+         <td>xml</td>
+         <td></td>
+         <td>file name and line of the <a href="https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis">XML file</a>
+          with this assertion</td>
+      </tr>
+    </table>    
+    """, "Downloads")
+
 
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
@@ -638,7 +718,8 @@ def report_index(graphs):
              ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
              ('dag', 'sortierrelevanter Gesamtgraph', 'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion', '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
-             ('help', 'Legende', 'Legende zu den Graphen')]
+             ('help', 'Legende', 'Legende zu den Graphen'),
+             ('downloads', 'Downloads', 'Graphen zum Download')]
     links = "\n".join(('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page in pages))
     report = f"""
       <p>
