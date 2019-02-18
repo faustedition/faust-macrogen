@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-from .faust_logging import logging
-
 import sys
 
+from macrogen.config import config
 from . import graph
 from . import report
 from .visualize import render_all
 
-logger = logging.getLogger('main')
+logger = config.getLogger('main')
 
 
 def main(argv=sys.argv):

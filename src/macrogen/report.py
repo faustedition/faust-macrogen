@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict, Counter
 from datetime import date, datetime
 from itertools import chain, repeat, groupby
 from operator import itemgetter
@@ -9,24 +10,20 @@ from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
 
-from .faust_logging import logging
-
 import csv
-from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Any, Optional
 
 import networkx as nx
 
-from . import faust
-from .datings import BiblSource
+from .config import config
+from .bibliography import BiblSource
 from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 
-logger = logging.getLogger(__name__)
-target = Path(faust.config.get('macrogenesis', 'output-dir'))
+logger = config.getLogger(__name__)
 
 RELATION_LABELS = {'not_before': 'nicht vor',
                    'not_after': 'nicht nach',
@@ -242,6 +239,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
 
 
 def report_components(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     logger.info('Writing component overview to %s', target)
     target.mkdir(parents=True, exist_ok=True)
     report = f"""<h3>{len(graphs.conflicts)} stark zusammenhängende Komponenten</h3>

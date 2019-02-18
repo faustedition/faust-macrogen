@@ -1,27 +1,23 @@
 """
 Functions to parse the XML datings and build a graph out of them
 """
-import csv
-import datetime
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple, defaultdict
-from typing import List, Tuple, Optional, Any, Dict, Generator
+from pathlib import Path
+from time import strptime
+from typing import List, Tuple, Optional, Any, Generator
 
 import networkx as nx
-import requests
+from datetime import date, timedelta
 from lxml import etree
 from more_itertools import pairwise
 
-from . import faust
-from .faust_logging import logging
+from .bibliography import BiblSource
 from .uris import Witness, Reference
+from .config import config
 
-logger = logging.getLogger(__name__)
+logger = config.getLogger(__name__)
 
-# When there is only one notbefore/notafter border -- how much should we adjust
-HALF_INTERVAL_CORRECTION = datetime.timedelta(365/2)
-
-def parse_datestr(datestr: str) -> datetime.date:
+def parse_datestr(datestr: str) -> date:
     """
     Parses a date str like 1799-01-01 to a date.
 
@@ -31,7 +27,7 @@ def parse_datestr(datestr: str) -> datetime.date:
     if datestr is None:
         return None
 
-    dt = datetime.datetime.strptime(datestr, '%Y-%m-%d')
+    dt = strptime(datestr, '%Y-%m-%d')
     if dt is not None:
         return dt.date()
     else:
@@ -48,118 +44,6 @@ class InvalidDatingError(ValueError):
         super().__init__(msg)
 
 
-# Entry in the bibliography
-BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
-
-
-def _parse_bibliography(url: str) -> Dict[str, BibEntry]:
-    """Parses the bibliography file at url. Returns a dictionary mapping an URI to a corresponding bibliography entry."""
-    db: Dict[str, BibEntry] = {}
-    scores = _read_scores()
-    et = etree.fromstring(requests.get(url).content)
-    for bib in et.xpath('//f:bib', namespaces=faust.namespaces):
-        uri = bib.get('uri')
-        citation = bib.find('f:citation', namespaces=faust.namespaces).text
-        reference = bib.find('f:reference', namespaces=faust.namespaces).text
-        db[uri] = BibEntry(uri, citation, reference, scores[uri])
-    return db
-
-
-def _read_scores():
-    """
-    Parses the bibliography score file.
-
-    Returns:
-        Map uri -> score
-
-    """
-    scores = defaultdict(lambda: 1)
-    try:
-        with open('bibscores.tsv', encoding='utf-8') as scorefile:
-            r = csv.reader(scorefile, delimiter='\t')
-            for row in r:
-                try:
-                    scores[row[0]] = int(row[1])
-                except ValueError as e:
-                    logger.warning('Skipping row %s: %s', row, e)
-    except FileNotFoundError as e:
-        logger.warning('Could not read score file: %s. Will use default score', e)
-    return scores
-
-
-bibliography = _parse_bibliography('https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml')
-
-_bib_labels = {
-    'faust://self': 'Faustedition',
-    'faust://model/inscription': 'Inskription von',
-    'faust://orphan/adoption': 'Datierungsinhalt für',
-    'faust://heuristic': 'künstliche Datierung'
-}
-
-class BiblSource:
-    """
-    A bibliographic source in a macrogenesis XML file.
-    """
-
-    def __init__(self, uri, detail=''):
-        """
-        Creates a bibliographic source.
-        Args:
-            uri: should be a faust://bibliography/ URI or one of the special values
-            detail: detail string like pages
-        """
-        self.uri = uri
-        if detail is None:
-            detail = ''
-        self.detail = detail
-        self.weight = bibliography[uri].weight if uri in bibliography else 1
-
-    def __eq__(self, other):
-        if isinstance(other, BiblSource):
-            return self.uri == other.uri and self.detail == other.detail
-        else:
-            return super().__eq__(other)
-
-    def __hash__(self):
-        return hash(self.uri) ^ hash(self.detail)
-
-    def __str__(self):
-        result = self.citation
-        if self.detail is not None:
-            result += '\n' + self.detail
-        return result
-
-    @property
-    def filename(self):
-        """
-        A string representation of the source (w/o detail) that is usable as part of a filename.
-        """
-        if self.uri.startswith('faust://bibliography'):
-            return self.uri.replace('faust://bibliography/', '')
-        else:
-            return self.uri.replace('faust://', '').replace('/', '-')
-
-    @property
-    def citation(self):
-        """
-        String representation of only the citation, w/o detail.
-
-        Example:
-            Bohnenkamp 19994
-        """
-        if self.uri in bibliography:
-            return bibliography[self.uri].citation
-        elif self.uri in _bib_labels:
-            return _bib_labels[self.uri]
-        else:
-            return self.filename
-
-    @property
-    def long_citation(self):
-        if self.uri in bibliography:
-            return bibliography[self.uri].reference
-        else:
-            return self.citation
 
 
 class _AbstractDating(metaclass=ABCMeta):
@@ -176,11 +60,11 @@ class _AbstractDating(metaclass=ABCMeta):
         Args:
             el: The basic assertion element. This will usually be <relation> or <date>.
         """
-        self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=faust.namespaces)]
+        self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=config.namespaces)]
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
-                             for source in el.xpath('f:source', namespaces=faust.namespaces))
-        self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=faust.namespaces))
-        self.xmlsource: Tuple[str, int] = (faust.relative_path(el.getroottree().docinfo.URL), el.sourceline)
+                             for source in el.xpath('f:source', namespaces=config.namespaces))
+        self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=config.namespaces))
+        self.xmlsource: Tuple[str, int] = (config.relative_path(el.getroottree().docinfo.URL), el.sourceline)
         self.ignore = el.get('ignore', 'no') == 'yes'
 
     @abstractmethod
@@ -236,7 +120,7 @@ class AbsoluteDating(_AbstractDating):
             raise InvalidDatingError('Backwards dating (%s), this would have caused a conflict' % self, el)
 
     @property
-    def start_attr(self) -> Tuple[str, datetime.date]:
+    def start_attr(self) -> Tuple[str, date]:
         """
         The attribute representing the start of the interval.
 
@@ -246,7 +130,7 @@ class AbsoluteDating(_AbstractDating):
         return _firstattr(self, 'from_', 'when', 'not_before')
 
     @property
-    def end_attr(self) -> Tuple[str, datetime.date]:
+    def end_attr(self) -> Tuple[str, date]:
         """
         The attribute representing the end of the interval.
 
@@ -256,22 +140,22 @@ class AbsoluteDating(_AbstractDating):
         return _firstattr(self, 'to', 'when', 'not_after')
 
     @property
-    def start(self) -> Optional[datetime.date]:
+    def start(self) -> Optional[date]:
         """The start date, regardless of the detailed semantics"""
         return self.start_attr[1]
 
     @property
-    def end(self) -> Optional[datetime.date]:
+    def end(self) -> Optional[date]:
         """The end date, regardless of the detailed semantics"""
         return self.end_attr[1]
 
     @property
-    def date_before(self) -> Optional[datetime.date]:
-        return self.start - datetime.timedelta(days=1) if self.start is not None else None
+    def date_before(self) -> Optional[date]:
+        return self.start - timedelta(days=1) if self.start is not None else None
 
     @property
-    def date_after(self) -> Optional[datetime.date]:
-        return self.end + datetime.timedelta(days=1) if self.end is not None else None
+    def date_after(self) -> Optional[date]:
+        return self.end + timedelta(days=1) if self.end is not None else None
 
     def __str__(self):
         if self.when is not None:
@@ -287,14 +171,17 @@ class AbsoluteDating(_AbstractDating):
         for item in self.items:
             for source in self.sources:
                 if self.start is not None:
-                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
+                    G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self,
+                               xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.end is None and not self.ignore:
-                        G.add_edge(item, self.date_before + HALF_INTERVAL_CORRECTION, kind='not_after', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
+                        G.add_edge(item, self.date_before + timedelta(config.half_interval_correction), kind='not_after',
+                                   source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
-                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self, xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
+                    G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self,
+                               xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.start is None and not self.ignore:
-                        G.add_edge(self.date_after - HALF_INTERVAL_CORRECTION, item, kind='not_before', source=BiblSource('faust://heuristic'), xml=self.xmlsource)
-
+                        G.add_edge(self.date_after - timedelta(config.half_interval_correction), item, kind='not_before',
+                                   source=BiblSource('faust://heuristic'), xml=self.xmlsource)
 
 
 class RelativeDating(_AbstractDating):
@@ -334,9 +221,9 @@ def _parse_file(filename: str) -> Generator[_AbstractDating, None, None]:
 
     """
     tree = etree.parse(filename)
-    for element in tree.xpath('//f:relation', namespaces=faust.namespaces):
+    for element in tree.xpath('//f:relation', namespaces=config.namespaces):
         yield RelativeDating(element)
-    for element in tree.xpath('//f:date', namespaces=faust.namespaces):
+    for element in tree.xpath('//f:date', namespaces=config.namespaces):
         try:
             yield AbsoluteDating(element)
         except InvalidDatingError as e:
@@ -350,7 +237,7 @@ def _parse_files() -> Generator[_AbstractDating, None, None]:
 
     """
 
-    for file in faust.macrogenesis_files():
+    for file in Path(config.data, 'macrogenesis').rglob('**/*.xml'):
         yield from _parse_file(file)
 
 
@@ -360,7 +247,7 @@ def add_timeline_edges(graph):
 
     Afterwards, each date node in the graph will have an edge to the next date represented in the graph.
     """
-    date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
+    date_nodes = sorted(node for node in graph.nodes if isinstance(node, date))
     for earlier, later in pairwise(date_nodes):
         if earlier != later and (earlier, later) not in graph.edges:
             graph.add_edge(earlier, later, kind='timeline')
@@ -382,10 +269,11 @@ def simplify_timeline(graph: nx.MultiDiGraph):
                     1798-01-01  ->  1798-02-01
                        `-----> H.x -----^
     """
-    date_nodes = sorted(node for node in graph.nodes if isinstance(node, datetime.date))
+    date_nodes = sorted(node for node in graph.nodes if isinstance(node, date))
     prev = None
     for node in date_nodes:
-        if prev is not None and graph.in_degree(node) == graph.out_degree(node) == 1 and isinstance(graph.successors(node)[0], datetime.date):
+        if prev is not None and graph.in_degree(node) == graph.out_degree(node) == 1 and isinstance(
+                graph.successors(node)[0], date):
             graph.remove_node(node)
         else:
             if prev is not None:

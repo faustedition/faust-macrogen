@@ -4,8 +4,6 @@ Handle URIs and the objects they point to
 """
 from pathlib import Path
 
-from .faust_logging import logging
-
 import codecs
 import csv
 import json
@@ -21,9 +19,9 @@ import pandas as pd
 import requests
 from lxml import etree
 
-from . import faust
+from .config import config
 
-logger = logging.getLogger(__name__)
+logger = config.getLogger(__name__)
 
 
 def call_recorder(function=None, argument_picker=None):
@@ -408,13 +406,14 @@ class Witness(Reference):
 
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
-    for macrogenetic_file in faust.macrogenesis_files():
+    macrogenesis_files = list(config.path.data.join('macrogenesis').rglob('**/*.xml'))
+    for macrogenetic_file in macrogenesis_files:
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
-        for element in tree.xpath('//f:item', namespaces=faust.namespaces):  # type: etree._Element
+        for element in tree.xpath('//f:item', namespaces=config.namespaces):  # type: etree._Element
             uri = element.get('uri')
             wit = Witness.get(uri, allow_duplicate=True)
             items[wit].append((macrogenetic_file.split('macrogenesis/')[-1], element.sourceline))
-    logger.info('Collected %d references in %d macrogenesis files', len(items), len(faust.macrogenesis_files()))
+    logger.info('Collected %d references in %d macrogenesis files', len(items), len(macrogenesis_files))
     return items
 
 

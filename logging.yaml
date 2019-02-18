@@ -13,7 +13,7 @@ handlers:
 root:
   handlers:
     - console
-  level: INFO
+  level: WARNING
 
 loggers:
   graph:

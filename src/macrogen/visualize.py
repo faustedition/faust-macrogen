@@ -1,3 +1,4 @@
+from collections import Sequence
 from datetime import date
 from multiprocessing.pool import Pool
 from pathlib import Path
@@ -8,7 +9,8 @@ from networkx import MultiDiGraph
 from pygraphviz import AGraph
 from tqdm import tqdm
 
-from .datings import BiblSource, add_timeline_edges
+from .datings import add_timeline_edges
+from macrogen import BiblSource
 from .faust_logging import logging
 from .graph import pathlink
 from .uris import Reference
@@ -53,16 +55,39 @@ def _simplify_attrs(attrs):
                 attrs[key + '_detail'] = value.detail
         elif value is None:
             del attrs[key]
+        elif isinstance(value, Sequence) and not isinstance(value, str):
+            attrs[key] = " ".join(item.uri if hasattr(item, 'uri') else str(item) for item in value)
         elif type(value) not in {str, int, float, bool}:
             attrs[key] = str(value)
 
 
 def _load_style(filename):
+    """
+    Loads a YAML Style file for :func:`write_doc`.
+    :param filename: Path to a YAML file with style directions
+    :return: dictionary with style directions
+    """
     with open(filename, encoding='utf-8') as f:
         return yaml.load(f)
 
 
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'), highlight=None, record='auto', edge_labels=True):
+def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'),
+              highlight=None, record='auto', edge_labels=True):
+    """
+    Writes a properly styled graphviz file for the given graph.
+
+    Args:
+        graph: the subgraph to draw
+        target: dot file that should be written, may be a Path
+        style (dict): rules for styling the graph
+        highlight: if a node, highlight that in the graph. If a tuple of nodes, highlight the shortest path(s) from the
+                   first to the second node
+        record: record in the queue for `render_all`. If ``"auto"`` dependent on graph size
+        edge_labels (bool): Should we paint edge labels?
+
+    Returns:
+        None.
+    """
     logger.info('Writing %s ...', target)
     target_path = Path(target)
     target_path.parent.mkdir(exist_ok=True, parents=True)

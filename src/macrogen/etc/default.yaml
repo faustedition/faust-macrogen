@@ -1,0 +1,24 @@
+## Default configuration for the macrogenesis software
+
+# configuration and data files, either paths or URIs
+data:       data/xml  # XML Data, this is a folder
+logging:    # YAML file with logging configuration
+styles:     # YAML file with styling for the graphviz graphs
+references: # CSV file featuring manual normalizations for references
+bibscores:  # TSV file (FIXME) with scores by source
+sigils:     # JSON file mapping URIs to sigils
+paralipomena: # JSON file mapping paralipomena to sources
+genetic_bar_graph: # JSON file
+report_dir: target/macrogen  # where to save reports and graphs
+
+bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml # The bibliography
+
+## Limits
+half_interval_correction: 182.5    # if we only have a start or end date, the other limit is max. this many days away
+
+## Other data
+namespaces:
+  f: http://www.faustedition.net/ns
+  tei: http://www.tei-c.org/ns/1.0
+
+

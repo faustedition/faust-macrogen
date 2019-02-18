@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from macrogen.datings import BiblSource
+from macrogen import BiblSource
 from macrogen.graph import collapse_edges
 from macrogen.uris import Witness
 
