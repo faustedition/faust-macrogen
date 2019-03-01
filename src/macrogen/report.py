@@ -457,7 +457,10 @@ def _fmt_source(attrs):
 def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
     if not xml:
         return ""
-    if isinstance(xml[0], str):
+
+    if isinstance(xml[0], Path):
+        return f"{xml[0].relative_to('macrogenesis')}: {xml[1]}"
+    elif isinstance(xml[0], str):
         return f"{xml[0].replace('macrogenesis/', '')}: {xml[1]}"
     else:
         result = []
