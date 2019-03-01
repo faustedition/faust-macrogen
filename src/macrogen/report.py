@@ -389,7 +389,7 @@ class RefTable(HtmlTable):
                           .column('Aussage', data_sortable_type='alpha')
                           .column('Bezug', data_sortable_type='sigil', format_spec=_fmt_node)
                           .column('Quelle', data_sortable_type='bibliography', format_spec=_fmt_source)
-                          .column('Kommentare', format_spec="/".join)
+                          .column('Kommentare', format_spec=_fmt_comments)
                           .column('XML', format_spec=_fmt_xml))
         for (u, v, attr) in self.base.in_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
@@ -426,7 +426,7 @@ class AssertionTable(HtmlTable):
              .column('Relation',  RELATION_LABELS.get, data_sortable_type="alpha")
              .column('Objekt', _fmt_node, data_sortable_type="sigil")
              .column('Quelle', _fmt_source, data_sortable_type="bibliography")
-             .column('Kommentare', ' / '.join, data_sortable_type="alpha")
+             .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
              .column('XML', _fmt_xml, data_sortable_type="alpha"))
 
     def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
@@ -454,19 +454,23 @@ def _fmt_source(attrs):
     return result
 
 
-def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
+def _fmt_xml(xml: Union[Tuple[Path, int], Sequence[Tuple[str, int]]]):
     if not xml:
         return ""
 
     if isinstance(xml[0], Path):
         return f"{xml[0].relative_to('macrogenesis')}: {xml[1]}"
-    elif isinstance(xml[0], str):
-        return f"{xml[0].replace('macrogenesis/', '')}: {xml[1]}"
     else:
         result = []
         for file, lines in groupby(xml, itemgetter(0)):
-            result.append(file.replace('macrogenesis/', '') + ': ' + ", ".join(map(str, map(itemgetter(1), lines))))
+            result.append(f"{file.relative_to('macrogenesis')}: {', '.join(map(str, map(itemgetter(1), lines)))}")
         return "; ".join(result)
+
+
+def _fmt_comments(comments):
+    if not comments:
+        return ""
+    return " / ".join(str(comment) for comment in comments if comment)
 
 
 def report_downloads(graphs: MacrogenesisInfo):
