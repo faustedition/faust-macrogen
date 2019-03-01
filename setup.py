@@ -15,7 +15,7 @@ setup(
                 'networkx>=2.1',
                 'python-igraph',
                 'pygraphviz',
-                'pyyaml',
+                'ruamel.yaml',
                 'pandas',
                 'openpyxl',
                 'xlrd',
@@ -27,5 +27,8 @@ setup(
                 'colorlog',
                 'tqdm',
                 'dataclasses',
-        ]
+        ],
+        entry_points={
+            'console_scripts': ['macrogen=macrogen.main:main']
+        }
 )

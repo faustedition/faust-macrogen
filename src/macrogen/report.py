@@ -361,6 +361,7 @@ class RefTable(HtmlTable):
 
     def _last_ref_subpage(self, DAY, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
+        target = config.path.report_dir
         basename = target / ref.filename
         relevant_nodes = {ref} | set(self.base.predecessors(ref)) | set(self.base.successors(ref))
         if ref.earliest != EARLIEST:
@@ -466,6 +467,7 @@ def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
 
 
 def report_downloads(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     target.mkdir(exist_ok=True, parents=True)
 
     simplified = simplify_graph(graphs.base)
@@ -549,6 +551,7 @@ def report_downloads(graphs: MacrogenesisInfo):
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
 
+    target = config.path.report_dir
     target.mkdir(exist_ok=True, parents=True)
 
     nx.write_yaml(simplify_graph(graphs.base), str(target / 'base.yaml'))
@@ -579,6 +582,7 @@ def _invert_mapping(mapping: Mapping) -> Dict:
 
 
 def report_missing(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     used_wits = {wit for wit in refs if isinstance(wit, Witness)}
@@ -617,6 +621,7 @@ def report_missing(graphs: MacrogenesisInfo):
 
 
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
+    target = config.path.report_dir
     reportfile = pathlink(u, v)
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
@@ -660,6 +665,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
 
 def report_conflicts(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     table = AssertionTable()
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
                      'delete' in attr and attr['delete']]
@@ -670,6 +676,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
 
 
 def report_sources(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     by_source = defaultdict(list)
     for u, v, k, attr in graphs.base.edges(keys=True, data=True):
         if 'source' in attr:
@@ -707,6 +714,7 @@ def report_sources(graphs: MacrogenesisInfo):
 
 
 def report_index(graphs):
+    target = config.path.report_dir
 
     pages = [('refs', 'Zeugen', 'Alle referenzierten Dokumente in der erschlossenen Reihenfolge'),
              ('scenes', 'nach Szene', 'Die relevanten Zeugen für jede Szene'),
@@ -752,6 +760,7 @@ def report_index(graphs):
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
 def report_help():
+    target = config.path.report_dir
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
         G = nx.MultiDiGraph() if extend is None else extend.copy()
         G.add_edge(u, v, **edge_attr)
@@ -840,14 +849,15 @@ def _yearlabel(ref: Reference):
 
 class ByScene:
     def __init__(self, graphs: MacrogenesisInfo):
-        scene_xml = etree.parse('scenes.xml')
-        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=faust.namespaces)
+        scene_xml: etree._ElementTree = etree.parse('scenes.xml')
+        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=config.namespaces)
         bargraph_info = requests.get('http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
         self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in bargraph_info}
         self.ordering = list(enumerate(graphs.order_refs()))
         self.graphs = graphs
 
     def report(self):
+        target = config.path.report_dir
         sceneTable = (HtmlTable()
                       .column('#')
                       .column('Szene')
@@ -855,7 +865,7 @@ class ByScene:
                       .column('Zeugen'))
         for scene in self.scenes:
             witnessTable = RefTable(self.graphs.base)
-            title = scene.xpath('f:title/text()', namespaces=faust.namespaces)[0]
+            title = scene.xpath('f:title/text()', namespaces=config.namespaces)[0]
             start, end = int(scene.get('first-verse')), int(scene.get('last-verse'))
             scene_wits = [(index, wit) for index, wit in self.ordering if self.relevant(wit, start, end)]
             for index, witness in scene_wits:
@@ -900,7 +910,9 @@ def report_scenes(graphs):
     ByScene(graphs).report()
 
 def write_order_xml(graphs):
-    F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=faust.namespaces)
+    target: Path = config.path.report_dir
+    logger.debug('Writing reports to %s', target.absolute())
+    F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
             *[F.item(format(witness),

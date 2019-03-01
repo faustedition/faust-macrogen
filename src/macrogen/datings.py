@@ -2,12 +2,12 @@
 Functions to parse the XML datings and build a graph out of them
 """
 from abc import ABCMeta, abstractmethod
+from os import fspath
 from pathlib import Path
-from time import strptime
 from typing import List, Tuple, Optional, Any, Generator
 
 import networkx as nx
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from lxml import etree
 from more_itertools import pairwise
 
@@ -27,7 +27,7 @@ def parse_datestr(datestr: str) -> date:
     if datestr is None:
         return None
 
-    dt = strptime(datestr, '%Y-%m-%d')
+    dt = datetime.strptime(datestr, '%Y-%m-%d')
     if dt is not None:
         return dt.date()
     else:
@@ -220,7 +220,7 @@ def _parse_file(filename: str) -> Generator[_AbstractDating, None, None]:
     Returns:
 
     """
-    tree = etree.parse(filename)
+    tree = etree.parse(fspath(filename))
     for element in tree.xpath('//f:relation', namespaces=config.namespaces):
         yield RelativeDating(element)
     for element in tree.xpath('//f:date', namespaces=config.namespaces):
@@ -237,7 +237,9 @@ def _parse_files() -> Generator[_AbstractDating, None, None]:
 
     """
 
-    for file in Path(config.data, 'macrogenesis').rglob('**/*.xml'):
+    path = Path(config.data, 'macrogenesis')
+    logger.info('Looking for macrogenesis files below %s', path.absolute())
+    for file in path.rglob('**/*.xml'):
         yield from _parse_file(file)
 
 

@@ -1,28 +1,7 @@
 import csv
 from collections import namedtuple, defaultdict
-from typing import Dict, Union, IO
 
-import requests
-from lxml import etree
-
-from .config import config
-from . import faust
-
-BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
-
-
-def _parse_bibliography(bibxml: Union[str, IO]) -> Dict[str, BibEntry]:
-    """Parses the bibliography file at url. Returns a dictionary mapping an URI to a corresponding bibliography entry."""
-    db: Dict[str, BibEntry] = {}
-    scores = config.bibscores
-    et = etree.parse(bibxml)
-    for bib in et.xpath('//f:bib', namespaces=faust.namespaces):
-        uri = bib.get('uri')
-        citation = bib.find('f:citation', namespaces=faust.namespaces).text
-        reference = bib.find('f:reference', namespaces=faust.namespaces).text
-        db[uri] = BibEntry(uri, citation, reference, scores[uri])
-    return db
-
+from .config import config, BibEntry
 
 _bib_labels = {
     'faust://self': 'Faustedition',

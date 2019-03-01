@@ -231,19 +231,15 @@ class Witness(Reference):
         return result
 
     @classmethod
-    def _load_database(cls,
-                       url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json'):
+    def _load_database(cls):
         cls.corrections = cls._load_corrections()
-        sigil_data = requests.get(url).json()
+        sigil_data = config.sigils
         cls.database = cls.build_database(sigil_data)
 
     @classmethod
-    def _load_corrections(cls, path=Path('uri-corrections.csv')):
-        with path.open(encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader)  # skip header
-            result = {row[0]: row[1] for row in reader if row[1]}
-        logger.info('Loaded %d corrections from %s', len(result), path)
+    def _load_corrections(cls):
+        result = config.uri_corrections
+        logger.info('Loaded %d corrections', len(result))
         return result
 
     @classmethod

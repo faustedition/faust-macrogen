@@ -6,10 +6,10 @@ logging:    # YAML file with logging configuration
 styles:     # YAML file with styling for the graphviz graphs
 references: # CSV file featuring manual normalizations for references
 bibscores:  # TSV file (FIXME) with scores by source
-sigils:     # JSON file mapping URIs to sigils
-paralipomena: # JSON file mapping paralipomena to sources
+sigils: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json # JSON file mapping URIs to sigils
+paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js # JSON file mapping paralipomena to sources
 genetic_bar_graph: # JSON file
-report_dir: target/macrogen  # where to save reports and graphs
+report_dir: target/macrogenesis  # where to save reports and graphs
 
 bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml # The bibliography
 

@@ -9,13 +9,13 @@ from networkx import MultiDiGraph
 from pygraphviz import AGraph
 from tqdm import tqdm
 
+from .config import config
 from .datings import add_timeline_edges
 from macrogen import BiblSource
-from .faust_logging import logging
 from .graph import pathlink
 from .uris import Reference
 
-logger = logging.getLogger(__name__)
+logger = config.getLogger(__name__)
 
 _render_queue = []
 
@@ -61,17 +61,7 @@ def _simplify_attrs(attrs):
             attrs[key] = str(value)
 
 
-def _load_style(filename):
-    """
-    Loads a YAML Style file for :func:`write_doc`.
-    :param filename: Path to a YAML file with style directions
-    :return: dictionary with style directions
-    """
-    with open(filename, encoding='utf-8') as f:
-        return yaml.load(f)
-
-
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style('styles.yaml'),
+def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
               highlight=None, record='auto', edge_labels=True):
     """
     Writes a properly styled graphviz file for the given graph.
@@ -88,6 +78,8 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=_load_style
     Returns:
         None.
     """
+    if style is None:
+        style = config.styles
     logger.info('Writing %s ...', target)
     target_path = Path(target)
     target_path.parent.mkdir(exist_ok=True, parents=True)

@@ -16,9 +16,11 @@ root:
   level: WARNING
 
 loggers:
-  graph:
+#  graph:
+#    level: DEBUG
+#  uris:
+#    level: INFO
+#  datings:
+#    level: INFO
+  config:
     level: DEBUG
-  uris:
-    level: INFO
-  datings:
-    level: INFO
