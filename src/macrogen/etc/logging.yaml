@@ -16,11 +16,13 @@ root:
   level: WARNING
 
 loggers:
-#  graph:
+  macrogen.visualize:
+    level: INFO
+#  macrogen.graph:
 #    level: DEBUG
-#  uris:
+#  macrogen.uris:
 #    level: INFO
-#  datings:
+#  macrogen.datings:
 #    level: INFO
-  config:
-    level: DEBUG
+  macrogen.config:
+    level: INFO

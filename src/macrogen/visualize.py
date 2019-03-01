@@ -83,8 +83,13 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
     logger.info('Writing %s ...', target)
     target_path = Path(target)
     target_path.parent.mkdir(exist_ok=True, parents=True)
-    if record == 'auto':
-        record = len(graph.edges) < 1000
+    try:
+        if record == 'auto' and config.render_node_limit >= 0:
+            record = graph.number_of_nodes() < config.render_node_limit
+            if not record:
+                logger.info('%s is too large to be rendered automatically (%d nodes)', target, graph.number_of_nodes())
+    except Exception as e:
+        logger.warning('Auto edges limit configuration error: %s', e)
 
     vis = graph.copy()
     add_timeline_edges(vis)
