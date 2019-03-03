@@ -2,13 +2,12 @@
 Functions to build the graphs and perform their analyses.
 """
 
-
 import csv
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Callable, Any, Dict, Tuple, Union
+from typing import List, Callable, Any, Dict, Tuple, Union, Iterable, Generator
 
 import networkx as nx
 
@@ -17,6 +16,7 @@ from .datings import base_graph, parse_datestr
 from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
 from .config import config
+from .fes import eades
 
 logger = config.getLogger(__name__)
 
@@ -123,6 +123,24 @@ def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[st
     # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
+def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Generator[
+    Tuple[Any, Any, int, dict], None, None]:
+    """
+    Expands a 'simple' edge list (of node pairs) to the corresponding full edge list, including keys and data.
+    Args:
+        graph: the graph with the edges
+        edges: edge list, a list of (u, v) node tuples
+
+    Returns:
+        all edges from the multigraph that are between any node pair from edges as tuple (u, v, key, attrs)
+
+    """
+    for u, v in edges:
+        atlas = graph[u][v]
+        for key in atlas:
+            yield u, v, key, atlas[key]
+
+
 def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
     """
     Calculates the feedback arc set using the given method and returns a
@@ -134,11 +152,17 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
     """
     if method == 'auto':
         method = 'eades' if len(graph.edges) > auto_threshold else 'ip'
-    logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
-    igraph = to_igraph(graph)
-    iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
-    logger.debug('%d edges to remove', len(iedges))
-    return list(nx_edges(iedges, keys=True, data=True))
+    if method == 'eades':
+        logger.debug('Calculating MFAS for a %d-node graph using internal Eades, may take a while',
+                     graph.number_of_nodes())
+        fes = eades(graph)
+        return list(expand_edges(graph, fes))
+    else:
+        logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
+        igraph = to_igraph(graph)
+        iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
+        logger.debug('%d edges to remove', len(iedges))
+        return list(nx_edges(iedges, keys=True, data=True))
 
 
 def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
@@ -282,6 +306,7 @@ class MacrogenesisInfo:
         years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
         return Counter(years)
 
+
 def resolve_ambiguities(graph: nx.MultiDiGraph):
     """
     Replaces ambiguous refs with the referenced nodes, possibly duplicating edges.
@@ -293,12 +318,12 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
     for ambiguity in ambiguities:
         for u, _, k, attr in list(graph.in_edges(ambiguity, keys=True, data=True)):
             for witness in ambiguity.witnesses:
-                attr['from_ambiguity']=ambiguity
+                attr['from_ambiguity'] = ambiguity
                 graph.add_edge(u, witness, k, **attr)
             graph.remove_edge(u, ambiguity, k)
         for _, v, k, attr in list(graph.out_edges(ambiguity, keys=True, data=True)):
             for witness in ambiguity.witnesses:
-                attr['from_ambiguity']=ambiguity
+                attr['from_ambiguity'] = ambiguity
                 graph.add_edge(witness, v, k, **attr)
             graph.remove_edge(ambiguity, v, k)
         graph.remove_node(ambiguity)
@@ -332,8 +357,6 @@ def datings_from_inscriptions(base: nx.MultiDiGraph):
                 base.add_edge(witness, d, copy=(d, i, k), **attr)
 
 
-
-
 def adopt_orphans(graph: nx.MultiDiGraph):
     """
     Introduces auxilliary edges to witnesses that are referenced by an inscription or ambiguous ref, but are not
@@ -361,6 +384,7 @@ def add_inscription_links(base: nx.MultiDiGraph):
     for node in list(base.nodes):
         if isinstance(node, Inscription):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
+
 
 def add_missing_wits(working: nx.MultiDiGraph):
     """
@@ -414,8 +438,8 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
 
     if not nx.is_directed_acyclic_graph(result_graph):
         logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_conflicting_edges))
-        cycles = list(nx.simple_cycles(result_graph))
-        logger.error('It contains %d simple cycles', len(cycles))
+        cycles = nx.simple_cycles(result_graph)
+        logger.error('Counterexample cycle: %s.', next(cycles))
     else:
         logger.info('Double-checking removed edges ...')
         for u, v, k, attr in sorted(all_conflicting_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):

@@ -18,8 +18,10 @@ root:
 loggers:
   macrogen.visualize:
     level: INFO
-#  macrogen.graph:
-#    level: DEBUG
+  macrogen.fes:
+    level: DEBUG
+  macrogen.graph:
+    level: DEBUG
 #  macrogen.uris:
 #    level: INFO
 #  macrogen.datings:

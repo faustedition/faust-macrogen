@@ -27,6 +27,7 @@ setup(
                 'colorlog',
                 'tqdm',
                 'dataclasses',
+                'cvxpy'
         ],
         entry_points={
             'console_scripts': ['macrogen=macrogen.main:main']
