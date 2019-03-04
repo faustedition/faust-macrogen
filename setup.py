@@ -16,6 +16,7 @@ setup(
                 'python-igraph',
                 'pygraphviz',
                 'ruamel.yaml',
+                'pyyaml',    # required for networkx' yaml dump
                 'pandas',
                 'openpyxl',
                 'xlrd',
