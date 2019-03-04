@@ -127,6 +127,20 @@ class FES_Baharev:
     Calculates the minimum feedback edge set for a given graph using the
     algorithm presented by Baharev et al. (2015).
 
+    The behaviour can be configured using the macrogen configuration mechanism:
+        - solvers contains a list of solvers to try
+        - solver_options contains a dictionary with options for every (configurable) solver,
+          `all` is used for default options
+
+
+
+    Description:
+        Baharev's algorithm is based on a formulation of the minimum feedback edge set problem as a mixed integer
+        program: The objective to be minimized is the sum of the weights of the edges in the feedback set,
+        and the constraint is that at least one edge of every simple cycle of the graph must be in the feedback set.
+        Since the number of simple cycles may be exponential, the set of simple cycles is built in an iterative
+        fashion.
+
     References:
         **Baharev, A., Schichl, H. and Neumaier, A.** (2015). An exact method
         for the minimum feedback arc set problem. : 34
@@ -135,6 +149,7 @@ class FES_Baharev:
 
     def __init__(self, graph: nx.DiGraph):
         self.original_graph = graph
+        self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
 
         # We need to address the edges by index, and we're only
         # interested in their weights. We collapse multi-edges,
@@ -186,7 +201,7 @@ class FES_Baharev:
         if solver:
             options['solver'] = solver
         self.solver_args = options
-        logger.info('configured solver: %s, options: %s (installed solvers: %s)',
+        self.logger.info('configured solver: %s, options: %s (installed solvers: %s)',
                     solver, options, ', '.join(installed))
 
     def edge_vector(self, edges: Iterable[Tuple[V, V]]) -> np.ndarray:
@@ -221,13 +236,12 @@ class FES_Baharev:
         lower_bound = 0
         upper_bound = np.sum(y0 * self.weights)
 
-        logger.info('Calculating FES for graph with %d edges, max %d feedback edges', self.m, len(F0))
-        logger.debug('Installed solvers: %s', ", ".join(cp.installed_solvers()))
+        self.logger.info('Calculating FES for graph with %d edges, max %d feedback edges', self.m, len(F0))
 
         simple_cycles = set(induced_cycles(self.graph, F0))
 
         for iteration in itertools.count(1):
-            logger.debug('Baharev iteration %d, %g <= objective <= %g, %d simple cycles', iteration, lower_bound,
+            self.logger.info('Baharev iteration %d, %g <= objective <= %g, %d simple cycles', iteration, lower_bound,
                          upper_bound, len(simple_cycles))
 
             # Formulate and solve the problem for this iteration:
@@ -239,31 +253,31 @@ class FES_Baharev:
             problem = cp.Problem(objective, constraints)
             resolution = problem.solve(**self.solver_args)
             if problem.status != 'optimal':
-                logger.warning('Optimization solution is %s. Try solver != %s?', problem.status,
+                self.logger.warning('Optimization solution is %s. Try solver != %s?', problem.status,
                                problem.solver_stats.solver_name)
-            logger.debug("Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
+            self.logger.debug("Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
                          len(constraints), resolution, problem.solution.status,
                          problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
                          problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
             current_solution = np.abs(y.value) >= 0.5
             S = self.edges_for_vector(current_solution)
-            logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(S))
+            self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(S))
             # S, the feedback edge set calculated using the constraint subset, can be an incomplete solution
             # (i.e. cycles remain after removing S from the graph). So lets compare this with the upper bound
             # from the heuristic
             lower_bound = max(lower_bound, objective.value)
             if lower_bound == upper_bound:
-                logger.info('upper == lower bound == %g, optimal solution found', lower_bound)
+                self.logger.info('upper == lower bound == %g, optimal solution found', lower_bound)
                 break  # y.value is the optimal solution
 
             if resolution > upper_bound:
-                logger.error('Solution %g > upper bound %g!', resolution, upper_bound)
+                self.logger.error('Solution %g > upper bound %g!', resolution, upper_bound)
                 break
 
             Gi = self.graph.copy()
             Gi.remove_edges_from(S)
             if nx.is_directed_acyclic_graph(Gi):
-                logger.info('Graph is acyclic, optimal solution found')
+                self.logger.info('Graph is acyclic, optimal solution found')
                 break  # y.value is the optimal solution
 
             # The solution is not yet ideal. So we take G^(i), the graph still containing some feedback edges,
