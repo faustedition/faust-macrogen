@@ -1,4 +1,4 @@
-from collections import Sequence
+from typing import Sequence
 from datetime import date
 from multiprocessing.pool import Pool
 from pathlib import Path

@@ -16,7 +16,7 @@ from .datings import base_graph, parse_datestr
 from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
 from .config import config
-from .fes import eades
+from .fes import eades, FES_Baharev
 
 logger = config.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Ge
             yield u, v, key, atlas[key]
 
 
-def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
+def feedback_arcs(graph: nx.MultiDiGraph, method='baharev', auto_threshold=64):
     """
     Calculates the feedback arc set using the given method and returns a
     list of edges in the form (u, v, key, data)
@@ -156,6 +156,10 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='auto', auto_threshold=64):
         logger.debug('Calculating MFAS for a %d-node graph using internal Eades, may take a while',
                      graph.number_of_nodes())
         fes = eades(graph)
+        return list(expand_edges(graph, fes))
+    elif method == 'baharev':
+        solver = FES_Baharev(graph)
+        fes = solver.solve()
         return list(expand_edges(graph, fes))
     else:
         logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
