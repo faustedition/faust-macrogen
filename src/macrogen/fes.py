@@ -243,8 +243,8 @@ class FES_Baharev:
                                problem.solver_stats.solver_name)
             logger.debug("Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
                          len(constraints), resolution, problem.solution.status,
-                         problem.solver_stats.solve_time, problem.solver_stats.setup_time or 0,
-                         problem.solver_stats.num_iters, problem.solver_stats.solver_name)
+                         problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
+                         problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
             current_solution = np.abs(y.value) >= 0.5
             S = self.edges_for_vector(current_solution)
             logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(S))

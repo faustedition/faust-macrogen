@@ -21,13 +21,10 @@ render_node_limit: 1000
 fes_method: baharev   # ip, baharev: exact methods; eades: inexact, list of two: select by fes_threshold
 fes_threshold: 64     # if two fes_methods, number of edges above which to select the second one
 solvers:              # the first installed solver is chosen. see log message for values.
-  - GUROBI
-  - auto              # auto = let CVXPY choose
+  - GLPK_MI
 solver_options:
   all:
-    max_iters: 10000
-
-
+    verbose: false
 ## Other data
 namespaces:
   f: http://www.faustedition.net/ns

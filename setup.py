@@ -27,7 +27,8 @@ setup(
                 'colorlog',
                 'tqdm',
                 'dataclasses',
-                'cvxpy'
+                'cvxpy',
+                'cvxopt'   # just used to pull in GLPK
         ],
         entry_points={
             'console_scripts': ['macrogen=macrogen.main:main']
