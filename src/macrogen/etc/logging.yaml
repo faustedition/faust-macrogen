@@ -4,27 +4,40 @@ formatters:
   colored:
     '()': colorlog.ColoredFormatter
     format: '%(log_color)s%(levelname)-8s %(name)-8s %(message)s'
+  tabbed:
+    format: '%(asctime)s  %(levelname)-8s %(name)s  %(message)s'
+
+filters:
+  display:
+    (): macrogen.logging.LevelFilter
+    default: WARNING
+    levels:
+      macrogen.graph: INFO
+      macrogen.fes: INFO
+  file:
+    (): macrogen.logging.LevelFilter
+    default: INFO
+    levels:
+      macrogen.fes: DEBUG
+
 
 handlers:
   console:
     class: logging.StreamHandler
     formatter: colored
+    filters:
+      - display
+  file:
+    class: logging.FileHandler
+    filename: macrogenesis.log
+    encoding: utf-8
+    mode: w
+    formatter: tabbed
+    filters:
+      - file
 
 root:
   handlers:
     - console
-  level: WARNING
-
-loggers:
-#  macrogen.visualize:
-#    level: INFO
-  macrogen.fes:
-    level: DEBUG
-#  macrogen.graph:
-#    level: DEBUG
-#  macrogen.uris:
-#    level: INFO
-#  macrogen.datings:
-#    level: INFO
-#  macrogen.config:
-#    level: INFO
+    - file
+  level: DEBUG
