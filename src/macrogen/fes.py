@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import itertools
 from collections import defaultdict
 from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence
@@ -127,11 +128,30 @@ class FES_Baharev:
     Calculates the minimum feedback edge set for a given graph using the
     algorithm presented by Baharev et al. (2015).
 
-    The behaviour can be configured using the macrogen configuration mechanism:
+    Creating an instance of this class will initialize the data model by building a
+    reduced version of the given graph (no multi-edges, no attributes except for weight
+    and index) and defining an arbitrary ordering of the edges used for the vector
+    representations. Calling the `solve` method will perform the actual optimization
+    and return the set of edges, which is also available via attributes.
+
+    Attributes:
+        original_graph: The original graph we are called on
+        graph: Simplified version: No parallel edges, weight and index attributes only
+        edges: list of (u, v) tuples of edges in graph such that edges[i] has index i
+        weights: weight vector for edges
+        m: number of edges in graph
+        solver_args: configured arguments to the solver
+        solution: List of edges in feedback edge set
+        solution_vector: binary vector of edges
+        objective: sum of weights in feedback edge set
+        iterations: number of baharev iterations used to calculate the edge set
+
+    Notes:
+
+        The behaviour can be configured using the macrogen configuration mechanism:
         - solvers contains a list of solvers to try
         - solver_options contains a dictionary with options for every (configurable) solver,
           `all` is used for default options
-
 
 
     Description:
@@ -180,7 +200,9 @@ class FES_Baharev:
         self._load_solver_args()
 
     def _load_solver_args(self):
-        # get solver settings from config
+        """
+        Loads the configuration
+        """
         solvers: List[str] = config.solvers
         installed = cp.installed_solvers()
         index = 0
@@ -228,17 +250,22 @@ class FES_Baharev:
         return S
 
     def solve(self):
-        # first, create an initial FES over-approximation using a heuristic
-        F0 = eades(self.graph)
-        y0 = self.edge_vector(F0)
+        """
+        Runs the actual optimization. This may take a while ...
+
+        Returns:
+            the edge set as list of (u,v) tuples
+        """
+        initial_fes = eades(self.graph)
+        initial_fes_vec = self.edge_vector(initial_fes)
 
         # bounds for the objective
         lower_bound = 0
-        upper_bound = np.sum(y0 * self.weights)
+        upper_bound = np.sum(initial_fes_vec * self.weights)
 
-        self.logger.info('Calculating FES for graph with %d edges, max %d feedback edges', self.m, len(F0))
+        self.logger.info('Calculating FES for graph with %d edges, max %d feedback edges', self.m, len(initial_fes))
 
-        simple_cycles = set(induced_cycles(self.graph, F0))
+        simple_cycles = set(induced_cycles(self.graph, initial_fes))
 
         for iteration in itertools.count(1):
             self.logger.info('Baharev iteration %d, %g <= objective <= %g, %d simple cycles', iteration, lower_bound,
@@ -259,9 +286,9 @@ class FES_Baharev:
                          len(constraints), resolution, problem.solution.status,
                          problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
                          problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
-            current_solution = np.abs(y.value) >= 0.5
-            S = self.edges_for_vector(current_solution)
-            self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(S))
+            current_solution = np.abs(y.value) >= 0.5   # y.value = vector of floats each ≈ 0 or 1
+            current_fes = self.edges_for_vector(current_solution)
+            self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(current_fes))
             # S, the feedback edge set calculated using the constraint subset, can be an incomplete solution
             # (i.e. cycles remain after removing S from the graph). So lets compare this with the upper bound
             # from the heuristic
@@ -275,7 +302,7 @@ class FES_Baharev:
                 break
 
             Gi = self.graph.copy()
-            Gi.remove_edges_from(S)
+            Gi.remove_edges_from(current_fes)
             if nx.is_directed_acyclic_graph(Gi):
                 self.logger.info('Graph is acyclic, optimal solution found')
                 break  # y.value is the optimal solution
