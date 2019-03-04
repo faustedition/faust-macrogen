@@ -157,11 +157,37 @@ class FES_Baharev:
         self.weights = np.array(weights)
         self.edges = edges
         self.m = len(self.edges)
-
+        self.solver_args = {}
         self.solution_vector = None
         self.solution = None
         self.objective = None
         self.iterations = None
+        self._load_solver_args()
+
+    def _load_solver_args(self):
+        # get solver settings from config
+        solvers: List[str] = config.solvers
+        installed = cp.installed_solvers()
+        index = 0
+        while index < len(solvers):
+            if solvers[index] not in installed:
+                del solvers[index]
+            else:
+                index += 1
+        if solvers and solvers[0]:
+            solver = solvers[0]
+        else:
+            solver = None
+        options = {}
+        if 'all' in config.solver_options:
+            options.update(config.solver_options['all'])
+        if solver and solver in config.solver_options:
+            options.update(config.solver_options[solver])
+        if solver:
+            options['solver'] = solver
+        self.solver_args = options
+        logger.info('configured solver: %s, options: %s (installed solvers: %s)',
+                    solver, options, ', '.join(installed))
 
     def edge_vector(self, edges: Iterable[Tuple[V, V]]) -> np.ndarray:
         """
@@ -211,20 +237,28 @@ class FES_Baharev:
             cycle_vectors = [self.edge_vector(nx.utils.pairwise(cycle)) for cycle in simple_cycles]
             constraints = [cp.sum(a * y) >= 1 for a in cycle_vectors]
             problem = cp.Problem(objective, constraints)
-            resolution = problem.solve(solver=cp.GUROBI, verbose=False, max_iters=10000)
-            logger.debug("Solved optimization problem with %d constraints: %s -> %s (%s)", len(constraints), resolution,
-                         problem.solution.status, problem.solver_stats)
+            resolution = problem.solve(**self.solver_args)
+            if problem.status != 'optimal':
+                logger.warning('Optimization solution is %s. Try solver != %s?', problem.status,
+                               problem.solver_stats.solver_name)
+            logger.debug("Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
+                         len(constraints), resolution, problem.solution.status,
+                         problem.solver_stats.solve_time, problem.solver_stats.setup_time or 0,
+                         problem.solver_stats.num_iters, problem.solver_stats.solver_name)
             current_solution = np.abs(y.value) >= 0.5
             S = self.edges_for_vector(current_solution)
             logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(S))
             # S, the feedback edge set calculated using the constraint subset, can be an incomplete solution
             # (i.e. cycles remain after removing S from the graph). So lets compare this with the upper bound
             # from the heuristic
-
             lower_bound = max(lower_bound, objective.value)
             if lower_bound == upper_bound:
                 logger.info('upper == lower bound == %g, optimal solution found', lower_bound)
                 break  # y.value is the optimal solution
+
+            if resolution > upper_bound:
+                logger.error('Solution %g > upper bound %g!', resolution, upper_bound)
+                break
 
             Gi = self.graph.copy()
             Gi.remove_edges_from(S)

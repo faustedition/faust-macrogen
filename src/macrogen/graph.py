@@ -3,7 +3,7 @@ Functions to build the graphs and perform their analyses.
 """
 
 import csv
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -141,20 +141,26 @@ def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Ge
             yield u, v, key, atlas[key]
 
 
-def feedback_arcs(graph: nx.MultiDiGraph, method='baharev', auto_threshold=64):
+def feedback_arcs(graph: nx.MultiDiGraph, method=None):
     """
     Calculates the feedback arc set using the given method and returns a
     list of edges in the form (u, v, key, data)
 
     Args:
         graph: NetworkX DiGraph
-        method: 'eades' (approximation, fast) or 'ip' (exact, exponential), or 'auto'
+        method: 'eades', 'baharev', or 'ip'; if None, look at config
     """
-    if method == 'auto':
-        method = 'eades' if len(graph.edges) > auto_threshold else 'ip'
+    if method is None:
+        method = config.fes_method
+    if isinstance(method, Sequence) and not isinstance(method, str):
+        try:
+            threshold = config.fes_threshold
+        except AttributeError:
+            threshold = 64
+        method = method[0] if len(graph.edges > threshold) else method[1]
+
+    logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
     if method == 'eades':
-        logger.debug('Calculating MFAS for a %d-node graph using internal Eades, may take a while',
-                     graph.number_of_nodes())
         fes = eades(graph)
         return list(expand_edges(graph, fes))
     elif method == 'baharev':
@@ -162,10 +168,8 @@ def feedback_arcs(graph: nx.MultiDiGraph, method='baharev', auto_threshold=64):
         fes = solver.solve()
         return list(expand_edges(graph, fes))
     else:
-        logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
         igraph = to_igraph(graph)
         iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
-        logger.debug('%d edges to remove', len(iedges))
         return list(nx_edges(iedges, keys=True, data=True))
 
 
