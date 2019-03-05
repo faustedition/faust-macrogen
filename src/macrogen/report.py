@@ -20,7 +20,7 @@ import networkx as nx
 
 from .config import config
 from .bibliography import BiblSource
-from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
+from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY, collapse_timeline
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 
@@ -657,10 +657,10 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     except nx.NodeNotFound:
         logger.exception('Node not found!? %s or %s', u, v)
         counter_html = ''
-    subgraph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes).copy()
+    subgraph: nx.MultiDiGraph = collapse_timeline(nx.subgraph(graphs.base, relevant_nodes))
 
     # Highlight conflicting edges, counter path and the two nodes of the conflicting edge(s)
-    for v1, v2 in [(u, v)] + list(pairwise(counter_path)):
+    for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(subgraph, v, u))):
         for k, attr in subgraph.get_edge_data(v1, v2).items():
             attr['highlight'] = True
     subgraph.node[u]['highlight'] = True

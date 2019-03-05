@@ -3,11 +3,11 @@ Functions to build the graphs and perform their analyses.
 """
 
 import csv
-from collections import defaultdict, Counter, Sequence
+from collections import defaultdict, Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Callable, Any, Dict, Tuple, Union, Iterable, Generator
+from typing import List, Callable, Any, Dict, Tuple, Union, Iterable, Generator, Sequence, TypeVar
 
 import networkx as nx
 
@@ -247,6 +247,35 @@ def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
             result.remove_edges_from(group)
             result.add_edge(u, v, **group_attr)
     return result
+
+
+T = TypeVar('T')
+S = TypeVar('S')
+
+
+def first(sequence: Iterable[T], default: S = None) -> Union[T, S]:
+    try:
+        return next(iter(sequence))
+    except StopIteration:
+        return default
+
+
+def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    """
+    Returns a new graph in which unneeded datetime nodes are removed.
+    """
+    g: nx.MultiDiGraph = graph.copy()
+    timeline = sorted(node for node in g.nodes() if isinstance(node, date))
+    if not timeline:
+        return g  # nothing to do
+    for node in timeline[1:]:
+        pred = first(g.predecessors(node))
+        succ = first(g.successors(node))
+        if g.in_degree(node) == 1 and g.out_degree(node) == 1 \
+                and isinstance(pred, date) and isinstance(succ, date):
+            g.add_edge(pred, succ, **g[pred][node][0])
+            g.remove_node(node)
+    return g
 
 
 @dataclass
