@@ -1,6 +1,6 @@
 ## Default configuration for the macrogenesis software
 
-# configuration and data files, either paths or URIs
+# configuration and data files, either paths or URIs. missing data: included files
 data:       data/xml  # XML Data, this is a folder
 logging:    # YAML file with logging configuration
 styles:     # YAML file with styling for the graphviz graphs
@@ -13,11 +13,11 @@ report_dir: target/macrogenesis  # where to save reports and graphs
 
 bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml # The bibliography
 
-xmlroot: https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis
+xmlroot: https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis  # base for links to xml files
 
 ## Limits
 half_interval_correction: 182.5    # if we only have a start or end date, the other limit is max. this many days away
-render_node_limit: 1000
+render_node_limit: 1500
 
 ## Options for solving the FES
 fes_method: baharev   # ip, baharev: exact methods; eades: inexact, list of two: select by fes_threshold
