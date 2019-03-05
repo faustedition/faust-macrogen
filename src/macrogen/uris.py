@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+"""
+Handle URIs and the objects they point to
+"""
 from pathlib import Path
-
-from faust_logging import logging
 
 import codecs
 import csv
@@ -18,9 +19,9 @@ import pandas as pd
 import requests
 from lxml import etree
 
-import faust
+from .config import config
 
-logger = logging.getLogger(__name__)
+logger = config.getLogger(__name__)
 
 
 def call_recorder(function=None, argument_picker=None):
@@ -52,6 +53,9 @@ def call_recorder(function=None, argument_picker=None):
 
 @total_ordering
 class Reference(metaclass=ABCMeta):
+    """
+    Some kind of datable object in the data.
+    """
 
     def __init__(self, uri):
         self.uri = uri
@@ -63,7 +67,10 @@ class Reference(metaclass=ABCMeta):
             raise TypeError(f"{type(self)} cannot be compared to {type(other)}")
 
     @property
-    def label(self):
+    def label(self) -> str:
+        """
+        A human-readable label for the object
+        """
         if self.uri.startswith('faust://inscription'):
             kind, sigil, inscription = self.uri.split('/')[-3:]
             return f"{kind}: {sigil} {inscription}"
@@ -74,6 +81,9 @@ class Reference(metaclass=ABCMeta):
             return self.uri
 
     def sort_tuple(self):
+        """
+        Creates a tuple that can be used as a sort key
+        """
         match = re.match('faust://(document|inscription)/(.+?)/(.+?)', self.uri)
         if match:
             return (0, match.group(3), 99999, match.group(2))
@@ -94,7 +104,13 @@ class Reference(metaclass=ABCMeta):
         return f'{self.__class__.__name__}({repr(self.uri)})'
 
     @property
-    def filename(self):
+    def filename(self) -> Path:
+        """
+        File name for this reference
+
+        Returns:
+            Path, with extension `.dot`
+        """
         match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?$', self.uri)
         if match:
             result = f'{match.group(2)}.{match.group(3)}'
@@ -106,6 +122,14 @@ class Reference(metaclass=ABCMeta):
 
 
 class Inscription(Reference):
+    """
+    A reference that refers to an inscription that is not identical with a witness.
+
+    The `witness` attribute contains a reference to the witness.
+
+    Todo:
+        maybe support multiple witnesses?
+    """
 
     def __init__(self, witness, inscription):
         self.witness = witness
@@ -121,7 +145,7 @@ class Inscription(Reference):
             self.status = 'unknown'
 
     @property
-    def uri(self):
+    def uri(self) -> str:
         return "/".join([self.witness.uri.replace('faust://document/', 'faust://inscription/'), self.inscription])
 
     @property
@@ -134,6 +158,9 @@ class Inscription(Reference):
 
 
 class UnknownRef(Reference):
+    """
+    A reference in the data that could not be resolved to any kind of known object.
+    """
 
     def __init__(self, uri):
         self.uri = uri
@@ -141,6 +168,9 @@ class UnknownRef(Reference):
 
 
 class AmbiguousRef(Reference):
+    """
+    A reference that identifies more than one witness.
+    """
 
     def __init__(self, uri, wits):
         self.uri = uri
@@ -165,6 +195,12 @@ class AmbiguousRef(Reference):
 
 
 class Witness(Reference):
+    """
+    A reference that maps 1:1 to a document in the edition.
+
+    Todo:
+        move the database stuff out of here
+    """
     database = {}
     paralipomena = None
 
@@ -176,6 +212,9 @@ class Witness(Reference):
             raise TypeError('doc_record must be a mapping, not a ' + str(type(doc_record)))
 
     def uris(self):
+        """
+        Returns a set of all uris that can point to the current witness (i.e., faust://…)
+        """
         result = {self.uri}
         if hasattr(self, 'other_sigils'):
             for uri in self.other_sigils:
@@ -192,19 +231,15 @@ class Witness(Reference):
         return result
 
     @classmethod
-    def _load_database(cls,
-                       url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json'):
+    def _load_database(cls):
         cls.corrections = cls._load_corrections()
-        sigil_data = requests.get(url).json()
+        sigil_data = config.sigils
         cls.database = cls.build_database(sigil_data)
 
     @classmethod
-    def _load_corrections(cls, path=Path('uri-corrections.csv')):
-        with path.open(encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader)  # skip header
-            result = {row[0]: row[1] for row in reader if row[1]}
-        logger.info('Loaded %d corrections from %s', len(result), path)
+    def _load_corrections(cls):
+        result = config.uri_corrections
+        logger.info('Loaded %d corrections', len(result))
         return result
 
     @classmethod
@@ -238,6 +273,18 @@ class Witness(Reference):
     @classmethod
     @call_recorder(argument_picker=itemgetter(1))
     def get(cls, uri, allow_duplicate=True):
+        """
+        Returns the reference for the given URI.
+
+        This is the heart of the URI resolving mechanism and the general way to resolve an URI. It will return a
+        Reference object representing the concrete item referred to by the URI.
+
+        Args:
+            uri: An uri
+            allow_duplicate: if an URI resolves to more than one object and allow_duplicate is True, this will resolve
+                             to an AmbiguousRef representing all objects that could be referred to by this URI.
+                             Otherwise it will return the first matching object.
+        """
         if not cls.database:
             cls._load_database()
             cls._load_paralipomena()
@@ -261,7 +308,7 @@ class Witness(Reference):
             else:
                 return result
 
-        wa_h = re.match('faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
+        wa_h = re.match(r'faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
         if wa_h is not None:
             wit = cls.get('faust://document/faustedition/2_H')
             if wa_h.group(4):
@@ -269,7 +316,7 @@ class Witness(Reference):
             else:
                 return Inscription(wit, wa_h.group(3))
 
-        wa_pseudo_inscr = re.match('faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
+        wa_pseudo_inscr = re.match(r'faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
         if wa_pseudo_inscr is not None:
             docuri = 'faust://document/wa_faust/' + wa_pseudo_inscr.group(2)
             wit = cls.get(docuri)
@@ -278,7 +325,7 @@ class Witness(Reference):
             else:
                 logger.warning('Could not fix WA pseudo inscription candidate %s (%s)', uri, wit)
 
-        space_inscr = re.match('faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
+        space_inscr = re.match(r'faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
         if space_inscr is not None:
             uri = 'faust://inscription/' + space_inscr.group(2) + '/' + space_inscr.group(3) + '/' + space_inscr.group(
                     4)
@@ -350,15 +397,19 @@ class Witness(Reference):
         return Path(self.sigil_t + '.dot')
 
 
+### The rest of this module is intended for producing tables about uri use in order to help with disambiguation
+
+
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
-    for macrogenetic_file in faust.macrogenesis_files():
+    macrogenesis_files = list(config.path.data.join('macrogenesis').rglob('**/*.xml'))
+    for macrogenetic_file in macrogenesis_files:
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
-        for element in tree.xpath('//f:item', namespaces=faust.namespaces):  # type: etree._Element
+        for element in tree.xpath('//f:item', namespaces=config.namespaces):  # type: etree._Element
             uri = element.get('uri')
             wit = Witness.get(uri, allow_duplicate=True)
             items[wit].append((macrogenetic_file.split('macrogenesis/')[-1], element.sourceline))
-    logger.info('Collected %d references in %d macrogenesis files', len(items), len(faust.macrogenesis_files()))
+    logger.info('Collected %d references in %d macrogenesis files', len(items), len(macrogenesis_files))
     return items
 
 
@@ -387,7 +438,7 @@ def _report_wits(wits, output_csv='witness-usage.csv'):
         logger.info('Analyzed references in data:\n%s', report)
 
 
-if __name__ == '__main__':
+def _witness_report():
 #    logging.basicConfig(level=logger.WARNING)
 #    logger.setLevel(logging.INFO)
     wits = _collect_wits()
@@ -419,3 +470,6 @@ if __name__ == '__main__':
 
     wit_report = pd.DataFrame(wit_sigils).T
     wit_report.to_excel('witness-sigils.xlsx')
+
+if __name__ == '__main__':
+    _witness_report()

@@ -1,19 +1,24 @@
+"""
+Functions to build the graphs and perform their analyses.
+"""
+
+
 import csv
 from collections import defaultdict, Counter
+from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Callable, Any, Dict, Tuple, Union, Hashable, Set
+from typing import List, Callable, Any, Dict, Tuple, Union
 
-import dateutil
 import networkx as nx
-from dataclasses import dataclass
 
-from datings import base_graph, BiblSource, parse_datestr
-from faust_logging import logging
-from igraph_wrapper import to_igraph, nx_edges
-from uris import Reference, Inscription, Witness, AmbiguousRef
+from .bibliography import BiblSource
+from .datings import base_graph, parse_datestr
+from .igraph_wrapper import to_igraph, nx_edges
+from .uris import Reference, Inscription, Witness, AmbiguousRef
+from .config import config
 
-logger = logging.getLogger(__name__)
+logger = config.getLogger(__name__)
 
 EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
@@ -21,6 +26,11 @@ DAY = timedelta(days=1)
 
 
 def pathlink(*nodes) -> Path:
+    """
+    Creates a file name for the given path.
+
+    The file name consists of the file names for the given nodes, in order, joined by `--`
+    """
     node_names: List[str] = []
     for node in nodes:
         if isinstance(node, str):
@@ -61,6 +71,16 @@ def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
 
 
 def analyse_conflicts(graph):
+    """
+    Dumps some statistics on the conflicts in the given graph.
+
+    Args:
+        graph:
+
+
+    Todo: is this still up to date?
+    """
+
     conflicts_file_name = 'conflicts.tsv'
     with open(conflicts_file_name, "wt") as conflicts_file:
         writer = csv.writer(conflicts_file, delimiter='\t')
@@ -127,6 +147,7 @@ def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int
 
 
 def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], **new_attrs):
+    """Mark all edges in the given graph by updating their attributes with the keyword arguments. """
     for u, v, k, *_ in edges:
         graph.edges[u, v, k].update(new_attrs)
 
@@ -147,8 +168,7 @@ def collapse_edges(graph: nx.MultiDiGraph):
 
     Note:
         This is not able to reduce the number of edges enough to let the
-        feedback_arc_set method 'ip' work with the
-
+        feedback_arc_set method 'ip' work with the largest component
     """
     result = graph.copy()
     multiedges = defaultdict(list)
@@ -285,6 +305,15 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
 
 
 def datings_from_inscriptions(base: nx.MultiDiGraph):
+    """
+    Copy datings from inscriptions to witnesses.
+
+    Args:
+        base:
+
+    Returns:
+
+    """
     logger.info('Copying datings from inscriptions to witnesses')
     inscriptions_by_wit: Dict[Witness, List[Inscription]] = defaultdict(list)
     for inscription in [node for node in base.nodes if isinstance(node, Inscription)]:
@@ -326,11 +355,20 @@ def adopt_orphans(graph: nx.MultiDiGraph):
 
 
 def add_inscription_links(base: nx.MultiDiGraph):
+    """
+    Add an edge from each inscription to its parent witness.
+    """
     for node in list(base.nodes):
         if isinstance(node, Inscription):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
 
 def add_missing_wits(working: nx.MultiDiGraph):
+    """
+    Add known witnesses that are not in the graph yet.
+
+    The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
+    but it makes these nodes appear in the topological order.
+    """
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
     missing_wits = all_wits - known_wits
@@ -371,32 +409,32 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
         all_conflicting_edges.extend(selfloops)
 
     logger.info('Building DAG from remaining data')
-    dag = working.copy()
-    dag.remove_edges_from(all_conflicting_edges)
+    result_graph = working.copy()
+    result_graph.remove_edges_from(all_conflicting_edges)
 
-    if not nx.is_directed_acyclic_graph(dag):
+    if not nx.is_directed_acyclic_graph(result_graph):
         logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_conflicting_edges))
-        cycles = list(nx.simple_cycles(dag))
+        cycles = list(nx.simple_cycles(result_graph))
         logger.error('It contains %d simple cycles', len(cycles))
     else:
-        logging.info('Double-checking removed edges ...')
+        logger.info('Double-checking removed edges ...')
         for u, v, k, attr in sorted(all_conflicting_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
-            dag.add_edge(u, v, **attr)
-            if nx.is_directed_acyclic_graph(dag):
+            result_graph.add_edge(u, v, **attr)
+            if nx.is_directed_acyclic_graph(result_graph):
                 all_conflicting_edges.remove((u, v, k, attr))
-                logging.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v, attr.get('weight', 1))
+                logger.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v, attr.get('weight', 1))
             else:
-                dag.remove_edge(u, v)
+                result_graph.remove_edge(u, v)
 
     logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
     mark_edges_to_delete(base, all_conflicting_edges)
 
     logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
 
-    closure = nx.transitive_closure(dag)
+    closure = nx.transitive_closure(result_graph)
     add_inscription_links(base)
 
-    return MacrogenesisInfo(base, working, dag, closure, conflicts)
+    return MacrogenesisInfo(base, working, result_graph, closure, conflicts)
 
 
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:

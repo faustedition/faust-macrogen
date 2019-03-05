@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # coding=utf-8
+
+"""
+Legacy script to deal with the events table
+"""
 import argparse
 import codecs
 import logging
@@ -13,7 +17,7 @@ from lxml import etree
 
 import faust
 from attic.graph import AbsoluteDating
-from uris import Witness
+from .uris import Witness
 
 
 class TimeSpan(object):

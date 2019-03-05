@@ -13,12 +13,16 @@ handlers:
 root:
   handlers:
     - console
-  level: INFO
+  level: WARNING
 
 loggers:
-  graph:
-    level: DEBUG
-  uris:
+  macrogen.visualize:
     level: INFO
-  datings:
+#  macrogen.graph:
+#    level: DEBUG
+#  macrogen.uris:
+#    level: INFO
+#  macrogen.datings:
+#    level: INFO
+  macrogen.config:
     level: INFO

@@ -8,6 +8,12 @@ from lxml import etree
 from lxml.builder import ElementMaker
 import re
 
+"""
+This script can be used to convert an excel table in a special format to macrogenesis XML files.
+
+TODO move out of macrogenesis package?
+"""
+
 F = ElementMaker(namespace=faust.namespaces['f'], nsmap={None: faust.namespaces['f']})
 
 def make_group(sigils, kind='', source='', comment='', notes=''):

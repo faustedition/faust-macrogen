@@ -1,4 +1,6 @@
 import json
+import os
+from collections import defaultdict, Counter
 from datetime import date, datetime
 from itertools import chain, repeat, groupby
 from operator import itemgetter
@@ -9,24 +11,20 @@ from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
 
-from faust_logging import logging
-
 import csv
-from collections.__init__ import defaultdict, Counter
 from html import escape
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Optional, Any
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Any, Optional
 
 import networkx as nx
 
-import faust
-from datings import BiblSource
-from graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
-from uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
-from visualize import write_dot, simplify_graph
+from .config import config
+from .bibliography import BiblSource
+from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY
+from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
+from .visualize import write_dot, simplify_graph
 
-logger = logging.getLogger(__name__)
-target = Path(faust.config.get('macrogenesis', 'output-dir'))
+logger = config.getLogger(__name__)
 
 RELATION_LABELS = {'not_before': 'nicht vor',
                    'not_after': 'nicht nach',
@@ -37,8 +35,6 @@ RELATION_LABELS = {'not_before': 'nicht vor',
                    'temp-pre': 'zeitlich vor',
                    None: '???'
                    }
-
-XML_ROOT: str = 'https://github.com/faustedition/faust-xml/blob/master/xml/macrogenesis/'
 
 
 class HtmlTable:
@@ -113,10 +109,24 @@ class HtmlTable:
 
     @staticmethod
     def _build_attrs(attrdict: Dict):
+        """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
         return ''.join(
                 ' {}="{}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
 
-    def _format_column(self, index, data):
+    def _format_column(self, index, data) -> str:
+        """
+        Returns the HTML for the given cell.
+
+        This looks up the configured formatter for the column and calls it to
+        rendr the data, and it will also configure the cell attributes.
+
+        Args:
+            index: index of the column
+            data:  data to display
+
+        Returns:
+            String containing HTML `<td>` element
+        """
         try:
             attributes = self._build_attrs(self.attrs[index])
             content = self.formatters[index](data)
@@ -125,6 +135,15 @@ class HtmlTable:
             raise ValueError('Error formatting column %s' % self.titles[index]) from e
 
     def _format_row(self, row: Iterable, **rowattrs) -> str:
+        """
+        Returns the HTML for a column with the given row.
+        Args:
+            row: the row to format
+            **rowattrs: attributes for the row
+
+        Returns: a string containing an HTML `<tr>` element
+
+        """
         attributes = self._build_attrs(rowattrs)
         try:
             return f'<tr{attributes}>' + ''.join(
@@ -133,11 +152,15 @@ class HtmlTable:
             logger.exception('Error formatting row %s', row)
             return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
 
-    def _format_rows(self, rows: Iterable[Iterable]):
+    def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str, None, None]:
+        """Formats the given rows."""
         for row in rows:
             yield self._format_row(row)
 
     def _format_header(self):
+        """
+        Formats the table header.
+        """
         column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
                                   for title, attrs in zip(self.titles, self.header_attrs)])
         return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers, self._build_attrs(self.table_attrs))
@@ -217,6 +240,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
 
 
 def report_components(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     logger.info('Writing component overview to %s', target)
     target.mkdir(parents=True, exist_ok=True)
     report = f"""<h3>{len(graphs.conflicts)} stark zusammenhängende Komponenten</h3>
@@ -272,8 +296,8 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
-
-def _fmt_node(node):
+def _fmt_node(node: Union[Reference, object]):
+    """Formats a node by creating a link of possible"""
     if isinstance(node, Reference):
         return f'<a href="{node.filename.stem}">{node}</a>'
     else:
@@ -281,6 +305,7 @@ def _fmt_node(node):
 
 
 def _edition_link(ref: Reference):
+    """Creates a link or links into the edition for the node."""
     if isinstance(ref, Witness):
         return f'<a href="/document?sigil={ref.sigil_t}">{ref}</a>'
     elif isinstance(ref, Inscription):
@@ -294,6 +319,9 @@ def _edition_link(ref: Reference):
 
 
 class RefTable(HtmlTable):
+    """
+    Builds a table of references.
+    """
 
     def __init__(self, base: nx.MultiDiGraph, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
@@ -309,7 +337,15 @@ class RefTable(HtmlTable):
         self.base = base
 
 
-    def reference(self, ref, index=None, write_subpage=False):
+    def reference(self, ref: Reference, index: Optional[int] = None, write_subpage: bool = False):
+        """
+        Adds the given reference to the table.
+
+        Args:
+            ref: the object for which the row will be created
+            index: if present, the index to display for the node.
+            write_subpage: if true, create a subpage with all assertions for the referende
+        """
         if ref in self.base:
             if index is None:
                 index = self.base.node[ref]['index']
@@ -326,6 +362,7 @@ class RefTable(HtmlTable):
 
     def _last_ref_subpage(self, DAY, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
+        target = config.path.report_dir
         basename = target / ref.filename
         relevant_nodes = {ref} | set(self.base.predecessors(ref)) | set(self.base.successors(ref))
         if ref.earliest != EARLIEST:
@@ -353,7 +390,7 @@ class RefTable(HtmlTable):
                           .column('Aussage', data_sortable_type='alpha')
                           .column('Bezug', data_sortable_type='sigil', format_spec=_fmt_node)
                           .column('Quelle', data_sortable_type='bibliography', format_spec=_fmt_source)
-                          .column('Kommentare', format_spec="/".join)
+                          .column('Kommentare', format_spec=_fmt_comments)
                           .column('XML', format_spec=_fmt_xml))
         for (u, v, attr) in self.base.in_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
@@ -390,7 +427,7 @@ class AssertionTable(HtmlTable):
              .column('Relation',  RELATION_LABELS.get, data_sortable_type="alpha")
              .column('Objekt', _fmt_node, data_sortable_type="sigil")
              .column('Quelle', _fmt_source, data_sortable_type="bibliography")
-             .column('Kommentare', ' / '.join, data_sortable_type="alpha")
+             .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
              .column('XML', _fmt_xml, data_sortable_type="alpha"))
 
     def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
@@ -418,23 +455,24 @@ def _fmt_source(attrs):
     return result
 
 
-def _source_link(file: str, line: Optional[Union[int, str]] = None, text: Optional[Union[int, str]] = None) -> str:
-    file = file.replace('macrogenesis/', '')
+def _source_link(file: Path, line: Optional[Union[int, str]] = None, text: Optional[Union[int, str]] = None) -> str:
+    file = file.relative_to('macrogenesis')
     if text is None:
         text = file
         if line is not None:
             text += ': ' + str(line)
-    href = XML_ROOT + file
+    href = os.path.join(config.xmlroot, os.fspath(file))
     if line is not None:
         href += '#L' + str(line)
     return f'<a href="{href}">{text}</a>'
 
 
-def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
+def _fmt_xml(xml: Union[Tuple[Path, int], Sequence[Tuple[str, int]]]):
     if not xml:
         return ""
-    if isinstance(xml[0], str):
-        return _source_link(xml[0], xml[1])
+
+    if isinstance(xml[0], Path):
+        return _source_link(xml[0], xml[1], f"{xml[0].relative_to('macrogenesis')}: {xml[1]}")
     else:
         result = []
         for file, lines in groupby(xml, itemgetter(0)):
@@ -442,9 +480,98 @@ def _fmt_xml(xml: Union[Tuple[str, int], Sequence[Tuple[str, int]]]):
         return "; ".join(result)
 
 
+def _fmt_comments(comments):
+    if not comments:
+        return ""
+    return " / ".join(str(comment) for comment in comments if comment)
+
+
+def report_downloads(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
+    target.mkdir(exist_ok=True, parents=True)
+
+    simplified = simplify_graph(graphs.base)
+    nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
+    nx.write_gexf(simplified, str(target / 'base.gexf'))
+    nx.write_edgelist(simplified, str(target / 'base.edges'))
+
+    write_html(target / 'downloads.php', """
+    <section>
+    <p>Downloadable files for the base graph in various formats:</p>
+    <ul>
+        <li><a href='base.gpickle'>NetworkX GPickle, requires the faust-macrogen library</a></li>
+        <li><a href='base.gexf'>GEXF</a></li>
+        <li><a href='base.edges'>Edge List</a></li>
+    <ul>
+    </section>
+    <h4>Nodes</h4>
+    <p>The <strong>nodes</strong> are either URIs or dates in ISO 8601 format. URIs of the form
+       <code>faust://document/<var>scheme</var>/<var>sigil</var></code> denote a witness (document)
+       that has the identifier <var>sigil</var> in the respective identifier scheme. 
+       <code>faust://inscription/<var>scheme</var>/<var>sigil</var>/<var>id</var></code> denote an 
+       inscription (single “writing event”) on the respective document.</p>
+        <p>If some URI has a <var>scheme</var> ≠ <code>faustedition</code>, then it was not possible to map it to
+       a document in the edition. You may still try the sigil with the search. Otherwise, the document can be
+       displayed at <code>http://faustedition.net/document?sigil=<var>sigil</var></code>.
+       </p>
+    <p>Dates are always of the form YYYY-MM-DD.</p>
+    
+    <h4>Edges</h4>
+    <p>The edges have attributes that describe them further:</p>
+    <table class="pure-table">
+      <tr>
+        <th>Attribute</th><th>Value(s)</th><th>Meaning (<var>u</var> → <var>v</var>)</th>
+      </tr>
+      <tr>
+        <td rowspan="3">kind</td>
+        <td>
+            <code>not_before</code>, <code>not_after</code>, <code>from_</code>, <code>to_</code>, <code>when</code>,
+            <code>timeline</code>
+        </td>
+        <td>These all essentially mean <var>u</var> happened before <var>v</var></td>
+      </tr>
+      <tr>
+        <td><code>timeline</code></td>
+        <td><var>v</var> is the next date after date node <var>u</var></td>
+      </tr>
+      <tr>
+        <td><code>temp-syn</code></td>
+        <td><var>u</var> and <var>v</var> happened about at the same time
+      </tr>
+      <tr>
+        <td>ignore</td>
+        <td>boolean</td>
+        <td>if present and true, this edge is to be ignored for philological reasons</td>
+      </tr>
+      <tr>
+         <td>delete</td>
+         <td>boolean</td>
+         <td>if present and true, this edge has been removed by the minimum feedback edge set heuristics</td>
+      </tr>
+      <tr>
+          <td>weight</td>
+          <td>positive integer</td>
+          <td>trust in edge, generated mainly from sources</td>
+      </tr>
+      <tr>
+        <td>source</td>
+        <td>URI</td>
+        <td>URI identifying the source for this assertion</td>
+      </tr>
+      <tr>
+         <td>xml</td>
+         <td></td>
+         <td>file name and line of the <a href="https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis">XML file</a>
+          with this assertion</td>
+      </tr>
+    </table>    
+    """, "Downloads")
+
+
 def report_refs(graphs: MacrogenesisInfo):
     # Fake dates for when we don’t have any earliest/latest info
 
+    target = config.path.report_dir
     target.mkdir(exist_ok=True, parents=True)
 
     nx.write_yaml(simplify_graph(graphs.base), str(target / 'base.yaml'))
@@ -475,6 +602,7 @@ def _invert_mapping(mapping: Mapping) -> Dict:
 
 
 def report_missing(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     used_wits = {wit for wit in refs if isinstance(wit, Witness)}
@@ -513,6 +641,7 @@ def report_missing(graphs: MacrogenesisInfo):
 
 
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
+    target = config.path.report_dir
     reportfile = pathlink(u, v)
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
@@ -556,6 +685,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
 
 
 def report_conflicts(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     table = AssertionTable()
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
                      'delete' in attr and attr['delete']]
@@ -566,6 +696,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
 
 
 def report_sources(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
     by_source = defaultdict(list)
     for u, v, k, attr in graphs.base.edges(keys=True, data=True):
         if 'source' in attr:
@@ -603,6 +734,7 @@ def report_sources(graphs: MacrogenesisInfo):
 
 
 def report_index(graphs):
+    target = config.path.report_dir
 
     pages = [('refs', 'Zeugen', 'Alle referenzierten Dokumente in der erschlossenen Reihenfolge'),
              ('scenes', 'nach Szene', 'Die relevanten Zeugen für jede Szene'),
@@ -612,7 +744,8 @@ def report_index(graphs):
              ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
              ('dag', 'sortierrelevanter Gesamtgraph', 'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion', '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
-             ('help', 'Legende', 'Legende zu den Graphen')]
+             ('help', 'Legende', 'Legende zu den Graphen'),
+             ('downloads', 'Downloads', 'Graphen zum Download')]
     links = "\n".join(('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page in pages))
     report = f"""
       <p>
@@ -633,7 +766,7 @@ def report_index(graphs):
 
     write_html(target / "index.php", report)
     logger.info('Writing DAG ...')
-    write_dot(graphs.dag, target / 'dag-graph.dot', record=True)
+    write_dot(graphs.dag, target / 'dag-graph.dot')
     write_html(target / 'dag.php', '<object type="image/svg+xml" data="dag-graph.svg" id="refgraph"/>',
                graph_id='refgraph', head='Effektiver Gesamtgraph (ohne Konflikte)',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
@@ -641,12 +774,13 @@ def report_index(graphs):
     logger.info('Creating transitive reduction ...')
     tred_base = nx.MultiDiGraph(nx.transitive_reduction(graphs.dag))
     tred = nx.edge_subgraph(graphs.dag, tred_base.edges)
-    write_dot(tred, target / 'tred-graph.dot', record=True)
+    write_dot(tred, target / 'tred-graph.dot')
     write_html(target / 'tred.php', '<object type="image/svg+xml" data="tred-graph.svg" id="refgraph"/>',
                graph_id='refgraph', head='Transitive Reduktion',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
 def report_help():
+    target = config.path.report_dir
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
         G = nx.MultiDiGraph() if extend is None else extend.copy()
         G.add_edge(u, v, **edge_attr)
@@ -735,14 +869,15 @@ def _yearlabel(ref: Reference):
 
 class ByScene:
     def __init__(self, graphs: MacrogenesisInfo):
-        scene_xml = etree.parse('scenes.xml')
-        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=faust.namespaces)
+        scene_xml: etree._ElementTree = etree.parse('scenes.xml')
+        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=config.namespaces)
         bargraph_info = requests.get('http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
         self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in bargraph_info}
         self.ordering = list(enumerate(graphs.order_refs()))
         self.graphs = graphs
 
     def report(self):
+        target = config.path.report_dir
         sceneTable = (HtmlTable()
                       .column('#')
                       .column('Szene')
@@ -750,7 +885,7 @@ class ByScene:
                       .column('Zeugen'))
         for scene in self.scenes:
             witnessTable = RefTable(self.graphs.base)
-            title = scene.xpath('f:title/text()', namespaces=faust.namespaces)[0]
+            title = scene.xpath('f:title/text()', namespaces=config.namespaces)[0]
             start, end = int(scene.get('first-verse')), int(scene.get('last-verse'))
             scene_wits = [(index, wit) for index, wit in self.ordering if self.relevant(wit, start, end)]
             for index, witness in scene_wits:
@@ -795,7 +930,9 @@ def report_scenes(graphs):
     ByScene(graphs).report()
 
 def write_order_xml(graphs):
-    F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=faust.namespaces)
+    target: Path = config.path.report_dir
+    logger.debug('Writing reports to %s', target.absolute())
+    F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
             *[F.item(format(witness),
