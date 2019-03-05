@@ -11,6 +11,9 @@ setup(
         author_email='thorsten.vitt@uni-wuerzburg.de',
         description='Macrogenesis Tools for the Faustedition',
         include_package_data=True,
+        setup_requires=[
+            'numpy'       # work around https://github.com/numpy/numpy/issues/2434
+        ],
         install_requires=[
                 'networkx>=2.1',
                 'python-igraph',
