@@ -1,10 +1,9 @@
-from collections import Sequence
+from typing import Sequence
 from datetime import date
 from multiprocessing.pool import Pool
 from pathlib import Path
 
 import networkx as nx
-import yaml
 from networkx import MultiDiGraph
 from pygraphviz import AGraph
 from tqdm import tqdm

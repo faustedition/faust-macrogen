@@ -16,6 +16,7 @@ setup(
                 'python-igraph',
                 'pygraphviz',
                 'ruamel.yaml',
+                'pyyaml',    # required for networkx' yaml dump
                 'pandas',
                 'openpyxl',
                 'xlrd',
@@ -27,6 +28,8 @@ setup(
                 'colorlog',
                 'tqdm',
                 'dataclasses',
+                'cvxpy',
+                'cvxopt'   # just used to pull in GLPK
         ],
         entry_points={
             'console_scripts': ['macrogen=macrogen.main:main']
