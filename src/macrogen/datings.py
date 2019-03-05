@@ -175,7 +175,7 @@ class AbsoluteDating(_AbstractDating):
                                xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.end is None and not self.ignore:
                         G.add_edge(item, min(self.date_before + timedelta(config.half_interval_correction),
-                                             datetime.date(1832, 3, 23)), kind='not_after',
+                                             date(1832, 3, 23)), kind='not_after',
                                    source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
                     G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self,

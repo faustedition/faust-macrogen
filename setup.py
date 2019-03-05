@@ -15,6 +15,7 @@ setup(
             'numpy'       # work around https://github.com/numpy/numpy/issues/2434
         ],
         install_requires=[
+                'numpy',
                 'networkx>=2.1',
                 'python-igraph',
                 'pygraphviz',
