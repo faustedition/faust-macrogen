@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 from collections import defaultdict
-from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence
+from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional
 from .config import config
 import networkx as nx
 import numpy as np
@@ -167,7 +167,7 @@ class FES_Baharev:
         http://www.mat.univie.ac.at/~neum/ms/minimum_feedback_arc_set.pdf.
     """
 
-    def __init__(self, graph: nx.DiGraph):
+    def __init__(self, graph: nx.DiGraph, force_forward_edges: Optional[List[Tuple[V, V]]] = None):
         self.original_graph = graph
         self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
 
@@ -188,10 +188,15 @@ class FES_Baharev:
             weights.append(w)
             edges.append((u, v))
 
+        if force_forward_edges is None:
+            force_forward_edges = []
+
         self.graph = G
         self.weights = np.array(weights)
         self.edges = edges
         self.m = len(self.edges)
+        self.force_forward_edges = force_forward_edges
+        self.force_forward_vec = self.edge_vector(force_forward_edges)
         self.solver_args = {}
         self.solution_vector = None
         self.solution = None
@@ -277,6 +282,7 @@ class FES_Baharev:
 
             cycle_vectors = [self.edge_vector(nx.utils.pairwise(cycle)) for cycle in simple_cycles]
             constraints = [cp.sum(a * y) >= 1 for a in cycle_vectors]
+            constraints.append(cp.sum(y * self.force_forward_vec) == 0)  # no force forward vec may be in the result set
             problem = cp.Problem(objective, constraints)
             resolution = problem.solve(**self.solver_args)
             if problem.status != 'optimal':
