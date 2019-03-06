@@ -25,6 +25,7 @@ def test_all_sinks(graph1):
         sinks.append(sink)
     assert sinks == [5, 4]
 
+
 def test_eades(graph1):
     assert list(eades(graph1)) == [(3, 2)]
 
@@ -33,6 +34,19 @@ def test_baharev(graph1):
     solver = FES_Baharev(graph1)
     result = solver.solve()
     assert set(result) == {(3, 2)} or set(result) == {(2, 3)}
+
+
+def test_eades_ff():
+    g = nx.DiGraph()
+    g.add_path([1, 2, 3, 4, 5], weight=1)
+    g.add_edge(3, 2, weight=2)
+
+    result = Eades(g).solve()
+    assert set(result) == {(2, 3)}
+
+    solver = Eades(g, [(4,5), (2, 3)])
+    result = set(solver.solve())
+    assert set(result) == {(3, 2)}
 
 
 def test_baharev_ff():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 from collections import defaultdict
-from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional
+from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional, Dict
 from .config import config
 import networkx as nx
 import numpy as np
@@ -17,13 +17,37 @@ class Eades:
     def to_start(self, node):
         """
         Removes the node from the graph and appends it to the start sequence.
+
+        This honors the forced edges ...
         """
-        self.start.append(node)
-        self.graph.remove_node(node)
+        if node in self.graph:
+            if node in self.keep_index_backward:
+                for pred in self.keep_index_backward[node]:
+                    self.to_start(pred)
+
+            if node in self.graph:
+                self.start.append(node)
+                self.graph.remove_node(node)
+
+            if node in self.keep_index_forward:
+                for succ in self.keep_index_forward[node]:
+                    self.to_start(succ)
+        self.logger.debug('%s %s\t(to_start: %s)', self.start, self.end, node)
 
     def to_end(self, node):
-        self.end.insert(0, node)
-        self.graph.remove_node(node)
+        if node in self.graph:
+            if node in self.keep_index_forward:
+                for succ in self.keep_index_forward[node]:
+                    self.to_end(succ)
+
+            if node in self.graph:
+                self.end.insert(0, node)
+                self.graph.remove_node(node)
+
+            if node in self.keep_index_backward:
+                for pred in self.keep_index_backward[node]:
+                    self.to_end(pred)
+        self.logger.debug('%s %s\t(to_end: %s)', self.start, self.end, node)
 
     def _exhaust_sinks(self, sink: bool = True):
         """
@@ -47,7 +71,7 @@ class Eades:
         """
         return self._exhaust_sinks(False)
 
-    def __init__(self, graph: nx.DiGraph, double_check=True):
+    def __init__(self, graph: nx.DiGraph, edges_to_keep=None):
         """
         Fast heuristic for the minimum feedback arc set.
 
@@ -55,7 +79,9 @@ class Eades:
         such that each edge can be classified into *forward* or *backward* edges.
         The heuristic tries to minimize the sum of the weights (`weight` attribute)
         of the backward edges. It always produces an acyclic graph, however it can
-        produce more conflicting edges than the minimal solution.
+        produce more conflicting     g = nx.DiGraph()
+    g.add_path([1, 2, 3, 4, 5], weight=1)
+    g.add_edge(3, 2, weight=2)edges than the minimal solution.
 
         Args:
             graph: a directed graph, may be a multigraph.
@@ -75,16 +101,31 @@ class Eades:
         self.original_graph = graph
         g = graph.copy()
         self.graph = g
+        if edges_to_keep is not None:
+            self._register_keep_edges(edges_to_keep)
+        else:
+            self.keep_index_backward = self.keep_index_forward = {}
         self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
         self.logger.debug('Internal eades calculation for a graph with %d nodes and %d edges', g.number_of_nodes(),
                           g.number_of_edges())
         self.start = self.end = None
         self.feedback_edges = None
 
+    def _register_keep_edges(self, edges_to_keep: Iterable[Tuple[V, V]]):
+        forward_index: Dict[V, List[V]] = defaultdict(list)
+        backward_index: Dict[V, List[V]] = defaultdict(list)
+        for u, v in edges_to_keep:
+            forward_index[u].append(v)
+            backward_index[v].append(u)
+        self.keep_index_forward = forward_index
+        self.keep_index_backward = backward_index
+        logger.debug('keep: %s -> fi = %s | bi = %s', edges_to_keep, dict(forward_index), dict(backward_index))
+
+
     def solve(self) -> List[Tuple[V, V]]:
         self.start = []
         self.end = []
-        self.graph.remove_edges_from(list(self.graph.selfloop_edges()))
+        self.graph.remove_edges_from(list(nx.selfloop_edges(self.graph)))
         while self.graph:
             for v in self._exhaust_sinks():
                 self.to_end(v)
