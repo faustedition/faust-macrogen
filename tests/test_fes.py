@@ -1,7 +1,7 @@
 import pytest
 import networkx as nx
 
-from macrogen.fes import _exhaust_sources, _exhaust_sinks, eades, FES_Baharev
+from macrogen.fes import eades, FES_Baharev, Eades
 
 
 @pytest.fixture
@@ -18,11 +18,13 @@ def graph1():
 
 
 def test_all_sinks(graph1):
-    assert list(_exhaust_sinks(graph1)) == [5, 4]
+    eades = Eades(graph1)
+    sinks = list(eades._exhaust_sinks())
+    assert sinks == [5, 4]
 
 
 def test_all_sources(graph1):
-    assert list(_exhaust_sources(graph1)) == [1]
+    assert list(Eades(graph1)._exhaust_sources()) == [1]
 
 
 def test_eades(graph1):
