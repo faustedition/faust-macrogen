@@ -648,7 +648,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
     counter_path = []
     try:
-        counter_path = nx.shortest_path(graphs.dag, v, u)
+        counter_path = nx.shortest_path(graphs.dag, v, u, weight='weight')
         relevant_nodes = set(counter_path)
         counter_desc = " → ".join(map(_fmt_node, counter_path))
         counter_html = f'<p><strong>Pfad in Gegenrichtung:</strong> {counter_desc}</p>'
