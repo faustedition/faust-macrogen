@@ -1,5 +1,6 @@
 from typing import Sequence
-from datetime import date
+from datetime import date, timedelta
+from time import perf_counter
 from multiprocessing.pool import Pool
 from pathlib import Path
 
@@ -173,12 +174,18 @@ def render_file(filename):
     Renders the given dot file to an svg file using dot.
     """
     graph = AGraph(filename=filename)
+    starttime = perf_counter()
     try:
         resultfn = filename[:-3] + 'svg'
         graph.draw(resultfn, format='svg', prog='dot')
         return resultfn
     except:
         logger.exception('Failed to render %s', filename)
+    finally:
+        duration = timedelta(seconds=perf_counter()-starttime)
+        if duration > timedelta(seconds=5):
+            logger.warning('Rendering %s with %d nodes and %d edges took %s',
+                           filename, graph.number_of_nodes(), graph.number_of_edges(), duration)
 
 
 def render_all():
