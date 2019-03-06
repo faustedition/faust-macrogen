@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 from collections import defaultdict
-from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence
+from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional, Dict
 from .config import config
 import networkx as nx
 import numpy as np
@@ -12,89 +12,147 @@ logger = config.getLogger(__name__)
 V = TypeVar('V')
 
 
-def _exhaust_sinks(g: nx.DiGraph, sink: bool = True):
-    """
-    Produces all sinks until there are no more.
+class Eades:
 
-    Warning: This modifies the graph g
-    """
-    sink_method = g.out_degree if sink else g.in_degree
-    while True:
-        sinks = [u for (u, d) in sink_method() if d == 0]
-        if sinks:
-            yield from sinks
-            g.remove_nodes_from(sinks)
+    def to_start(self, node):
+        """
+        Removes the node from the graph and appends it to the start sequence.
+
+        This honors the forced edges ...
+        """
+        if node in self.graph:
+            if node in self.keep_index_backward:
+                for pred in self.keep_index_backward[node]:
+                    self.to_start(pred)
+
+            if node in self.graph:
+                self.start.append(node)
+                self.graph.remove_node(node)
+
+            if node in self.keep_index_forward:
+                for succ in self.keep_index_forward[node]:
+                    self.to_start(succ)
+        self.logger.debug('%s %s\t(to_start: %s)', self.start, self.end, node)
+
+    def to_end(self, node):
+        if node in self.graph:
+            if node in self.keep_index_forward:
+                for succ in self.keep_index_forward[node]:
+                    self.to_end(succ)
+
+            if node in self.graph:
+                self.end.insert(0, node)
+                self.graph.remove_node(node)
+
+            if node in self.keep_index_backward:
+                for pred in self.keep_index_backward[node]:
+                    self.to_end(pred)
+        self.logger.debug('%s %s\t(to_end: %s)', self.start, self.end, node)
+
+    def _exhaust_sinks(self, sink: bool = True):
+        """
+        Produces all sinks until there are no more.
+
+        Warning: This modifies the graph g
+        """
+        sink_method = self.graph.out_degree if sink else self.graph.in_degree
+        while True:
+            sinks = [u for (u, d) in sink_method() if d == 0]
+            if sinks:
+                yield from sinks
+            else:
+                return
+
+    def _exhaust_sources(self):
+        """
+        Produces all sources until there are no more.
+
+        Warning: This modifies the given graph
+        """
+        return self._exhaust_sinks(False)
+
+    def __init__(self, graph: nx.DiGraph, edges_to_keep=None):
+        """
+        Fast heuristic for the minimum feedback arc set.
+
+        Eades’ heuristic creates an ordering of all nodes of the given graph,
+        such that each edge can be classified into *forward* or *backward* edges.
+        The heuristic tries to minimize the sum of the weights (`weight` attribute)
+        of the backward edges. It always produces an acyclic graph, however it can
+        produce more conflicting     g = nx.DiGraph()
+    g.add_path([1, 2, 3, 4, 5], weight=1)
+    g.add_edge(3, 2, weight=2)edges than the minimal solution.
+
+        Args:
+            graph: a directed graph, may be a multigraph.
+            double_check: check whether we’ve _really_ produced an acyclic graph
+
+        Returns:
+            a list of edges, removal of which guarantees a
+
+        References:
+            **Eades, P., Lin, X. and Smyth, W. F.** (1993). A fast and effective
+            heuristic for the feedback arc set problem. *Information Processing
+            Letters*, **47**\ (6): 319–23
+            doi:\ `10.1016/0020-0190(93)90079-O. <https://doi.org/10.1016/0020-0190(93)90079-O.>`__
+            http://www.sciencedirect.com/science/article/pii/002001909390079O
+            (accessed 27 July 2018).
+        """
+        self.original_graph = graph
+        g = graph.copy()
+        self.graph = g
+        if edges_to_keep is not None:
+            self._register_keep_edges(edges_to_keep)
         else:
-            return
+            self.keep_index_backward = self.keep_index_forward = {}
+        self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.logger.debug('Internal eades calculation for a graph with %d nodes and %d edges', g.number_of_nodes(),
+                          g.number_of_edges())
+        self.start = self.end = None
+        self.feedback_edges = None
+
+    def _register_keep_edges(self, edges_to_keep: Iterable[Tuple[V, V]]):
+        forward_index: Dict[V, List[V]] = defaultdict(list)
+        backward_index: Dict[V, List[V]] = defaultdict(list)
+        for u, v in edges_to_keep:
+            forward_index[u].append(v)
+            backward_index[v].append(u)
+        self.keep_index_forward = forward_index
+        self.keep_index_backward = backward_index
+        logger.debug('keep: %s -> fi = %s | bi = %s', edges_to_keep, dict(forward_index), dict(backward_index))
 
 
-def _exhaust_sources(g: nx.DiGraph):
-    """
-    Produces all sources until there are no more.
+    def solve(self) -> List[Tuple[V, V]]:
+        self.start = []
+        self.end = []
+        self.graph.remove_edges_from(list(nx.selfloop_edges(self.graph)))
+        while self.graph:
+            for v in self._exhaust_sinks():
+                self.to_end(v)
+            for v in self._exhaust_sources():
+                self.to_start(v)
+            if self.graph:
+                u = max(self.graph.nodes, key=lambda v: self.graph.out_degree(v, weight='weight')
+                                                        - self.graph.in_degree(v, weight='weight'))
+                self.to_start(u)
+        ordering = self.start + self.end
+        pos = dict(zip(ordering, itertools.count()))
+        feedback_edges = list(self.original_graph.selfloop_edges())
+        for u, v in self.original_graph.edges():
+            if pos[u] > pos[v]:
+                feedback_edges.append((u, v))
+        logger.debug('Found %d feedback edges', len(feedback_edges))
+        self.feedback_edges = feedback_edges
+        return feedback_edges
 
-    Warning: This modifies the given graph
-    """
-    return _exhaust_sinks(g, False)
-
-
-def eades(graph: nx.DiGraph, double_check=True) -> List[Tuple[V, V]]:
-    """
-    Fast heuristic for the minimum feedback arc set.
-
-    Eades’ heuristic creates an ordering of all nodes of the given graph,
-    such that each edge can be classified into *forward* or *backward* edges.
-    The heuristic tries to minimize the sum of the weights (`weight` attribute)
-    of the backward edges. It always produces an acyclic graph, however it can
-    produce more conflicting edges than the minimal solution.
-
-    Args:
-        graph: a directed graph, may be a multigraph.
-        double_check: check whether we’ve _really_ produced an acyclic graph
-
-    Returns:
-        a list of edges, removal of which guarantees a
-
-    References:
-        **Eades, P., Lin, X. and Smyth, W. F.** (1993). A fast and effective
-        heuristic for the feedback arc set problem. *Information Processing
-        Letters*, **47**\ (6): 319–23
-        doi:\ `10.1016/0020-0190(93)90079-O. <https://doi.org/10.1016/0020-0190(93)90079-O.>`__
-        http://www.sciencedirect.com/science/article/pii/002001909390079O
-        (accessed 27 July 2018).
-    """
-    g = graph.copy()
-    logger.debug('Internal eades calculation for a graph with %d nodes and %d edges', g.number_of_nodes(),
-                g.number_of_edges())
-    g.remove_edges_from(list(g.selfloop_edges()))
-    start = []
-    end = []
-    while g:
-        for v in _exhaust_sinks(g):
-            end.insert(0, v)
-        for v in _exhaust_sources(g):
-            start.append(v)
-        if g:
-            u = max(g.nodes, key=lambda v: g.out_degree(v, weight='weight') - g.in_degree(v, weight='weight'))
-            start.append(u)
-            g.remove_node(u)
-    ordering = start + end
-    pos = dict(zip(ordering, itertools.count()))
-    feedback_edges = list(graph.selfloop_edges())
-    for u, v in graph.edges():
-        if pos[u] > pos[v]:
-            feedback_edges.append((u, v))
-    logger.debug('Found %d feedback edges', len(feedback_edges))
-
-    if double_check:
-        check = graph.copy()
-        check.remove_edges_from(feedback_edges)
+    def double_check(self):
+        check = self.graph.copy()
+        check.remove_edges_from(self.feedback_edges)
         if not nx.is_directed_acyclic_graph(check):
             logger.error('double-check: graph is not a dag!')
             cycles = nx.simple_cycles()
             counter_example = next(cycles)
             logger.error('Counterexample cycle: %s', counter_example)
-
-    return feedback_edges
 
 
 def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[Iterable[V], None, None]:
@@ -111,7 +169,7 @@ def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[I
         paths (sequences of nodes) that form simple cycles
 
     See Also:
-        fes_evans
+        FES_Baharev
 
     """
     for u, v in fes:
@@ -121,6 +179,14 @@ def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[I
             yield tuple(path)
         except nx.NetworkXNoPath:
             logger.debug('no feedback edge from %s to %s', u, v)
+
+
+def eades(graph: nx.DiGraph, force_forward_edges = None, double_check: bool = False):
+    solver = Eades(graph, force_forward_edges)
+    result = solver.solve()
+    if double_check:
+        solver.double_check()
+    return result
 
 
 class FES_Baharev:
@@ -167,7 +233,7 @@ class FES_Baharev:
         http://www.mat.univie.ac.at/~neum/ms/minimum_feedback_arc_set.pdf.
     """
 
-    def __init__(self, graph: nx.DiGraph):
+    def __init__(self, graph: nx.DiGraph, force_forward_edges: Optional[List[Tuple[V, V]]] = None):
         self.original_graph = graph
         self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
 
@@ -188,10 +254,15 @@ class FES_Baharev:
             weights.append(w)
             edges.append((u, v))
 
+        if force_forward_edges is None:
+            force_forward_edges = []
+
         self.graph = G
         self.weights = np.array(weights)
         self.edges = edges
         self.m = len(self.edges)
+        self.force_forward_edges = force_forward_edges
+        self.force_forward_vec = self.edge_vector(force_forward_edges)
         self.solver_args = {}
         self.solution_vector = None
         self.solution = None
@@ -224,7 +295,7 @@ class FES_Baharev:
             options['solver'] = solver
         self.solver_args = options
         self.logger.info('configured solver: %s, options: %s (installed solvers: %s)',
-                    solver, options, ', '.join(installed))
+                         solver, options, ', '.join(installed))
 
     def edge_vector(self, edges: Iterable[Tuple[V, V]]) -> np.ndarray:
         """
@@ -256,7 +327,7 @@ class FES_Baharev:
         Returns:
             the edge set as list of (u,v) tuples
         """
-        initial_fes = eades(self.graph)
+        initial_fes = eades(self.graph, self.force_forward_edges)
         initial_fes_vec = self.edge_vector(initial_fes)
 
         # bounds for the objective
@@ -269,7 +340,7 @@ class FES_Baharev:
 
         for iteration in itertools.count(1):
             self.logger.info('Baharev iteration %d, %g <= objective <= %g, %d simple cycles', iteration, lower_bound,
-                         upper_bound, len(simple_cycles))
+                             upper_bound, len(simple_cycles))
 
             # Formulate and solve the problem for this iteration:
             y = cp.Variable(self.m, boolean=True, name="y")
@@ -277,18 +348,21 @@ class FES_Baharev:
 
             cycle_vectors = [self.edge_vector(nx.utils.pairwise(cycle)) for cycle in simple_cycles]
             constraints = [cp.sum(a * y) >= 1 for a in cycle_vectors]
+            constraints.append(cp.sum(y * self.force_forward_vec) == 0)  # no force forward vec may be in the result set
             problem = cp.Problem(objective, constraints)
             resolution = problem.solve(**self.solver_args)
             if problem.status != 'optimal':
                 self.logger.warning('Optimization solution is %s. Try solver != %s?', problem.status,
-                               problem.solver_stats.solver_name)
-            self.logger.debug("Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
-                         len(constraints), resolution, problem.solution.status,
-                         problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
-                         problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
-            current_solution = np.abs(y.value) >= 0.5   # y.value = vector of floats each ≈ 0 or 1
+                                    problem.solver_stats.solver_name)
+            self.logger.debug(
+                "Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
+                len(constraints), resolution, problem.solution.status,
+                problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
+                problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
+            current_solution = np.abs(y.value) >= 0.5  # y.value = vector of floats each ≈ 0 or 1
             current_fes = self.edges_for_vector(current_solution)
-            self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution, len(current_fes))
+            self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution,
+                              len(current_fes))
             # S, the feedback edge set calculated using the constraint subset, can be an incomplete solution
             # (i.e. cycles remain after removing S from the graph). So lets compare this with the upper bound
             # from the heuristic
@@ -310,7 +384,7 @@ class FES_Baharev:
             # The solution is not yet ideal. So we take G^(i), the graph still containing some feedback edges,
             # calculate a heuristic on it and use the heuristic (= over-estimation) to adjust upper bound and
             # determine additional simple cycles (= constraints)
-            Fi = eades(Gi)
+            Fi = eades(Gi, self.force_forward_edges)
             yi = self.edge_vector(Fi) | current_solution
             zi = np.sum(yi * self.weights)
             if zi < upper_bound:

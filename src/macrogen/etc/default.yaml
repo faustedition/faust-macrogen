@@ -27,6 +27,9 @@ solvers:              # the first installed solver is chosen. see log message fo
 solver_options:
   all:
     verbose: false
+lightweight_timeline: true  # use exclusion instead of high weight for timeline edges
+
+
 ## Other data
 namespaces:
   f: http://www.faustedition.net/ns
