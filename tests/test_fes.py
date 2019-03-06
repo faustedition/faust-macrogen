@@ -19,13 +19,11 @@ def graph1():
 
 def test_all_sinks(graph1):
     eades = Eades(graph1)
-    sinks = list(eades._exhaust_sinks())
+    sinks = []
+    for sink in eades._exhaust_sinks():
+        eades.graph.remove_node(sink)
+        sinks.append(sink)
     assert sinks == [5, 4]
-
-
-def test_all_sources(graph1):
-    assert list(Eades(graph1)._exhaust_sources()) == [1]
-
 
 def test_eades(graph1):
     assert list(eades(graph1)) == [(3, 2)]

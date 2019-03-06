@@ -14,6 +14,17 @@ V = TypeVar('V')
 
 class Eades:
 
+    def to_start(self, node):
+        """
+        Removes the node from the graph and appends it to the start sequence.
+        """
+        self.start.append(node)
+        self.graph.remove_node(node)
+
+    def to_end(self, node):
+        self.end.insert(0, node)
+        self.graph.remove_node(node)
+
     def _exhaust_sinks(self, sink: bool = True):
         """
         Produces all sinks until there are no more.
@@ -25,7 +36,6 @@ class Eades:
             sinks = [u for (u, d) in sink_method() if d == 0]
             if sinks:
                 yield from sinks
-                self.graph.remove_nodes_from(sinks)
             else:
                 return
 
@@ -77,14 +87,13 @@ class Eades:
         self.graph.remove_edges_from(list(self.graph.selfloop_edges()))
         while self.graph:
             for v in self._exhaust_sinks():
-                self.end.insert(0, v)
+                self.to_end(v)
             for v in self._exhaust_sources():
-                self.start.append(v)
+                self.to_start(v)
             if self.graph:
                 u = max(self.graph.nodes, key=lambda v: self.graph.out_degree(v, weight='weight')
                                                         - self.graph.in_degree(v, weight='weight'))
-                self.start.append(u)
-                self.graph.remove_node(u)
+                self.to_start(u)
         ordering = self.start + self.end
         pos = dict(zip(ordering, itertools.count()))
         feedback_edges = list(self.original_graph.selfloop_edges())
