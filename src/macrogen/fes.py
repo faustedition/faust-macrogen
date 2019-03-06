@@ -169,7 +169,7 @@ def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[I
         paths (sequences of nodes) that form simple cycles
 
     See Also:
-        fes_evans
+        FES_Baharev
 
     """
     for u, v in fes:
@@ -181,8 +181,8 @@ def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[I
             logger.debug('no feedback edge from %s to %s', u, v)
 
 
-def eades(graph: nx.DiGraph, double_check: bool = False):
-    solver = Eades(graph)
+def eades(graph: nx.DiGraph, force_forward_edges = None, double_check: bool = False):
+    solver = Eades(graph, force_forward_edges)
     result = solver.solve()
     if double_check:
         solver.double_check()
@@ -327,7 +327,7 @@ class FES_Baharev:
         Returns:
             the edge set as list of (u,v) tuples
         """
-        initial_fes = eades(self.graph)
+        initial_fes = eades(self.graph, self.force_forward_edges)
         initial_fes_vec = self.edge_vector(initial_fes)
 
         # bounds for the objective
@@ -384,7 +384,7 @@ class FES_Baharev:
             # The solution is not yet ideal. So we take G^(i), the graph still containing some feedback edges,
             # calculate a heuristic on it and use the heuristic (= over-estimation) to adjust upper bound and
             # determine additional simple cycles (= constraints)
-            Fi = eades(Gi)
+            Fi = eades(Gi, self.force_forward_edges)
             yi = self.edge_vector(Fi) | current_solution
             zi = np.sum(yi * self.weights)
             if zi < upper_bound:
