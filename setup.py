@@ -16,6 +16,7 @@ setup(
         ],
         install_requires=[
                 'numpy',
+                'more-itertools',
                 'networkx>=2.1',
                 'python-igraph',
                 'pygraphviz',

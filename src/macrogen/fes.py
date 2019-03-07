@@ -2,6 +2,8 @@
 import itertools
 from collections import defaultdict
 from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional, Dict
+
+from more_itertools import first
 from .config import config
 import networkx as nx
 import numpy as np
@@ -112,6 +114,13 @@ class Eades:
         self.feedback_edges = None
 
     def _register_keep_edges(self, edges_to_keep: Iterable[Tuple[V, V]]):
+        # first check we don’t get served a cycle ...
+        test_graph = nx.DiGraph()
+        test_graph.add_edges_from(edges_to_keep)
+        if not nx.is_directed_acyclic_graph(test_graph):
+            counter_example = first(nx.simple_cycles(test_graph))
+            raise ValueError('There is a cycle in the edges to keep: {}'.format(counter_example))
+
         forward_index: Dict[V, List[V]] = defaultdict(list)
         backward_index: Dict[V, List[V]] = defaultdict(list)
         for u, v in edges_to_keep:
@@ -120,7 +129,6 @@ class Eades:
         self.keep_index_forward = forward_index
         self.keep_index_backward = backward_index
         logger.debug('keep: %s -> fi = %s | bi = %s', edges_to_keep, dict(forward_index), dict(backward_index))
-
 
     def solve(self) -> List[Tuple[V, V]]:
         self.start = []
@@ -181,7 +189,7 @@ def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[I
             logger.debug('no feedback edge from %s to %s', u, v)
 
 
-def eades(graph: nx.DiGraph, force_forward_edges = None, double_check: bool = False):
+def eades(graph: nx.DiGraph, force_forward_edges=None, double_check: bool = False):
     solver = Eades(graph, force_forward_edges)
     result = solver.solve()
     if double_check:
@@ -355,10 +363,10 @@ class FES_Baharev:
                 self.logger.warning('Optimization solution is %s. Try solver != %s?', problem.status,
                                     problem.solver_stats.solver_name)
             self.logger.debug(
-                "Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
-                len(constraints), resolution, problem.solution.status,
-                problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
-                problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
+                    "Solved optimization problem with %d constraints: %s -> %s (%g + %g seconds, %d iterations, solver %s)",
+                    len(constraints), resolution, problem.solution.status,
+                    problem.solver_stats.solve_time or 0, problem.solver_stats.setup_time or 0,
+                    problem.solver_stats.num_iters or 0, problem.solver_stats.solver_name)
             current_solution = np.abs(y.value) >= 0.5  # y.value = vector of floats each ≈ 0 or 1
             current_fes = self.edges_for_vector(current_solution)
             self.logger.debug('Iteration %d, resolution: %s, %d feedback edges', iteration, resolution,
