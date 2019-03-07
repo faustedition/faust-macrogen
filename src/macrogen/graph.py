@@ -294,6 +294,20 @@ def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return g
 
 
+def add_iweight(graph: nx.MultiDiGraph):
+    """
+    Adds an 'iweight' attribute with the inverse weight for each edge. timeline edges are trimmed to zero.
+    """
+    for u, v, k, attr in graph.edges(keys=True, data=True):
+        if 'weight' in attr:
+            if attr.get('kind', '') == 'timeline':
+                attr['iweight'] = 0
+            elif attr['weight'] > 0:
+                attr['iweight'] = 1 / attr['weight']
+            else:
+                attr['iweight'] = 0
+
+
 @dataclass
 class MacrogenesisInfo:
     base: nx.MultiDiGraph
@@ -467,6 +481,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     resolve_ambiguities(base)
     adopt_orphans(base)
     base = collapse_edges_by_source(base)
+    add_iweight(base)
     working = cleanup_graph(base).copy()
     add_missing_wits(working)
     conflicts = subgraphs_with_conflicts(working)

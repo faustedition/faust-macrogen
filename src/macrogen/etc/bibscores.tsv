@@ -6,7 +6,7 @@ faust://bibliography/landeck1981	5
 faust://bibliography/hertz1932	0
 faust://bibliography/gsa-datenbank	75
 faust://bibliography/inventare_2_2	50
-faust://self	2147483647
+faust://self	20000
 faust://bibliography/hertz1931	0
 faust://bibliography/pniower1924	1
 faust://generalknowledge	50
@@ -56,3 +56,4 @@ faust://bibliography/scheibe1974	50
 faust://bibliography/fischer-lamberg1957	1
 faust://bibliography/nollendorfs1967	10
 faust://bibliography/witkowski1894	1
+faust://bibliography/bruening_hahn2017	500
