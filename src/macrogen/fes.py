@@ -276,6 +276,7 @@ class FES_Baharev:
         self.solution = None
         self.objective = None
         self.iterations = None
+        self.simple_cycles = []
         self._load_solver_args()
 
     def _load_solver_args(self):
@@ -404,4 +405,5 @@ class FES_Baharev:
         self.solution = self.edges_for_vector(current_solution)
         self.objective = objective.value
         self.iterations = iteration
+        self.simple_cycles = simple_cycles
         return self.solution

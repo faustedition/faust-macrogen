@@ -141,19 +141,19 @@ def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Ge
             yield u, v, key, atlas[key]
 
 
-def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V,V]]:
+def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:
     result = []
     for u, v, k, attr in graph.edges(keys=True, data=True):
         if attr['kind'] == 'timeline':
             result.append((u, v))
             if weight is 'auto':
-                attr['weight'] = (v-u).days / 365.25
+                attr['weight'] = (v - u).days / 365.25
             else:
                 attr['weight'] = weight
     return result
 
 
-def feedback_arcs(graph: nx.MultiDiGraph, method=None, lightweight_timeline: Optional[bool] = None):
+def feedback_arcs(graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None):
     """
     Calculates the feedback arc set using the given method and returns a
     list of edges in the form (u, v, key, data)
