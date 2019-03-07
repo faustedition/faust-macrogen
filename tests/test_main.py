@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 
 from macrogen import BiblSource
-from macrogen.graph import collapse_edges
+from macrogen.graphutils import collapse_edges
 from macrogen.uris import Witness
 
 

@@ -10,6 +10,8 @@ sigils: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBui
 paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js # JSON file mapping paralipomena to sources
 genetic_bar_graph: # JSON file
 report_dir: target/macrogenesis  # where to save reports and graphs
+save_config: target/config.yaml  # YAML file to save the config actually used
+
 
 bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml # The bibliography
 

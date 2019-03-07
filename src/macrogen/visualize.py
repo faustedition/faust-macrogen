@@ -12,7 +12,7 @@ from tqdm import tqdm
 from .config import config
 from .datings import add_timeline_edges
 from macrogen import BiblSource
-from .graph import pathlink
+from macrogen.graphutils import pathlink
 from .uris import Reference
 
 logger = config.getLogger(__name__)

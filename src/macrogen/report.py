@@ -20,7 +20,8 @@ import networkx as nx
 
 from .config import config
 from .bibliography import BiblSource
-from .graph import MacrogenesisInfo, pathlink, EARLIEST, LATEST, DAY, collapse_timeline
+from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
+from macrogen.graphutils import pathlink, collapse_timeline
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 

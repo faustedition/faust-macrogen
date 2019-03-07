@@ -3,8 +3,6 @@ import pytest
 import macrogen.datings
 from lxml import etree
 
-import macrogen.faust
-
 
 @pytest.fixture
 def sample_xml():
