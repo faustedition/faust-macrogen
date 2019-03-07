@@ -26,9 +26,11 @@ Additional stuff to configure:
 - Render / Render graphs up to ...
 - algorithm / threshold
 """
+import argparse
 import csv
 import json
 import logging
+import traceback
 from collections import namedtuple, defaultdict
 from functools import partial
 from io import BytesIO, StringIO, TextIOWrapper
@@ -267,8 +269,9 @@ class Configuration:
     def _apply_override(self, override=None):
         if override is None:
             override = self.config_override
-        for key, value in override:
+        for key, value in override.items():
             if value is not None:
+                logger.info('Overriding %s=%s with %s', key, self.config[key], value)
                 self.config[key] = value
 
     def __getattr__(self, item):
@@ -283,7 +286,7 @@ class Configuration:
     def _load_config(self):
         self.config_loaded = True
         # First, load the default config
-        logger.debug("Loading default configuration")
+        logger.debug("Loading default configuration.\n%s", "".join(traceback.format_stack()))
         with pkg_resources.resource_stream(_config_package, 'etc/default.yaml') as f:
             config: Mapping = _yaml.load(f)
             self.config = config
