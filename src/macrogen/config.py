@@ -319,5 +319,50 @@ class Configuration:
     def relative_path(self, absolute_path):
         return Path(absolute_path).relative_to(self.path.data)
 
+    def prepare_options(self, argparser: argparse.ArgumentParser):
+        """
+        Configures the given argument parser from the current options.
+
+        The method walks through the currently active configuration.
+        Each top-level option that has a comment will be considered
+        for the option parser, and a commented option will be generated.
+
+        The namespace object the argparser returns can then be used with
+        the override options.
+        """
+        for key in self.config:
+            value = self.config[key]
+            try:
+                comment = self.config.ca.items[key][2].value
+                desc = comment.strip('# ')
+                option_name='--' + key.replace('_','-')
+
+                if isinstance(value, list):
+                    argparser.add_argument(option_name, nargs="*", dest=key,
+                                           help=f"{desc} ({' '.join(value)}")
+                elif value is not None:
+                    argparser.add_argument(option_name, dest=key, action='store', type=_yaml_from_string,
+                                           help=f"{desc} ({str(value)})")
+                else:
+                    argparser.add_argument(option_name, dest=key, action='store', type=_yaml_from_string,
+                                           help=desc)
+            except KeyError:
+                logger.debug('No argument for uncommented config option %s', key)
+            except AttributeError:
+                logger.debug('Could not extract comment from config option %s', key)
+
+    def save_config(self, output: Optional[Union[Path, str]]):
+        target = Path(output)
+        if output is None:
+            target = StringIO()
+        _yaml.dump(self.config, output)
+        if output is None:
+            logger.info('Configuration:\n%s', target.getvalue())
+        else:
+            logger.debug('Saved effective configuration to %s', target)
+
+def _yaml_from_string(arg):
+    yaml = YAML(typ='safe')
+    return yaml.load(StringIO(arg))
 
 config = Configuration()

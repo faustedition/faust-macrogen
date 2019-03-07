@@ -164,8 +164,8 @@ def feedback_arcs(graph: nx.MultiDiGraph, method=None, lightweight_timeline: Opt
     """
     if method is None:
         method = config.fes_method
-    if lightweight_timeline is None:
-        lightweight_timeline = config.lightweight_timeline
+    if light_timeline is None:
+        light_timeline = config.light_timeline
     if isinstance(method, Sequence) and not isinstance(method, str):
         try:
             threshold = config.fes_threshold
@@ -175,14 +175,14 @@ def feedback_arcs(graph: nx.MultiDiGraph, method=None, lightweight_timeline: Opt
 
     logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
     if method == 'eades':
-        fes = eades(graph, prepare_timeline_for_keeping(graph) if lightweight_timeline else None)
+        fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
         return list(expand_edges(graph, fes))
     elif method == 'baharev':
-        solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if lightweight_timeline else None)
+        solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
         fes = solver.solve()
         return list(expand_edges(graph, fes))
     else:
-        if lightweight_timeline:
+        if light_timeline:
             logger.warning('Method %s does not support lightweight timeline', method)
         igraph = to_igraph(graph)
         iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
@@ -205,7 +205,7 @@ def add_edge_weights(graph: nx.MultiDiGraph):
     for u, v, k, data in graph.edges(data=True, keys=True):
         if 'weight' not in data:
             if data['kind'] == 'timeline':
-                data['weight'] = 0.00001 if config.lightweight_timeline else 2 ** 31
+                data['weight'] = 0.00001 if config.light_timeline else 2 ** 31
             if 'source' in data:
                 data['weight'] = data['source'].weight
 

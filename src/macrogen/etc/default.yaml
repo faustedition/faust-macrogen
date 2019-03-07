@@ -17,17 +17,18 @@ xmlroot: https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis 
 
 ## Limits
 half_interval_correction: 182.5    # if we only have a start or end date, the other limit is max. this many days away
-render_node_limit: 1500
+render_node_limit: 1500            # do not layout graphs with more nodes than this
 
 ## Options for solving the FES
 fes_method: baharev   # ip, baharev: exact methods; eades: inexact, list of two: select by fes_threshold
 fes_threshold: 64     # if two fes_methods, number of edges above which to select the second one
 solvers:              # the first installed solver is chosen. see log message for values.
   - GLPK_MI
-solver_options:
+solver_options:       # pass options to the solvers. maps solver name or 'all' to key: value pairs
   all:
     verbose: false
-lightweight_timeline: true  # use exclusion instead of high weight for timeline edges
+light_timeline: true  # use exclusion instead of high weight for timeline edges
+
 
 
 ## Other data
