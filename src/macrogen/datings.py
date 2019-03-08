@@ -284,9 +284,9 @@ def simplify_timeline(graph: nx.MultiDiGraph):
             prev = node
 
 
-def base_graph() -> nx.MultiDiGraph:
+def build_datings_graph() -> nx.MultiDiGraph:
     """
-    Builds the base graph by parsing the datings from all macrogenesis files from the default directory,
+    Builds the raw datings graph by parsing the datings from all macrogenesis files from the default directory,
     adding them to a new graph and adjusting the timeline.
     """
     graph = nx.MultiDiGraph()
