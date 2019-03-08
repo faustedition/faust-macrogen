@@ -75,7 +75,7 @@ class MacrogenesisInfo:
         elif method == 'baharev':
             solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
             fes = solver.solve()
-            self.simple_cycles = solver.simple_cycles
+            self.simple_cycles |= solver.simple_cycles
             return list(expand_edges(graph, fes))
         else:
             if light_timeline:

@@ -21,7 +21,7 @@ import networkx as nx
 from .config import config
 from .bibliography import BiblSource
 from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
-from macrogen.graphutils import pathlink, collapse_timeline
+from .graphutils import pathlink, collapse_timeline, expand_edges, in_path
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 
@@ -650,7 +650,9 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     counter_path = []
     try:
         counter_path = nx.shortest_path(graphs.dag, v, u, weight='iweight')
+        involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
         relevant_nodes = set(counter_path)
+
         counter_desc = " → ".join(map(_fmt_node, counter_path))
         counter_html = f'<p><strong>Pfad in Gegenrichtung:</strong> {counter_desc}</p>'
     except nx.NetworkXNoPath:
@@ -658,10 +660,16 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     except nx.NodeNotFound:
         logger.exception('Node not found!? %s or %s', u, v)
         counter_html = ''
-    subgraph: nx.MultiDiGraph = collapse_timeline(nx.subgraph(graphs.base, relevant_nodes))
+    subgraph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes).copy()
+    for cycle in involved_cycles:
+        subgraph.add_edges_from(expand_edges(graphs.base, pairwise(cycle)))
+    subgraph = collapse_timeline(subgraph)
+
+    if involved_cycles:
+        counter_html += f"<p>Teil von mindestens {len(involved_cycles)} einfachen Zyklen</p>"
 
     # Highlight conflicting edges, counter path and the two nodes of the conflicting edge(s)
-    for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(subgraph, v, u))):
+    for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(subgraph, v, u, weight='iweight'))):
         for k, attr in subgraph.get_edge_data(v1, v2).items():
             attr['highlight'] = True
     subgraph.node[u]['highlight'] = True
@@ -693,7 +701,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
         reportfile = _report_conflict(graphs, u, v)
         table.edge(u, v, attr)
-    write_html(target / 'conflicts.php', table.format_table(), head='entfernte Kanten')
+    write_html(target / 'conflicts.php', table.format_table(), head=f'{len(removed_edges)} entfernte Kanten')
 
 
 def report_sources(graphs: MacrogenesisInfo):
