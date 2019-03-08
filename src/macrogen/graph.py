@@ -1,22 +1,23 @@
 """
 Functions to build the graphs and perform their analyses.
 """
-
-import csv
+import pickle
 from collections import defaultdict, Counter
-from dataclasses import dataclass
 from datetime import date, timedelta
-from pathlib import Path
-from typing import List, Callable, Any, Dict, Tuple, Union, Iterable, Generator, Sequence, TypeVar, Optional
+from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set
+from warnings import warn
+from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
 
+from .graphutils import mark_edges_to_delete, remove_edges, in_path
 from .bibliography import BiblSource
-from .datings import base_graph, parse_datestr
+from .config import config
+from .datings import build_datings_graph
+from .fes import eades, FES_Baharev, V
+from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
 from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
-from .config import config
-from .fes import eades, FES_Baharev, V
 
 logger = config.getLogger(__name__)
 
@@ -24,299 +25,153 @@ EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
 DAY = timedelta(days=1)
 
-
-def pathlink(*nodes) -> Path:
-    """
-    Creates a file name for the given path.
-
-    The file name consists of the file names for the given nodes, in order, joined by `--`
-    """
-    node_names: List[str] = []
-    for node in nodes:
-        if isinstance(node, str):
-            if node.startswith('faust://'):
-                node = Witness.get(node)
-            else:
-                try:
-                    node = parse_datestr(node)
-                except ValueError:
-                    pass
-
-        if isinstance(node, Reference):
-            node_names.append(node.filename.stem)
-        elif isinstance(node, date):
-            node_names.append(node.isoformat())
-        else:
-            logger.warning('Unknown node type: %s (%s)', type(node), node)
-            node_names.append(str(hash(node)))
-    return Path("--".join(node_names) + '.php')
+Node = Union[date, Reference]
+MultiEdge = Tuple[Node, Node, int, Dict[str, Any]]
 
 
-def subgraphs_with_conflicts(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
-    """
-    Extracts the smallest conflicted subgraphs of the given graph, i.e. the
-    non-trivial (more than one node) strongly connected components.
-
-    Args:
-        graph: the base graph, or some modified version of it
-
-    Returns:
-        List of subgraphs, ordered by number of nodes. Note the subgraphs
-        are views on the original graph
-    """
-    sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
-    by_node_count = sorted(sccs, key=len)
-    logger.info('Extracted %d subgraphs with conflicts', len(by_node_count))
-    return [nx.subgraph(graph, scc_nodes) for scc_nodes in by_node_count]
-
-
-def analyse_conflicts(graph):
-    """
-    Dumps some statistics on the conflicts in the given graph.
-
-    Args:
-        graph:
-
-
-    Todo: is this still up to date?
-    """
-
-    conflicts_file_name = 'conflicts.tsv'
-    with open(conflicts_file_name, "wt") as conflicts_file:
-        writer = csv.writer(conflicts_file, delimiter='\t')
-        writer.writerow(
-                ['Index', 'Size', 'References', 'Edges', 'Sources', 'Types',
-                 'Nodes'])
-        for index, subgraph in enumerate(subgraphs_with_conflicts(graph), start=1):
-            nodes = subgraph.nodes
-            size = subgraph.number_of_nodes()
-            refs = len([node for node in nodes if isinstance(node, Reference)])
-            if size > 1:
-                logger.debug('  - Subgraph %d, %d refs', index, refs)
-                edges_to_remove = feedback_arcs(subgraph)
-                edge_count = len(subgraph.edges)
-                sources = {str(attr['source'].uri) for u, v, attr in subgraph.edges.data() if 'source' in attr}
-                node_types = {str(attr['kind']) for u, v, attr in subgraph.edges.data()}
-                writer.writerow(
-                        [index, size, refs, edge_count, ", ".join(sources), ", ".join(node_types),
-                         " / ".join(map(str, nodes))])
-                conflicts_file.flush()
-                mark_edges_to_delete(subgraph, edges_to_remove)
-    return [('List of conflicts', conflicts_file_name)]
-
-
-def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[str, Any]], bool]):
-    """
-    Returns a subgraph of source that does not contain the edges for which the predicate returns true.
-    Args:
-        source: source graph
-
-        predicate: a function(u, v, attr) that returns true if the edge from node u to node v with the attributes attr should be removed.
-
-    Returns:
-        the subgraph of source induced by the edges that are not selected by the predicate.
-        This is a read-only view, you may want to use copy() on  the result.
-    """
-    to_keep = [(u, v, k) for u, v, k, attr in source.edges(data=True, keys=True)
-               if not predicate(u, v, attr)]
-    return source.edge_subgraph(to_keep)
-    # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
-
-
-def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Generator[
-    Tuple[Any, Any, int, dict], None, None]:
-    """
-    Expands a 'simple' edge list (of node pairs) to the corresponding full edge list, including keys and data.
-    Args:
-        graph: the graph with the edges
-        edges: edge list, a list of (u, v) node tuples
-
-    Returns:
-        all edges from the multigraph that are between any node pair from edges as tuple (u, v, key, attrs)
-
-    """
-    for u, v in edges:
-        atlas = graph[u][v]
-        for key in atlas:
-            yield u, v, key, atlas[key]
-
-
-def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:
-    result = []
-    for u, v, k, attr in graph.edges(keys=True, data=True):
-        if attr['kind'] == 'timeline':
-            result.append((u, v))
-            if weight is 'auto':
-                attr['weight'] = (v - u).days / 365.25
-            else:
-                attr['weight'] = weight
-    return result
-
-
-def feedback_arcs(graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None):
-    """
-    Calculates the feedback arc set using the given method and returns a
-    list of edges in the form (u, v, key, data)
-
-    Args:
-        graph: NetworkX DiGraph
-        method: 'eades', 'baharev', or 'ip'; if None, look at config
-    """
-    if method is None:
-        method = config.fes_method
-    if light_timeline is None:
-        light_timeline = config.light_timeline
-    if isinstance(method, Sequence) and not isinstance(method, str):
-        try:
-            threshold = config.fes_threshold
-        except AttributeError:
-            threshold = 64
-        method = method[0] if len(graph.edges > threshold) else method[1]
-
-    logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
-    if method == 'eades':
-        fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
-        return list(expand_edges(graph, fes))
-    elif method == 'baharev':
-        solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
-        fes = solver.solve()
-        return list(expand_edges(graph, fes))
-    else:
-        if light_timeline:
-            logger.warning('Method %s does not support lightweight timeline', method)
-        igraph = to_igraph(graph)
-        iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
-        return list(nx_edges(iedges, keys=True, data=True))
-
-
-def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
-    """Marks edges to delete by setting their 'delete' attribute to True. Modifies the given graph."""
-    mark_edges(graph, edges, delete=True)
-
-
-def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], **new_attrs):
-    """Mark all edges in the given graph by updating their attributes with the keyword arguments. """
-    for u, v, k, *_ in edges:
-        graph.edges[u, v, k].update(new_attrs)
-
-
-def add_edge_weights(graph: nx.MultiDiGraph):
-    """Adds a 'weight' attribute, coming from the node kind or the bibliography, to the given graph"""
-    for u, v, k, data in graph.edges(data=True, keys=True):
-        if 'weight' not in data:
-            if data['kind'] == 'timeline':
-                data['weight'] = 0.00001 if config.light_timeline else 2 ** 31
-            if 'source' in data:
-                data['weight'] = data['source'].weight
-
-
-def collapse_edges(graph: nx.MultiDiGraph):
-    """
-    Returns a new graph with all multi- and conflicting edges collapsed.
-
-    Note:
-        This is not able to reduce the number of edges enough to let the
-        feedback_arc_set method 'ip' work with the largest component
-    """
-    result = graph.copy()
-    multiedges = defaultdict(list)
-
-    for u, v, k, attr in graph.edges(keys=True, data=True):
-        multiedges[tuple(sorted([u, v], key=str))].append((u, v, k, attr))
-
-    for (u, v), edges in multiedges.items():
-        if len(edges) > 1:
-            total_weight = sum(attr['source'].weight * (1 if (u, v) == (w, r) else -1) for w, r, k, attr in edges)
-            result.remove_edges_from([(u, v, k) for u, v, k, data in edges])
-            if total_weight < 0:
-                u, v = v, u
-                total_weight = -total_weight
-            result.add_edge(u, v,
-                            kind='collapsed',
-                            weight=total_weight,
-                            sources=tuple(attr['source'] for w, r, k, attr in edges))
-
-    return result
-
-
-def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
-    """
-    Returns a new graph with all parallel edges from the same source collapsed.
-    """
-    result = graph.copy()
-    edge_groups = defaultdict(list)
-    for u, v, k, attr in result.edges(keys=True, data=True):
-        if 'source' in attr:
-            edge_groups[(u, v, attr['kind'], attr['source'].uri)].append((u, v, k, attr))
-
-    for (u, v, kind, source_uri), group in edge_groups.items():
-        if len(group) > 1:
-            logger.debug('Collapsing group %s', group)
-            group_attr = dict(
-                    weight=sum(attr.get('weight', 1) for u, v, k, attr in group),
-                    kind=kind,
-                    collapsed=len(group),
-                    source=BiblSource(source_uri),
-                    sources=[attr['source'] for u, v, k, attr in group],
-                    xml=[attr['xml'] for u, v, k, attr in group]
-            )
-            result.remove_edges_from(group)
-            result.add_edge(u, v, **group_attr)
-    return result
-
-
-T = TypeVar('T')
-S = TypeVar('S')
-
-
-def first(sequence: Iterable[T], default: S = None) -> Union[T, S]:
-    try:
-        return next(iter(sequence))
-    except StopIteration:
-        return default
-
-
-def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
-    """
-    Returns a new graph in which unneeded datetime nodes are removed.
-    """
-    g: nx.MultiDiGraph = graph.copy()
-    timeline = sorted(node for node in g.nodes() if isinstance(node, date))
-    if not timeline:
-        return g  # nothing to do
-    for node in timeline[1:]:
-        pred = first(g.predecessors(node))
-        succ = first(g.successors(node))
-        if g.in_degree(node) == 1 and g.out_degree(node) == 1 \
-                and isinstance(pred, date) and isinstance(succ, date):
-            g.add_edge(pred, succ, **g[pred][node][0])
-            g.remove_node(node)
-    return g
-
-
-def add_iweight(graph: nx.MultiDiGraph):
-    """
-    Adds an 'iweight' attribute with the inverse weight for each edge. timeline edges are trimmed to zero.
-    """
-    for u, v, k, attr in graph.edges(keys=True, data=True):
-        if 'weight' in attr:
-            if attr.get('kind', '') == 'timeline':
-                attr['iweight'] = 0
-            elif attr['weight'] > 0:
-                attr['iweight'] = 1 / attr['weight']
-            else:
-                attr['iweight'] = 0
-
-
-@dataclass
 class MacrogenesisInfo:
-    base: nx.MultiDiGraph
-    working: nx.MultiDiGraph
-    dag: nx.MultiDiGraph
-    closure: nx.MultiDiGraph
-    conflicts: List[Tuple[Union[date, Reference], Union[date, Reference], int, Dict[str, Any]]]
+    """
+    Results of the analysis.
+    """
 
-    def __post_init__(self):
+    def __init__(self):
+        self.base: nx.MultiDiGraph = None
+        self.working: nx.MultiDiGraph = None
+        self.dag: nx.MultiDiGraph = None
+        self.closure: nx.MultiDiGraph = None
+        self.conflicts: List[MultiEdge] = []
+        self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
+
+        self.run_analysis()
+
+    def feedback_arcs(self, graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None):
+        """
+        Calculates the feedback arc set using the given method and returns a
+        list of edges in the form (u, v, key, data)
+
+        This is a wrapper that selects and calls the configured method.
+
+        Args:
+            light_timeline: different handling for the timeline nodes – they are enforced to be present, but with a light
+                edge weight
+            graph: NetworkX DiGraph
+            method: 'eades', 'baharev', or 'ip'; if None, look at config
+        """
+        if method is None:
+            method = config.fes_method
+        if light_timeline is None:
+            light_timeline = config.light_timeline
+        if isinstance(method, Sequence) and not isinstance(method, str):
+            try:
+                threshold = config.fes_threshold
+            except AttributeError:
+                threshold = 64
+            method = method[0] if len(graph.edges > threshold) else method[1]
+
+        logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
+        if method == 'eades':
+            fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
+            return list(expand_edges(graph, fes))
+        elif method == 'baharev':
+            solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
+            fes = solver.solve()
+            self.simple_cycles |= solver.simple_cycles
+            return list(expand_edges(graph, fes))
+        else:
+            if light_timeline:
+                logger.warning('Method %s does not support lightweight timeline', method)
+            igraph = to_igraph(graph)
+            iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
+            return list(nx_edges(iedges, keys=True, data=True))
+
+    def run_analysis(self):
+        """
+        Runs the complete analysis by loading the data, building the graph,
+        removing conflicting edges and calculating a transitive closure.
+
+        This calls the following steps, in order:
+        1. build the raw datings graph from the XML files and auxilliary information
+        2. copies dating edges from inscriptions to their base witnesses (*)
+        3. adds edge weights, based on bibliographic info etc.
+        4. resolve links to ambiguous nodes to their referencees (*)
+        5. adopt 'orphan' nodes, i.e. nodes that aren't directly mentioned but only via object model (*)
+        6. collapse parallel edges from the same source
+        7. add the inverse weight attribute used for some analyses
+
+        now we have built the 'base' graph we'll work on -> attribute `base`
+
+        8. cleanup the base graph by removing everything we don't want to be considered in the MFES
+           analysis, and by adding otherwise unmentioned witnesses -> attribute `working`
+        9. calculate the minimum feedback edge set for each strongly connected component and
+           join those to get the one for the whole graph
+        10. create a DAG by removing the MFES from the working graph -> attribute `dag`
+        11. double-check the DAG is a DAG (should fail only if the method used is broken) and re-add
+            edges that don't make the graph acyclic (can only happen when the method is a heuristic)
+
+        now we have a DAG, add info back to the base graph:
+
+        12. mark all MFES edges as deleted in the base graph
+        13. add information links from inscription to witness in the base graph
+
+
+        """
+        base = build_datings_graph()
+        datings_from_inscriptions(base)
+        add_edge_weights(base)
+        resolve_ambiguities(base)
+        adopt_orphans(base)
+        base = collapse_edges_by_source(base)
+        add_iweight(base)
+        working = cleanup_graph(base).copy()
+        add_missing_wits(working)
+        sccs = scc_subgraphs(working)
+
+        self.base = base
+        self.working = working
+
+        logger.info('Calculating minimum feedback arc set for %d strongly connected components', len(sccs))
+
+        all_feedback_edges = []
+        for scc in sccs:
+            feedback_edges = self.feedback_arcs(scc)
+            mark_edges_to_delete(scc, feedback_edges)
+            all_feedback_edges.extend(feedback_edges)
+
+        selfloops = list(nx.selfloop_edges(working, data=True, keys=True))
+        if selfloops:
+            logger.warning('Found %d self loops, will also remove those. Affected nodes: %s',
+                           len(selfloops), ", ".join(str(u) for u, v, k, attr in selfloops))
+            all_feedback_edges.extend(selfloops)
+
+        logger.info('Building DAG from remaining data')
+        result_graph = working.copy()
+        result_graph.remove_edges_from(all_feedback_edges)
+
+        if not nx.is_directed_acyclic_graph(result_graph):
+            logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_feedback_edges))
+            cycles = nx.simple_cycles(result_graph)
+            logger.error('Counterexample cycle: %s.', next(cycles))
+            # FIXME this should raise an exception
+        else:
+            logger.info('Double-checking removed edges ...')
+            for u, v, k, attr in sorted(all_feedback_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
+                result_graph.add_edge(u, v, **attr)
+                if nx.is_directed_acyclic_graph(result_graph):
+                    all_feedback_edges.remove((u, v, k, attr))
+                    logger.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v,
+                                attr.get('weight', 1))
+                else:
+                    result_graph.remove_edge(u, v)
+
+        self.dag = result_graph
+
+        logger.info('Marking %d conflicting edges for deletion', len(all_feedback_edges))
+        mark_edges_to_delete(base, all_feedback_edges)
+
+        logger.info('Removed %d of the original %d edges', len(all_feedback_edges), len(working.edges))
+
+        self.closure = nx.transitive_closure(result_graph)
+        add_inscription_links(base)
         self._augment_details()
 
     def order_refs(self):
@@ -372,6 +227,81 @@ class MacrogenesisInfo:
     def year_stats(self):
         years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
         return Counter(years)
+
+
+def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
+    """
+    Extracts the smallest conflicted subgraphs of the given graph, i.e. the
+    non-trivial (more than one node) strongly connected components.
+
+    Args:
+        graph: the base graph, or some modified version of it
+
+    Returns:
+        List of subgraphs, ordered by number of nodes. Note the subgraphs
+        are views on the original graph
+    """
+    sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
+    by_node_count = sorted(sccs, key=len)
+    logger.info('Extracted %d subgraphs with conflicts', len(by_node_count))
+    return [nx.subgraph(graph, scc_nodes) for scc_nodes in by_node_count]
+
+
+# def analyse_conflicts(graph):
+#     """
+#     Dumps some statistics on the conflicts in the given graph.
+#
+#     Args:
+#         graph:
+#
+#
+#     Todo: is this still up to date?
+#     """
+#
+#     conflicts_file_name = 'conflicts.tsv'
+#     with open(conflicts_file_name, "wt") as conflicts_file:
+#         writer = csv.writer(conflicts_file, delimiter='\t')
+#         writer.writerow(
+#                 ['Index', 'Size', 'References', 'Edges', 'Sources', 'Types',
+#                  'Nodes'])
+#         for index, subgraph in enumerate(scc_subgraphs(graph), start=1):
+#             nodes = subgraph.nodes
+#             size = subgraph.number_of_nodes()
+#             refs = len([node for node in nodes if isinstance(node, Reference)])
+#             if size > 1:
+#                 logger.debug('  - Subgraph %d, %d refs', index, refs)
+#                 edges_to_remove = feedback_arcs(subgraph)
+#                 edge_count = len(subgraph.edges)
+#                 sources = {str(attr['source'].uri) for u, v, attr in subgraph.edges.data() if 'source' in attr}
+#                 node_types = {str(attr['kind']) for u, v, attr in subgraph.edges.data()}
+#                 writer.writerow(
+#                         [index, size, refs, edge_count, ", ".join(sources), ", ".join(node_types),
+#                          " / ".join(map(str, nodes))])
+#                 conflicts_file.flush()
+#                 mark_edges_to_delete(subgraph, edges_to_remove)
+#     return [('List of conflicts', conflicts_file_name)]
+
+
+def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:
+    result = []
+    for u, v, k, attr in graph.edges(keys=True, data=True):
+        if attr['kind'] == 'timeline':
+            result.append((u, v))
+            if weight is 'auto':
+                attr['weight'] = (v - u).days / 365.25
+            else:
+                attr['weight'] = weight
+    return result
+
+
+def add_edge_weights(graph: nx.MultiDiGraph):
+    """Adds a 'weight' attribute, coming from the node kind or the bibliography, to the given graph"""
+    for u, v, k, data in graph.edges(data=True, keys=True):
+        if 'weight' not in data:
+            if data['kind'] == 'timeline':
+                data['weight'] = 0.00001 if config.light_timeline else 2 ** 31
+            if 'source' in data:
+                data['weight'] = data['source'].weight
 
 
 def resolve_ambiguities(graph: nx.MultiDiGraph):
@@ -467,68 +397,6 @@ def add_missing_wits(working: nx.MultiDiGraph):
     working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
 
 
-def macrogenesis_graphs() -> MacrogenesisInfo:
-    """
-    Runs the complete analysis by loading the data, building the graph,
-    removing conflicting edges and calculating a transitive closure.
-
-    Returns:
-
-    """
-    base = base_graph()
-    datings_from_inscriptions(base)
-    add_edge_weights(base)
-    resolve_ambiguities(base)
-    adopt_orphans(base)
-    base = collapse_edges_by_source(base)
-    add_iweight(base)
-    working = cleanup_graph(base).copy()
-    add_missing_wits(working)
-    conflicts = subgraphs_with_conflicts(working)
-
-    logger.info('Calculating minimum feedback arc set for %d subgraphs', len(conflicts))
-
-    all_conflicting_edges = []
-    for conflict in conflicts:
-        conflicting_edges = feedback_arcs(conflict)
-        mark_edges_to_delete(conflict, conflicting_edges)
-        all_conflicting_edges.extend(conflicting_edges)
-
-    selfloops = list(nx.selfloop_edges(working, data=True, keys=True))
-    if selfloops:
-        logger.warning('Found %d self loops, will also remove those. Affected nodes: %s',
-                       len(selfloops), ", ".join(str(u) for u, v, k, attr in selfloops))
-        all_conflicting_edges.extend(selfloops)
-
-    logger.info('Building DAG from remaining data')
-    result_graph = working.copy()
-    result_graph.remove_edges_from(all_conflicting_edges)
-
-    if not nx.is_directed_acyclic_graph(result_graph):
-        logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_conflicting_edges))
-        cycles = nx.simple_cycles(result_graph)
-        logger.error('Counterexample cycle: %s.', next(cycles))
-    else:
-        logger.info('Double-checking removed edges ...')
-        for u, v, k, attr in sorted(all_conflicting_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
-            result_graph.add_edge(u, v, **attr)
-            if nx.is_directed_acyclic_graph(result_graph):
-                all_conflicting_edges.remove((u, v, k, attr))
-                logger.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v, attr.get('weight', 1))
-            else:
-                result_graph.remove_edge(u, v)
-
-    logger.info('Marking %d conflicting edges for deletion', len(all_conflicting_edges))
-    mark_edges_to_delete(base, all_conflicting_edges)
-
-    logger.info('Removed %d of the original %d edges', len(all_conflicting_edges), len(working.edges))
-
-    closure = nx.transitive_closure(result_graph)
-    add_inscription_links(base)
-
-    return MacrogenesisInfo(base, working, result_graph, closure, conflicts)
-
-
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     logger.info('Removing edges to ignore')
 
@@ -546,3 +414,23 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
+
+    def save(self, outfile: Path):
+        with ZipFile(outfile, mode='w', compression=ZIP_DEFLATED) as zip:
+            with zip.open('base.gpickle', 'w') as base_entry:
+                nx.write_gpickle(self.base, base_entry)
+            with zip.open('simple_cycles.pickle', 'w') as sc_entry:
+                pickle.dump(self.simple_cycles, sc_entry)
+
+class _ConflictInfo:
+    def __init__(self, graphs: MacrogenesisInfo, u: Node, v: Node):
+        shortest_path = nx.shortest_path(graphs.base, v, u, weight='iweight')
+        involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
+
+
+
+
+
+def macrogenesis_graphs() -> MacrogenesisInfo:
+    warn("macrogenesis_graphs() is deprecated, instantiate MacrogenesisInfo directly instead", DeprecationWarning)
+    return MacrogenesisInfo()

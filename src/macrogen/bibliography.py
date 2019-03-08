@@ -27,7 +27,7 @@ class BiblSource:
         if detail is None:
             detail = ''
         self.detail = detail
-        self.weight = config.bibliography[uri].weight if uri in config.bibliography else 1
+        self.weight = config.bibscores[uri]
 
     def __eq__(self, other):
         if isinstance(other, BiblSource):
