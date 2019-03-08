@@ -1,12 +1,12 @@
 """
 Functions to build the graphs and perform their analyses.
 """
-
-import csv
+import pickle
 from collections import defaultdict, Counter
 from datetime import date, timedelta
-from typing import List, Callable, Any, Dict, Tuple, Union, Sequence, Optional, Set
+from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set
 from warnings import warn
+from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
 
@@ -414,6 +414,21 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
+
+    def save(self, outfile: Path):
+        with ZipFile(outfile, mode='w', compression=ZIP_DEFLATED) as zip:
+            with zip.open('base.gpickle', 'w') as base_entry:
+                nx.write_gpickle(self.base, base_entry)
+            with zip.open('simple_cycles.pickle', 'w') as sc_entry:
+                pickle.dump(self.simple_cycles, sc_entry)
+
+class _ConflictInfo:
+    def __init__(self, graphs: MacrogenesisInfo, u: Node, v: Node):
+        shortest_path = nx.shortest_path(graphs.base, v, u, weight='iweight')
+        involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
+
+
+
 
 
 def macrogenesis_graphs() -> MacrogenesisInfo:
