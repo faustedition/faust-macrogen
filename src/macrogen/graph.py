@@ -10,7 +10,7 @@ from warnings import warn
 
 import networkx as nx
 
-from macrogen.graphutils import mark_edges_to_delete
+from .graphutils import mark_edges_to_delete, remove_edges, in_path
 from .bibliography import BiblSource
 from .config import config
 from .datings import build_datings_graph
@@ -280,24 +280,6 @@ def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
 #                 conflicts_file.flush()
 #                 mark_edges_to_delete(subgraph, edges_to_remove)
 #     return [('List of conflicts', conflicts_file_name)]
-
-
-def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[str, Any]], bool]):
-    """
-    Returns a subgraph of source that does not contain the edges for which the predicate returns true.
-    Args:
-        source: source graph
-
-        predicate: a function(u, v, attr) that returns true if the edge from node u to node v with the attributes attr should be removed.
-
-    Returns:
-        the subgraph of source induced by the edges that are not selected by the predicate.
-        This is a read-only view, you may want to use copy() on  the result.
-    """
-    to_keep = [(u, v, k) for u, v, k, attr in source.edges(data=True, keys=True)
-               if not predicate(u, v, attr)]
-    return source.edge_subgraph(to_keep)
-    # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
 def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:

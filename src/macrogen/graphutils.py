@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar
+from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence
 
 import networkx as nx
 
@@ -13,7 +13,6 @@ from .config import config
 T = TypeVar('T')
 S = TypeVar('S')
 logger = config.getLogger(__name__)
-
 
 
 def pathlink(*nodes) -> Path:
@@ -164,3 +163,42 @@ def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], *
     """Mark all edges in the given graph by updating their attributes with the keyword arguments. """
     for u, v, k, *_ in edges:
         graph.edges[u, v, k].update(new_attrs)
+
+
+def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[str, Any]], bool]):
+    """
+    Returns a subgraph of source that does not contain the edges for which the predicate returns true.
+    Args:
+        source: source graph
+
+        predicate: a function(u, v, attr) that returns true if the edge from node u to node v with the attributes attr should be removed.
+
+    Returns:
+        the subgraph of source induced by the edges that are not selected by the predicate.
+        This is a read-only view, you may want to use copy() on  the result.
+    """
+    to_keep = [(u, v, k) for u, v, k, attr in source.edges(data=True, keys=True)
+               if not predicate(u, v, attr)]
+    return source.edge_subgraph(to_keep)
+    # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
+
+
+def in_path(edge: Tuple[T, T], path: Sequence[T], cycle=False) -> bool:
+    """
+    Whether edge is part of the given path.
+
+    Args:
+        edge: the edge we search, as a pair of nodes
+        path: the path we search in, as a sequence of nodes
+        cycle: if True, assume path is a cycle, i.e. there is an edge from path[-1] to path[0]
+    """
+    try:
+        first_index = path.index(edge[0])
+        if first_index < len(path) - 1:
+            return path[first_index + 1] == edge[1]
+        elif cycle:
+            return path[0] == edge[1]
+        else:
+            return False
+    except ValueError:
+        return False
