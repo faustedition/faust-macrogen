@@ -159,7 +159,7 @@ class MacrogenesisInfo:
                 result_graph.add_edge(u, v, **attr)
                 if nx.is_directed_acyclic_graph(result_graph):
                     all_feedback_edges.remove((u, v, k, attr))
-                    logger.info('Added edge %s -> %s (%d) back without introducing a cycle.', u, v,
+                    logger.debug('Added edge %s -> %s (%d) back without introducing a cycle.', u, v,
                                 attr.get('weight', 1))
                 else:
                     result_graph.remove_edge(u, v)
