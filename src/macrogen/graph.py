@@ -4,6 +4,7 @@ Functions to build the graphs and perform their analyses.
 import pickle
 from collections import defaultdict, Counter
 from datetime import date, timedelta
+from io import TextIOWrapper
 from pathlib import Path
 from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set
 from warnings import warn
@@ -30,12 +31,39 @@ Node = Union[date, Reference]
 MultiEdge = Tuple[Node, Node, int, Dict[str, Any]]
 
 
+class NotAcyclic(ValueError):
+    pass
+
+
+def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
+    """
+    Checks whether the given graph is acyclic. Raises a NotAcyclic error if not.
+
+    Args:
+        result_graph: the graph to check
+        message: message for the exception
+
+    Raises:
+        NotAcyclic error with a useful message
+
+    Returns: True
+    """
+    if not nx.is_directed_acyclic_graph(result_graph):
+        cycles = nx.simple_cycles(result_graph)
+        counterexample = next(cycles)
+        cyc = " → ".join(map(str, counterexample))
+        msg = "{!s}\nCounterexample cycle: {!s}".format(message, cyc)
+        raise NotAcyclic(msg)
+    else:
+        return True
+
+
 class MacrogenesisInfo:
     """
     Results of the analysis.
     """
 
-    def __init__(self):
+    def __init__(self, load_from: Optional[Path] = None):
         self.base: nx.MultiDiGraph = None
         self.working: nx.MultiDiGraph = None
         self.dag: nx.MultiDiGraph = None
@@ -43,7 +71,10 @@ class MacrogenesisInfo:
         self.conflicts: List[MultiEdge] = []
         self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
 
-        self.run_analysis()
+        if load_from:
+            self._load_from(load_from)
+        else:
+            self.run_analysis()
 
     def feedback_arcs(self, graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None):
         """
@@ -117,6 +148,9 @@ class MacrogenesisInfo:
 
         """
         base = build_datings_graph()
+        if base.number_of_edges() == 0:
+            raise ValueError("Loading macrogenesis data resulted in an empty graph. Is there data at {}?".format(
+                    config.path.data.absolute()))
         datings_from_inscriptions(base)
         add_edge_weights(base)
         resolve_ambiguities(base)
@@ -148,21 +182,18 @@ class MacrogenesisInfo:
         result_graph = working.copy()
         result_graph.remove_edges_from(all_feedback_edges)
 
-        if not nx.is_directed_acyclic_graph(result_graph):
-            logger.error('After removing %d conflicting edges, the graph is still not a DAG!', len(all_feedback_edges))
-            cycles = nx.simple_cycles(result_graph)
-            logger.error('Counterexample cycle: %s.', next(cycles))
-            # FIXME this should raise an exception
-        else:
-            logger.info('Double-checking removed edges ...')
-            for u, v, k, attr in sorted(all_feedback_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
-                result_graph.add_edge(u, v, **attr)
-                if nx.is_directed_acyclic_graph(result_graph):
-                    all_feedback_edges.remove((u, v, k, attr))
-                    logger.debug('Added edge %s -> %s (%d) back without introducing a cycle.', u, v,
-                                attr.get('weight', 1))
-                else:
-                    result_graph.remove_edge(u, v)
+        check_acyclic(result_graph, 'After removing %d conflicting edges, the graph is still not a DAG!' %
+                      len(all_feedback_edges))
+
+        logger.info('Double-checking %d removed edges ...', len(all_feedback_edges))
+        for u, v, k, attr in sorted(all_feedback_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
+            result_graph.add_edge(u, v, **attr)
+            if nx.is_directed_acyclic_graph(result_graph):
+                all_feedback_edges.remove((u, v, k, attr))
+                logger.debug('Added edge %s -> %s (%d) back without introducing a cycle.', u, v,
+                             attr.get('weight', 1))
+            else:
+                result_graph.remove_edge(u, v)
 
         self.dag = result_graph
 
@@ -170,6 +201,7 @@ class MacrogenesisInfo:
         mark_edges_to_delete(base, all_feedback_edges)
 
         logger.info('Removed %d of the original %d edges', len(all_feedback_edges), len(working.edges))
+        self.conflicts = all_feedback_edges
 
         self.closure = nx.transitive_closure(result_graph)
         add_inscription_links(base)
@@ -239,6 +271,40 @@ class MacrogenesisInfo:
                 pickle.dump(self.simple_cycles, sc_entry)
             with zip.open('config.yaml', 'w') as config_entry:
                 config.save_config(config_entry)
+            with zip.open('base.yaml', 'w') as base_entry:
+                text = TextIOWrapper(base_entry, encoding='utf-8')
+                nx.write_yaml(self.base, text)
+
+    def _load_from(self, load_from: Path):
+        # Load base graph and simple cycles:
+        logger.info('Loading macrogenesis graphs from %s', load_from)
+        with ZipFile(load_from, mode='r') as zip:
+            with zip.open('base.gpickle', 'r') as base_entry:
+                self.base = nx.read_gpickle(base_entry)
+            with zip.open('simple_cycles.pickle', 'r') as sc_entry:
+                self.simple_cycles = pickle.load(sc_entry)
+
+        # Now reconstruct the other data:
+        self.working: nx.MultiDiGraph = self.base.copy()
+        self.working = cleanup_graph(self.working)
+        self.dag = self.working.copy()
+
+        for u, v, k, attr in self.working.edges(keys=True, data=True):
+            try:
+                if attr.get('delete', False):
+                    self.conflicts.append((u, v, k, attr))
+                    self.dag.remove_edge(u, v, k)
+                if u is v:
+                    self.dag.remove_edge(u, v)
+                if attr.get('ignore', False):
+                    self.dag.remove_edge(u, v, k)
+                if attr.get('kind') in {'orphan', 'inscription'}:
+                    self.dag.remove_edge(u, v, k)
+            except nx.NetworkXError as e:
+                logger.info('Could not remove %s→%s (%d): %s', u, v, k, e)
+        check_acyclic(self.dag,
+                f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
+        self.closure = nx.transitive_closure(self.dag)
 
 
 
@@ -427,6 +493,7 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
+
 
 class _ConflictInfo:
     def __init__(self, graphs: MacrogenesisInfo, u: Node, v: Node):
