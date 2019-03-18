@@ -4,6 +4,7 @@ Functions to build the graphs and perform their analyses.
 import pickle
 from collections import defaultdict, Counter
 from datetime import date, timedelta
+from pathlib import Path
 from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -229,6 +230,18 @@ class MacrogenesisInfo:
         return Counter(years)
 
 
+    def save(self, outfile: Path):
+        with ZipFile(outfile, mode='w', compression=ZIP_DEFLATED) as zip:
+            zip.comment = b'Macrogenesis graph dump, see https://github.com/faustedition/faust-macrogen'
+            with zip.open('base.gpickle', 'w') as base_entry:
+                nx.write_gpickle(self.base, base_entry)
+            with zip.open('simple_cycles.pickle', 'w') as sc_entry:
+                pickle.dump(self.simple_cycles, sc_entry)
+            with zip.open('config.yaml', 'w') as config_entry:
+                config.save_config(config_entry)
+
+
+
 def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
     """
     Extracts the smallest conflicted subgraphs of the given graph, i.e. the
@@ -414,13 +427,6 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
-
-    def save(self, outfile: Path):
-        with ZipFile(outfile, mode='w', compression=ZIP_DEFLATED) as zip:
-            with zip.open('base.gpickle', 'w') as base_entry:
-                nx.write_gpickle(self.base, base_entry)
-            with zip.open('simple_cycles.pickle', 'w') as sc_entry:
-                pickle.dump(self.simple_cycles, sc_entry)
 
 class _ConflictInfo:
     def __init__(self, graphs: MacrogenesisInfo, u: Node, v: Node):
