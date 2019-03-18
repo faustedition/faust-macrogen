@@ -112,7 +112,7 @@ class HtmlTable:
     def _build_attrs(attrdict: Dict):
         """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
         return ''.join(
-                ' {}="{}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
+                ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
 
     def _format_column(self, index, data) -> str:
         """
@@ -715,10 +715,13 @@ def report_sources(graphs: MacrogenesisInfo):
         source = BiblSource(uri)
         return f'<a href="{source.filename}">{source}</a>'
 
-    sources_table = (HtmlTable()
-                     .column('Quelle', format_spec=_fmt_source)
-                     .column('Aussagen')
-                     .column('Zeugen'))
+    sources_table = (HtmlTable(data_sortable='true')
+                     .column('Quelle', format_spec=_fmt_source, data_sortable_type='bibliography')
+                     .column('Aussagen', data_sortable_type='numericplus')
+                     .column('entfernt', data_sortable_type='numericplus')
+                     .column('Nutzungsanteil', format_spec='{:.1f} %', data_sortable_type='numericplus')
+                     .column('Gewicht', data_sortable_type='numericplus')
+                     .column('Zeugen', data_sortable_type='numericplus'))
     for uri, edges in sorted(by_source.items()):
         source = BiblSource(uri)
         filename = target / (source.filename + '.php')
@@ -726,8 +729,19 @@ def report_sources(graphs: MacrogenesisInfo):
         logger.info('%d assertions from %s', len(edges), source.citation)
         # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
         subgraph = graphs.base.subgraph({u for u, v, k, attr in edges} | {v for u, v, k, attr in edges})
+        all_edges = {edge[:3] for edge in edges}
+        ignored = {edge[:3] for edge in edges if edge[3].get('ignore', False)}
+        conflicts = {edge[:3] for edge in edges if edge[3].get('delete', False)} - ignored
+        used = all_edges - conflicts - ignored
+        ratio = len(used) / len(conflicts | used) * 100 if conflicts | used else 0
+
         write_dot(subgraph, graphfile)
-        sources_table.row((uri, len(edges), len([node for node in subgraph.nodes if isinstance(node, Reference)])))
+        sources_table.row((uri,
+                           len(edges),
+                           len(conflicts),
+                           ratio,
+                           source.weight,
+                           len([node for node in subgraph.nodes if isinstance(node, Reference)])))
         current_table = AssertionTable()
         for u, v, k, attr in edges:
             current_table.edge(u, v, attr)
