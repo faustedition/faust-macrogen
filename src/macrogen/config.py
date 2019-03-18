@@ -44,7 +44,7 @@ import requests
 from lxml import etree
 from ruamel.yaml import YAML
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__ + '.preliminary')
 
 BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
@@ -351,15 +351,35 @@ class Configuration:
             except AttributeError:
                 logger.debug('Could not extract comment from config option %s', key)
 
-    def save_config(self, output: Optional[Union[Path, str]]):
-        target = Path(output)
+    def save_config(self, output: Optional[Union[Path, str, BytesIO]]):
+        """
+        Dumps the current configuration.
+
+        Args:
+            output: If Path or str, path describing the target file. If it is a stream,
+                    we simply write to the stream, closing is at the client's discretion.
+                    If None, dump the configuration to the log (at INFO level).
+        """
         if output is None:
             target = StringIO()
-        _yaml.dump(self.config, output)
-        if output is None:
-            logger.info('Configuration:\n%s', target.getvalue())
+        elif hasattr(output, 'write'):
+            target = output
         else:
-            logger.debug('Saved effective configuration to %s', target)
+            if not isinstance(output, Path):
+                output = Path(output)
+            target = output.open('wb')
+
+        try:
+            with YAML(typ='rt', output=target) as y:
+                y.dump(self.config, output)
+
+            if output is None:
+                logger.info('Configuration:\n%s', target.getvalue())
+            else:
+                logger.debug('Saved effective configuration to %s', target)
+        finally:
+            if target is not output:
+                target.close()
 
 def _yaml_from_string(arg):
     yaml = YAML(typ='safe')
