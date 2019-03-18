@@ -719,39 +719,44 @@ def report_sources(graphs: MacrogenesisInfo):
                      .column('Quelle', format_spec=_fmt_source, data_sortable_type='bibliography')
                      .column('Aussagen', data_sortable_type='numericplus')
                      .column('entfernt', data_sortable_type='numericplus')
-                     .column('Nutzungsanteil', format_spec='{:.1f} %', data_sortable_type='numericplus')
+                     .column('Nutzungsanteil', format_spec='{:.1f} %', data_sortable_type='numericplus')
                      .column('Gewicht', data_sortable_type='numericplus')
                      .column('Zeugen', data_sortable_type='numericplus'))
-    for uri, edges in sorted(by_source.items()):
-        source = BiblSource(uri)
-        filename = target / (source.filename + '.php')
-        graphfile = filename.with_name(filename.stem + '-graph.dot')
-        logger.info('%d assertions from %s', len(edges), source.citation)
-        # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
-        subgraph = graphs.base.subgraph({u for u, v, k, attr in edges} | {v for u, v, k, attr in edges})
-        all_edges = {edge[:3] for edge in edges}
-        ignored = {edge[:3] for edge in edges if edge[3].get('ignore', False)}
-        conflicts = {edge[:3] for edge in edges if edge[3].get('delete', False)} - ignored
-        used = all_edges - conflicts - ignored
-        ratio = len(used) / len(conflicts | used) * 100 if conflicts | used else 0
+    with (target / "sources_data.csv").open('wt', encoding='utf-8') as sources_csv_file:
+        csv_writer = csv.writer(sources_csv_file)
+        csv_writer.writerow(('Source', 'Label', 'Weight', 'Assertions', 'Conflicts', 'Ignored', 'Usage',  'Witnesses'))
+        for uri, edges in sorted(by_source.items()):
+            source = BiblSource(uri)
+            filename = target / (source.filename + '.php')
+            graphfile = filename.with_name(filename.stem + '-graph.dot')
+            logger.info('%d assertions from %s', len(edges), source.citation)
+            # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
+            subgraph = graphs.base.subgraph({u for u, v, k, attr in edges} | {v for u, v, k, attr in edges})
+            all_edges = {edge[:3] for edge in edges}
+            ignored = {edge[:3] for edge in edges if edge[3].get('ignore', False)}
+            conflicts = {edge[:3] for edge in edges if edge[3].get('delete', False)} - ignored
+            used = all_edges - conflicts - ignored
+            ratio = len(used) / len(conflicts | used) if conflicts | used else 0
 
-        write_dot(subgraph, graphfile)
-        sources_table.row((uri,
-                           len(edges),
-                           len(conflicts),
-                           ratio,
-                           source.weight,
-                           len([node for node in subgraph.nodes if isinstance(node, Reference)])))
-        current_table = AssertionTable()
-        for u, v, k, attr in edges:
-            current_table.edge(u, v, attr)
-        write_html(target / (source.filename + '.php'),
-                   f"""<p><a href="/bibliography#{source.filename}">{source.citation} in der Bibliographie</a></p>
-                   <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
-                       {current_table.format_table()}""",
-                   graph_id='refgraph',
-                   breadcrumbs=[dict(caption='Quellen', link='sources')],
-                   head=source.citation)
+            write_dot(subgraph, graphfile)
+            witness_count = len([node for node in subgraph.nodes if isinstance(node, Reference)])
+            sources_table.row((uri,
+                               len(edges),
+                               len(conflicts),
+                               ratio*100,
+                               source.weight,
+                               witness_count))
+            csv_writer.writerow((uri, source.citation, source.weight, len(edges), len(conflicts), len(ignored), ratio, witness_count))
+            current_table = AssertionTable()
+            for u, v, k, attr in edges:
+                current_table.edge(u, v, attr)
+            write_html(target / (source.filename + '.php'),
+                       f"""<p><a href="/bibliography#{source.filename}">{source.citation} in der Bibliographie</a></p>
+                       <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
+                           {current_table.format_table()}""",
+                       graph_id='refgraph',
+                       breadcrumbs=[dict(caption='Quellen', link='sources')],
+                       head=source.citation)
 
     write_html(target / 'sources.php', sources_table.format_table(), head='Quellen')
 
