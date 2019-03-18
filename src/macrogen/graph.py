@@ -67,9 +67,9 @@ class MacrogenesisInfo:
                 threshold = config.fes_threshold
             except AttributeError:
                 threshold = 64
-            method = method[0] if len(graph.edges > threshold) else method[1]
+            method = method[1] if len(graph.edges) > threshold else method[0]
 
-        logger.debug('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
+        logger.info('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
         if method == 'eades':
             fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
             return list(expand_edges(graph, fes))
