@@ -176,12 +176,14 @@ class AbsoluteDating(_AbstractDating):
                     if self.end is None and not self.ignore:
                         G.add_edge(item, min(self.date_before + timedelta(config.half_interval_correction),
                                              date(1832, 3, 23)), kind='not_after',
+                                             trigger_node=self.date_before,
                                    source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
                     G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self,
                                xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.start is None and not self.ignore:
                         G.add_edge(self.date_after - timedelta(config.half_interval_correction), item, kind='not_before',
+                                   trigger_node=self.date_after,
                                    source=BiblSource('faust://heuristic'), xml=self.xmlsource)
 
 

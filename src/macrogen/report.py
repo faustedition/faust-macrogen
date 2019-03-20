@@ -664,7 +664,9 @@ def _format_collapsed_path(path: List[Node]):
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
     target = config.path.report_dir
     reportfile = pathlink(u, v)
+    cyclefile = reportfile.with_name(reportfile.stem + '-cycles.php')
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
+    cyclegraphfile = reportfile.with_name(graphfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
     counter_path = []
@@ -681,22 +683,31 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     except nx.NodeNotFound:
         logger.exception('Node not found!? %s or %s', u, v)
         counter_html = ''
-    subgraph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes).copy()
-    for cycle in involved_cycles:
-        subgraph.add_edges_from(expand_edges(graphs.base, pairwise(cycle)))
-    subgraph = collapse_timeline(subgraph)
+    counter_graph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes)
+    for _, _, trigger_node in counter_graph.edges(data='trigger_node'):
+        if trigger_node:
+            relevant_nodes.add(trigger_node)
+            logger.info('Adding trigger node %s to %s', trigger_node, reportfile.stem)
+    counter_graph: nx.MultiDiGraph = nx.subgraph(graphs.base, relevant_nodes).copy()
 
     if involved_cycles:
-        counter_html += f"<p>Teil von mindestens {len(involved_cycles)} einfachen Zyklen</p>"
+        counter_html += f"<p>Teil von mindestens <a href='{cyclefile.stem}'>{len(involved_cycles)} einfachen Zyklen</a></p>"
 
     # Highlight conflicting edges, counter path and the two nodes of the conflicting edge(s)
-    for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(subgraph, v, u, weight='iweight'))):
-        for k, attr in subgraph.get_edge_data(v1, v2).items():
+    for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(counter_graph, v, u, weight='iweight'))):
+        for k, attr in counter_graph.get_edge_data(v1, v2).items():
             attr['highlight'] = True
-    subgraph.node[u]['highlight'] = True
-    subgraph.node[v]['highlight'] = True
+    counter_graph.node[u]['highlight'] = True
+    counter_graph.node[v]['highlight'] = True
 
-    write_dot(subgraph, str(target / graphfile))
+    counter_graph = collapse_timeline(counter_graph)
+    cycle_graph = counter_graph.copy()
+
+    for cycle in involved_cycles:
+        cycle_graph.add_edges_from(expand_edges(graphs.base, pairwise(cycle)))
+
+    write_dot(counter_graph, str(target / graphfile))
+    write_dot(cycle_graph, str(target / cyclegraphfile))
 
     table = AssertionTable()
     for k, attr in graphs.base.get_edge_data(u, v).items():
@@ -707,6 +718,14 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
                {table.format_table()}
                {counter_html}
                <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>
+               """,
+               graph_id='refgraph',
+               head=f'Entfernte Kante {u} → {v}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
+    write_html(target / cyclefile,
+               f"""
+               {table.format_table()}
+               {counter_html}
+               <object id="refgraph" type="image/svg+xml" data="{cyclegraphfile.with_suffix('.svg')}"></object>
                """,
                graph_id='refgraph',
                head=f'Entfernte Kante {u} → {v}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
