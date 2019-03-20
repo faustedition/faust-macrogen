@@ -271,8 +271,9 @@ class Configuration:
             override = self.config_override
         for key, value in override.items():
             if value is not None:
-                logger.info('Overriding %s=%s with %s', key, self.config[key], value)
-                self.config[key] = value
+                if key in self.config:
+                    logger.info('Overriding %s=%s with %s', key, self.config[key], value)
+                    self.config[key] = value
 
     def __getattr__(self, item):
         if item == 'config' and not self.config_loaded:
