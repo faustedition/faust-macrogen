@@ -652,6 +652,15 @@ def report_missing(graphs: MacrogenesisInfo):
                    head=format(ref))
 
 
+def _format_collapsed_path(path: List[Node]):
+    collapsed = []
+    for i in range(len(path)):
+        if 0 < i < len(path)-1 and isinstance(path[i], date) and isinstance(path[i-1], date) and isinstance(path[i+1], date):
+            continue
+        collapsed.append(path[i])
+    return " → ".join(map(_fmt_node, collapsed))
+
+
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
     target = config.path.report_dir
     reportfile = pathlink(u, v)
@@ -664,7 +673,8 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
         involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
         relevant_nodes = set(counter_path)
 
-        counter_desc = " → ".join(map(_fmt_node, counter_path))
+        #counter_desc = " → ".join(map(_fmt_node, counter_path))
+        counter_desc = _format_collapsed_path(counter_path)
         counter_html = f'<p><strong>Pfad in Gegenrichtung:</strong> {counter_desc}</p>'
     except nx.NetworkXNoPath:
         counter_html = f'<p>kein Pfad in Gegenrichtung ({_fmt_node(v)} … {_fmt_node(u)}) im Sortiergraphen</p>'
