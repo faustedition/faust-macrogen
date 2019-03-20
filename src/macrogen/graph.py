@@ -261,6 +261,8 @@ class MacrogenesisInfo:
         years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
         return Counter(years)
 
+    def conflict_stats(self):
+        return [_ConflictInfo(self, edge) for edge in self.conflicts]
 
     def save(self, outfile: Path):
         with ZipFile(outfile, mode='w', compression=ZIP_DEFLATED) as zip:
@@ -496,11 +498,29 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
 
 
 class _ConflictInfo:
-    def __init__(self, graphs: MacrogenesisInfo, u: Node, v: Node):
-        shortest_path = nx.shortest_path(graphs.base, v, u, weight='iweight')
-        involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
+    def __init__(self, graphs: MacrogenesisInfo, edge: MultiEdge):
+        self.u, self.v, self.k, self.attr = edge
+        self.parallel_edges = list(expand_edges(graphs.base, [(self.u, self.v)]))
+        self.conflict_weight = self.attr.get('weight', 0)
+        self.shortest_path = nx.shortest_path(graphs.base, self.v, self.u, weight='iweight')
+        self.sp_weight = sum(attr.get('weight', 0) for u, v, k, attr in expand_edges(graphs.base,
+                                                                                     nx.utils.pairwise(
+                                                                                         self.shortest_path,
+                                                                                         cyclic=True)))
+        self.involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((self.u, self.v), cycle, True)}
+        counter_edges = {edge for cycle in self.involved_cycles for edge in nx.utils.pairwise(cycle)} - {(self.u, self.v)}
+        self.removed_sources = {attr['source'] for u, v, k, attr in self.parallel_edges}
 
-
+    def stat(self):   # TODO better name
+        return dict(
+                u=self.u,
+                v=self.v,
+                edges=len(self.removed_edges),
+                conflict_weight=self.conflict_weight,
+                sp_weight=self.sp_weight,
+                involved_cycles=len(self.involved_cycles),
+                removed_source_count=len(self.removed_sources)
+        )
 
 
 
