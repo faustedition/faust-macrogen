@@ -494,18 +494,18 @@ def report_downloads(graphs: MacrogenesisInfo):
     target.mkdir(exist_ok=True, parents=True)
 
     simplified = simplify_graph(graphs.base)
-    nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
     nx.write_gexf(simplified, str(target / 'base.gexf'))
     nx.write_edgelist(simplified, str(target / 'base.edges'))
+    graphs.save(target / "macrogen-info.zip")
 
     write_html(target / 'downloads.php', """
     <section>
     <p>Downloadable files for the base graph in various formats:</p>
-    <ul>
-        <li><a href='base.gpickle'>NetworkX GPickle, requires the faust-macrogen library</a></li>
+    <ol>
         <li><a href='base.gexf'>GEXF</a></li>
         <li><a href='base.edges'>Edge List</a></li>
-    <ul>
+        <li><a href='macrogen-info.zip'>MacrogenesisInfo for the faust-macrogen library</a></li>
+    <ol>
     </section>
     <h4>Nodes</h4>
     <p>The <strong>nodes</strong> are either URIs or dates in ISO 8601 format. URIs of the form
@@ -567,7 +567,16 @@ def report_downloads(graphs: MacrogenesisInfo):
          <td>file name and line of the <a href="https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis">XML file</a>
           with this assertion</td>
       </tr>
-    </table>    
+    </table>
+    
+    <h4>MacrogenesisInfo</h4>
+    <p>The <a href='macrogen-info.zip'>macrogen-info.zip</a> file contains the data required to recreate the graph info
+    in the <a href='https://github.com/faustedition/faust-macrogen'>faust-macrogen</a> library. To do so, run:</p>
+    <pre lang='python'>
+    from macrogen import MacrogenesisInfo
+    graphs = MacrogenesisInfo('macrogen-info.zip')
+    </pre>
+    <p>Note this is barely tested yet.</p>
     """, "Downloads")
 
 
