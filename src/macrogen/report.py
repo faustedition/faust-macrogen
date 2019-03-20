@@ -20,7 +20,7 @@ import networkx as nx
 
 from .config import config
 from .bibliography import BiblSource
-from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY
+from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, MultiEdge
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
@@ -249,7 +249,9 @@ def report_components(graphs: MacrogenesisInfo):
     jedem anderen erreichbar ist. Hier ist keine Ordnung möglich, ohne dass Kanten entfernt
     werden.</p>
     """
-    scc_table = _report_subgraphs(graphs.conflicts, target, 'scc-{0:02d}')
+    sccs = [component for component in nx.strongly_connected_components(graphs.base) if len(component) > 1]
+    scc_subgraphs = [nx.subgraph(graphs.base, scc) for scc in sccs]
+    scc_table = _report_subgraphs(scc_subgraphs, target, 'scc-{0:02d}')
     report += scc_table.format_table()
 
     wccs = [nx.subgraph(graphs.working, component) for component in nx.weakly_connected_components(graphs.working)]
