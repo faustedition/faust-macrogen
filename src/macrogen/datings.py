@@ -4,7 +4,7 @@ Functions to parse the XML datings and build a graph out of them
 from abc import ABCMeta, abstractmethod
 from os import fspath
 from pathlib import Path
-from typing import List, Tuple, Optional, Any, Generator
+from typing import List, Tuple, Optional, Any, Generator, Union
 
 import networkx as nx
 from datetime import date, timedelta, datetime
@@ -16,6 +16,7 @@ from .uris import Witness, Reference
 from .config import config
 
 logger = config.getLogger(__name__)
+
 
 def parse_datestr(datestr: str) -> date:
     """
@@ -44,8 +45,6 @@ class InvalidDatingError(ValueError):
         super().__init__(msg)
 
 
-
-
 class _AbstractDating(metaclass=ABCMeta):
     """
     Abstract base class for assertions on datings.
@@ -60,7 +59,8 @@ class _AbstractDating(metaclass=ABCMeta):
         Args:
             el: The basic assertion element. This will usually be <relation> or <date>.
         """
-        self.items: List[Reference] = [Witness.get(uri) for uri in el.xpath('f:item/@uri', namespaces=config.namespaces)]
+        self.items: List[Reference] = [Witness.get(uri) for uri in
+                                       el.xpath('f:item/@uri', namespaces=config.namespaces)]
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
                              for source in el.xpath('f:source', namespaces=config.namespaces))
         self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=config.namespaces))
@@ -176,13 +176,14 @@ class AbsoluteDating(_AbstractDating):
                     if self.end is None and not self.ignore:
                         G.add_edge(item, min(self.date_before + timedelta(config.half_interval_correction),
                                              date(1832, 3, 23)), kind='not_after',
-                                             trigger_node=self.date_before,
+                                   trigger_node=self.date_before,
                                    source=BiblSource('faust://heuristic'), xml=self.xmlsource)
                 if self.end is not None:
                     G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self,
                                xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
                     if self.start is None and not self.ignore:
-                        G.add_edge(self.date_after - timedelta(config.half_interval_correction), item, kind='not_before',
+                        G.add_edge(self.date_after - timedelta(config.half_interval_correction), item,
+                                   kind='not_before',
                                    trigger_node=self.date_after,
                                    source=BiblSource('faust://heuristic'), xml=self.xmlsource)
 
@@ -314,3 +315,13 @@ def strongly_connected_subgraphs(graph: nx.Graph):
     sccs = [scc for scc in nx.strongly_connected_components(graph) if len(scc) > 1]
     sorted_sccs = sorted(sccs, key=len, reverse=True)
     return [graph.subgraph(scc) for scc in sorted_sccs]
+
+
+_datings: Optional[List[Union[RelativeDating, AbsoluteDating]]] = None
+
+
+def get_datings():
+    global _datings
+    if _datings is None:
+        _datings = list(_parse_files())
+    return _datings

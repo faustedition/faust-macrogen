@@ -5,6 +5,7 @@ from datetime import date, datetime
 from itertools import chain, repeat, groupby
 from operator import itemgetter
 
+import pandas as pd
 import requests
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -17,11 +18,13 @@ from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Any, Optional
 
 import networkx as nx
+from pandas import DataFrame
 
 from .config import config
 from .bibliography import BiblSource
 from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, MultiEdge
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path
+from .datings import get_datings, AbsoluteDating
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 
@@ -112,7 +115,8 @@ class HtmlTable:
     def _build_attrs(attrdict: Dict):
         """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
         return ''.join(
-                ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in attrdict.items())
+                ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
+                attrdict.items())
 
     def _format_column(self, index, data) -> str:
         """
@@ -164,7 +168,8 @@ class HtmlTable:
         """
         column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
                                   for title, attrs in zip(self.titles, self.header_attrs)])
-        return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers, self._build_attrs(self.table_attrs))
+        return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers,
+                                                                               self._build_attrs(self.table_attrs))
 
     def _format_footer(self):
         return '</tbody></table>'
@@ -192,9 +197,9 @@ class HtmlTable:
                 (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
 
 
-def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str,str]] = [],
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
                graph_id: str = None,
-               graph_options: Dict[str,object] = dict(controlIconsEnabled=True)) -> None:
+               graph_options: Dict[str, object] = dict(controlIconsEnabled=True)) -> None:
     """
     Writes a html page.
     Args:
@@ -299,6 +304,7 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
         for bibl, total in totals.most_common():
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
+
 def _fmt_node(node: Union[Reference, object]):
     """Formats a node by creating a link of possible"""
     if isinstance(node, Reference):
@@ -329,16 +335,15 @@ class RefTable(HtmlTable):
     def __init__(self, base: nx.MultiDiGraph, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
         (self.column('Nr.', data_sortable="numericplus")
-             .column('Knoten davor', data_sortable="numericplus")
-             .column('Objekt', data_sortable="sigil", format_spec=_fmt_node)
-             .column('Typ / Edition', data_sortable="sigil", format_spec=_edition_link)
-             .column('nicht vor', data_sortable="alpha", format_spec=lambda d: format(d) if d != EARLIEST else "")
-             .column('nicht nach', data_sortable="alpha", format_spec=lambda d: format(d) if d != LATEST else "")
-             .column('erster Vers', data_sortable="numericplus")
-             .column('Aussagen', data_sortable="numericplus")
-             .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
+         .column('Knoten davor', data_sortable="numericplus")
+         .column('Objekt', data_sortable="sigil", format_spec=_fmt_node)
+         .column('Typ / Edition', data_sortable="sigil", format_spec=_edition_link)
+         .column('nicht vor', data_sortable="alpha", format_spec=lambda d: format(d) if d != EARLIEST else "")
+         .column('nicht nach', data_sortable="alpha", format_spec=lambda d: format(d) if d != LATEST else "")
+         .column('erster Vers', data_sortable="numericplus")
+         .column('Aussagen', data_sortable="numericplus")
+         .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
         self.base = base
-
 
     def reference(self, ref: Reference, index: Optional[int] = None, write_subpage: bool = False):
         """
@@ -355,13 +360,13 @@ class RefTable(HtmlTable):
             assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
             self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
-                          getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
-                         id=f'idx{index}', class_=type(ref).__name__)
+                      getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
+                     id=f'idx{index}', class_=type(ref).__name__)
             if write_subpage:
                 self._last_ref_subpage(DAY, ref)
         else:
             self.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
-                         class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
+                     class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     def _last_ref_subpage(self, DAY, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
@@ -376,7 +381,8 @@ class RefTable(HtmlTable):
         write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
         report = f"<!-- {repr(ref)} -->\n"
         report += self.format_table(self.rows[-1:])
-        report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(basename.stem+'-graph.svg').name}"></object>\n"""
+        report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
+            basename.stem + '-graph.svg').name}"></object>\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
@@ -400,12 +406,12 @@ class RefTable(HtmlTable):
             assertionTable.row((
                 f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
                     'ignoriert' if attr.get('ignore', False) else 'ja',
-                                kinds[attr['kind']],
-                                u + DAY if isinstance(u, date) else u,
-                                attr,
-                                attr.get('comments', []),
-                                attr.get('xml', [])),
-                               class_='delete' if delete_ else str(attr['kind']))
+                kinds[attr['kind']],
+                u + DAY if isinstance(u, date) else u,
+                attr,
+                attr.get('comments', []),
+                attr.get('xml', [])),
+                    class_='delete' if delete_ else str(attr['kind']))
         kinds['temp-pre'] = 'entstanden vor'
         for (u, v, attr) in self.base.out_edges(ref, data=True):
             delete_ = 'delete' in attr and attr['delete']
@@ -426,19 +432,19 @@ class AssertionTable(HtmlTable):
     def __init__(self, **table_attrs):
         super().__init__(data_sortable='true', **table_attrs)
         (self.column('berücksichtigt?', data_sortable_type="alpha")
-             .column('Subjekt',  _fmt_node, data_sortable_type="sigil")
-             .column('Relation',  RELATION_LABELS.get, data_sortable_type="alpha")
-             .column('Objekt', _fmt_node, data_sortable_type="sigil")
-             .column('Quelle', _fmt_source, data_sortable_type="bibliography")
-             .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
-             .column('XML', _fmt_xml, data_sortable_type="alpha"))
+         .column('Subjekt', _fmt_node, data_sortable_type="sigil")
+         .column('Relation', RELATION_LABELS.get, data_sortable_type="alpha")
+         .column('Objekt', _fmt_node, data_sortable_type="sigil")
+         .column('Quelle', _fmt_source, data_sortable_type="bibliography")
+         .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
+         .column('XML', _fmt_xml, data_sortable_type="alpha"))
 
-    def edge(self, u: Reference, v: Reference, attr: Dict[str,object]):
+    def edge(self, u: Reference, v: Reference, attr: Dict[str, object]):
         classes = [attr['kind']] if 'kind' in attr and attr['kind'] is not None else ['unknown-kind']
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
+            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else \
                 'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
@@ -446,7 +452,8 @@ class AssertionTable(HtmlTable):
             attr,
             attr.get('comments', []),
             attr.get('xml', '')),
-        class_=' '.join(classes))
+                class_=' '.join(classes))
+
 
 def _fmt_source(attrs):
     source: BiblSource = attrs['source']
@@ -606,6 +613,7 @@ def report_refs(graphs: MacrogenesisInfo):
     # write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
     # write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
 
+
 def _invert_mapping(mapping: Mapping) -> Dict:
     result = defaultdict(set)
     for key, value in mapping.items():
@@ -655,7 +663,8 @@ def report_missing(graphs: MacrogenesisInfo):
 def _format_collapsed_path(path: List[Node]):
     collapsed = []
     for i in range(len(path)):
-        if 0 < i < len(path)-1 and isinstance(path[i], date) and isinstance(path[i-1], date) and isinstance(path[i+1], date):
+        if 0 < i < len(path) - 1 and isinstance(path[i], date) and isinstance(path[i - 1], date) and isinstance(
+                path[i + 1], date):
             continue
         collapsed.append(path[i])
     return " → ".join(map(_fmt_node, collapsed))
@@ -675,9 +684,9 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
         involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
         relevant_nodes = set(counter_path)
 
-        #counter_desc = " → ".join(map(_fmt_node, counter_path))
+        # counter_desc = " → ".join(map(_fmt_node, counter_path))
         counter_desc = _format_collapsed_path(counter_path)
-        counter_html = f'<p><strong>Pfad in Gegenrichtung:</strong> {counter_desc}</p>'
+        counter_html = f'<p><strong><a href="{reportfile.stem}">Pfad in Gegenrichtung:</a></strong> {counter_desc}</p>'
     except nx.NetworkXNoPath:
         counter_html = f'<p>kein Pfad in Gegenrichtung ({_fmt_node(v)} … {_fmt_node(u)}) im Sortiergraphen</p>'
     except nx.NodeNotFound:
@@ -764,7 +773,7 @@ def report_sources(graphs: MacrogenesisInfo):
                      .column('Zeugen', data_sortable_type='numericplus'))
     with (target / "sources_data.csv").open('wt', encoding='utf-8') as sources_csv_file:
         csv_writer = csv.writer(sources_csv_file)
-        csv_writer.writerow(('Source', 'Label', 'Weight', 'Assertions', 'Conflicts', 'Ignored', 'Usage',  'Witnesses'))
+        csv_writer.writerow(('Source', 'Label', 'Weight', 'Assertions', 'Conflicts', 'Ignored', 'Usage', 'Witnesses'))
         for uri, edges in sorted(by_source.items()):
             source = BiblSource(uri)
             filename = target / (source.filename + '.php')
@@ -783,10 +792,11 @@ def report_sources(graphs: MacrogenesisInfo):
             sources_table.row((uri,
                                len(edges),
                                len(conflicts),
-                               ratio*100,
+                               ratio * 100,
                                source.weight,
                                witness_count))
-            csv_writer.writerow((uri, source.citation, source.weight, len(edges), len(conflicts), len(ignored), ratio, witness_count))
+            csv_writer.writerow((uri, source.citation, source.weight, len(edges), len(conflicts), len(ignored), ratio,
+                                 witness_count))
             current_table = AssertionTable()
             for u, v, k, attr in edges:
                 current_table.edge(u, v, attr)
@@ -806,15 +816,22 @@ def report_index(graphs):
 
     pages = [('refs', 'Zeugen', 'Alle referenzierten Dokumente in der erschlossenen Reihenfolge'),
              ('scenes', 'nach Szene', 'Die relevanten Zeugen für jede Szene'),
-             ('conflicts', 'entfernte Aussagen', 'Aussagen, die algorithmisch als Konflikt identifiziert und entfernt wurden'),
+             ('conflicts', 'entfernte Aussagen',
+              'Aussagen, die algorithmisch als Konflikt identifiziert und entfernt wurden'),
              ('components', 'Komponenten', 'stark und schwach zusammenhängende Komponenten des Ausgangsgraphen'),
-             ('missing', 'Fehlendes', 'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen, und unbekannte Zeugen'),
+             ('missing', 'Fehlendes',
+              'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen, und unbekannte Zeugen'),
              ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
-             ('dag', 'sortierrelevanter Gesamtgraph', 'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
-             ('tred', 'transitive Reduktion', '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
+             ('dag', 'sortierrelevanter Gesamtgraph',
+              'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
+             ('tred', 'transitive Reduktion',
+              '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
-             ('downloads', 'Downloads', 'Graphen zum Download')]
-    links = "\n".join(('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page in pages))
+             ('downloads', 'Downloads', 'Graphen zum Download'),
+             ('stats', 'Statistik', 'Der Graph in Zahlen')]
+    links = "\n".join(
+            ('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page
+             in pages))
     report = f"""
       <p>
         Dieser Bereich der Edition enthält experimentelle Informationen zur Makrogenese, er wurde zuletzt
@@ -831,7 +848,6 @@ def report_index(graphs):
       </section>
     """
 
-
     write_html(target / "index.php", report)
     logger.info('Writing DAG ...')
     write_dot(graphs.dag, target / 'dag-graph.dot')
@@ -847,8 +863,10 @@ def report_index(graphs):
                graph_id='refgraph', head='Transitive Reduktion',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
+
 def report_help():
     target = config.path.report_dir
+
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
         G = nx.MultiDiGraph() if extend is None else extend.copy()
         G.add_edge(u, v, **edge_attr)
@@ -919,6 +937,7 @@ def report_help():
 
     write_html(target / 'help.php', report, 'Legende')
 
+
 def _yearlabel(ref: Reference):
     earliest_year = ref.earliest.year
     latest_year = ref.latest.year
@@ -939,8 +958,10 @@ class ByScene:
     def __init__(self, graphs: MacrogenesisInfo):
         scene_xml: etree._ElementTree = etree.parse('scenes.xml')
         self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=config.namespaces)
-        bargraph_info = requests.get('http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
-        self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in bargraph_info}
+        bargraph_info = requests.get(
+            'http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
+        self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in
+                          bargraph_info}
         self.ordering = list(enumerate(graphs.order_refs()))
         self.graphs = graphs
 
@@ -959,7 +980,7 @@ class ByScene:
             for index, witness in scene_wits:
                 witnessTable.reference(witness, index)
             scene_wits = {wit for _, wit in scene_wits}
-            scene_nodes = scene_wits | {node   for wit in scene_wits if wit in self.graphs.base
+            scene_nodes = scene_wits | {node for wit in scene_wits if wit in self.graphs.base
                                         for node in chain(self.graphs.base.predecessors(wit),
                                                           self.graphs.base.successors(wit))
                                         if isinstance(node, date)}
@@ -970,7 +991,8 @@ class ByScene:
             sceneTable.row((scene.get('n'), f'<a href="{basename}">{title}</a>', (start, end), len(scene_wits)))
             write_dot(scene_subgraph, target / graph_name)
             write_html(target / subgraph_page,
-                       f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix('.svg')}"></object>""",
+                       f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix(
+                           '.svg')}"></object>""",
                        graph_id='refgraph',
                        head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
                                                         dict(caption=title, link=basename)])
@@ -987,15 +1009,17 @@ class ByScene:
             for interval in self.intervals[witness]:
                 if first_verse <= interval['start'] <= last_verse or \
                         first_verse <= interval['end'] <= last_verse or \
-                        interval['start'] <= first_verse <= interval['end']  or \
+                        interval['start'] <= first_verse <= interval['end'] or \
                         interval['start'] <= last_verse <= interval['end']:
                     return True
         except KeyError:
             return False
         return False
 
+
 def report_scenes(graphs):
     ByScene(graphs).report()
+
 
 def write_order_xml(graphs):
     target: Path = config.path.report_dir
@@ -1020,3 +1044,94 @@ def write_order_xml(graphs):
     data = dict(max=max(stats.values()), counts=stats)
     with (target / 'witness-stats.json').open('wt', encoding='utf-8') as out:
         json.dump(data, out)
+
+
+def report_stats(graphs: MacrogenesisInfo):
+    """
+    Anzahl Zeugen; Referenzen
+    Anzahl absolute, relative Datierungen
+    Anzahl datierte Zeugen
+    Anzahl automatisch datierte Zeugen
+    Auto Datierungsintervallänge
+
+    Args:
+        graphs:
+
+    Returns:
+
+    """
+    refs = graphs.order_refs()
+    wits = [ref for ref in refs if isinstance(ref, Witness)]
+    stat: DataFrame = pd.DataFrame(index=wits, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
+                                                        'succ_dates', 'auto_pre', 'auto_post', 'auto_len'])
+
+    # now collect some info per witness:
+    for ref in refs:
+        preds = list(graphs.base.pred[ref])
+        succs = list(graphs.base.succ[ref])
+
+        pred_dates = [p for p in preds if isinstance(p, date)]
+        succ_dates = [s for s in succs if isinstance(s, date)]
+
+        auto_pre = max((d for d in graphs.closure.pred[ref] if isinstance(d, date)), default=None)
+        auto_post = min((d for d in graphs.closure.succ[ref] if isinstance(d, date)), default=None)
+        stat.loc[ref, :] = dict(
+                kind=ref.__class__.__name__,
+                pred=len(preds),
+                pred_dates=len(pred_dates),
+                pre=max((d for d in pred_dates), default=None),
+                post=min((d for d in succ_dates), default=None),
+                succ=len(succs),
+                succ_dates=len(succ_dates),
+
+                auto_pre=auto_pre,
+                auto_post=auto_post,
+                auto_len=auto_post - auto_pre if auto_pre and auto_post else None
+        )
+
+    def _dating_table():
+        for dating in get_datings():
+            if isinstance(dating, AbsoluteDating):
+                for item in dating.items:
+                    for source in dating.sources:
+                        yield item, item.__class__.__name__, dating.start, dating.end, source
+
+    dating_stat = pd.DataFrame(list(_dating_table()), columns='item kind start end source'.split())
+
+    edge_df = pd.DataFrame([dict(start=u, end=v, key=k, **attr)
+                            for u, v, k, attr in graphs.base.edges(keys=True, data=True)])
+    edge_df.delete = edge_df.delete.fillna(False)
+    edge_df.ignore = edge_df.ignore.fillna(False)
+
+    html = f"""
+    <h2>Kanten (Aussagen)</h2>
+    <p>{len(edge_df)} Kanten, {(edge_df.kind != 'timeline').sum()} Datierungsaussagen:</p>
+    <pre>{edge_df.kind.value_counts()}</pre>
+    <p>{edge_df.ignore.sum()} Aussagen (manuell) ignoriert, 
+    {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen 
+    ({len(edge_df[edge_df.delete].groupby(['start', 'end']))} ohne Parallelaussagen)
+    </p>
+    
+    <h2>Absolute Datierungen</h2>
+    <table class="pure-table">
+        
+        <thead><tr><td/><th>direkt</th><th>erschlossen</th><th>angepasst</th><th>fehlend</th></tr></thead>
+        <tbody>
+        <tr><th>Datumsuntergrenze</th>
+            <td>{(stat.pred_dates > 0).sum()}</td>
+            <td>{(~stat.auto_pre.isna() & ~(stat.pred_dates > 0)).sum()}</td>
+            <td>{(~stat.auto_pre.isna() & ~stat.pre.isna() & (stat.auto_pre != stat.pre)).sum()}</td>
+            <td>{(stat.auto_pre.isna()).sum()}</td>
+        </tr>
+        <tr><th>Datumsobergrenze</th>
+            <td>{(stat.succ_dates > 0).sum()}</td>
+            <td>{(~stat.auto_post.isna() & ~(stat.succ_dates > 0)).sum()}</td>
+            <td>{(~stat.auto_post.isna() & ~stat.post.isna() & (stat.auto_post != stat.post)).sum()}</td>
+            <td>{(stat.auto_post.isna()).sum()}</td>
+        </tr>
+        </tbody>
+    </table>
+    """
+    write_html(config.path.report_dir / "stats.php", html, "Statistik")
+
+    return stat, dating_stat, edge_df
