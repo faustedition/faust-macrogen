@@ -20,6 +20,7 @@ xmlroot: https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis 
 ## Limits
 half_interval_correction: 182.5    # if we only have a start or end date, the other limit is max. this many days away
 render_node_limit: 1500            # do not layout graphs with more nodes than this
+render_timeout:                    # max number of seconds before rendering a dot file is aborted
 
 ## Options for solving the FES
 fes_method: baharev   # ip, baharev: exact methods; eades: inexact, list of two: select by fes_threshold

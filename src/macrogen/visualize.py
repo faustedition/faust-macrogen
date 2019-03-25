@@ -1,4 +1,8 @@
-from typing import Sequence
+import shutil
+import subprocess
+from functools import partial
+from os import PathLike
+from typing import Sequence, Optional, Union, Tuple
 from datetime import date, timedelta
 from time import perf_counter
 from multiprocessing.pool import Pool
@@ -14,8 +18,9 @@ from .datings import add_timeline_edges
 from macrogen import BiblSource
 from macrogen.graphutils import pathlink
 from .uris import Reference
+import logging
 
-logger = config.getLogger(__name__)
+logger: logging.Logger = config.getLogger(__name__)
 
 _render_queue = []
 
@@ -184,18 +189,61 @@ def render_file(filename):
     except:
         logger.exception('Failed to render %s', filename)
     finally:
-        duration = timedelta(seconds=perf_counter()-starttime)
+        duration = timedelta(seconds=perf_counter() - starttime)
         if duration > timedelta(seconds=5):
             logger.warning('Rendering %s with %d nodes and %d edges took %s',
                            filename, graph.number_of_nodes(), graph.number_of_edges(), duration)
 
 
-def render_all():
+def render_file_alt(filename: PathLike, timeout: Optional[float] = None) -> \
+        Union[Path, Tuple[Path, Union[subprocess.CalledProcessError, subprocess.TimeoutExpired]]]:
+    """
+    Calls GraphViz' dot to render the given file to svg, at least if it does not take more than timeout seconds.
+
+    Args:
+        filename: The dot file to render
+        timeout: Timeout in seconds, or None if we would like to wait endlessly
+
+    Returns:
+        result path if everything is ok.
+        Tuple of result path and exception if timeout or process error.
+    """
+    path = Path(filename)
+    dot = shutil.which('dot')
+    target = path.with_suffix('.svg')
+    args = [dot, '-T', 'svg', '-o', target, path]
+    try:
+        p = subprocess.run(args, capture_output=True, check=True, encoding='utf-8', timeout=timeout)
+        if p.stderr:
+            logger.warning('Rendering %s: %s', path, p.stderr)
+        return target
+    except subprocess.CalledProcessError as e:
+        logger.error('Rendering %s failed (%d): %s', path, e.returncode, e.stderr)
+        return target, e
+    except subprocess.TimeoutExpired as e:
+        logger.warning('Rendering %s aborted after %g seconds (%s)', path, timeout, e.stderr)
+        return target, e
+
+
+def render_all(timeout=None):
+    if timeout is None:
+        timeout = config.render_timeout
+    if timeout is not None and timeout <= 0:
+        timeout = None
     with Pool() as pool:
         global _render_queue
         dots, _render_queue = _render_queue, []
-        result = list(tqdm(pool.imap_unordered(render_file, dots), desc='Rendering', total=len(dots), unit=' SVGs'))
-        failcount = result.count(None)
-        logger.info('Rendered %d SVGs, %d failed', len(result) - failcount, failcount)
-
-
+        result = list(tqdm(pool.imap_unordered(partial(render_file_alt, timeout=timeout), dots),
+                           desc='Rendering', total=len(dots), unit=' SVGs'))
+        not_rendered = [entry for entry in result if isinstance(entry, tuple)]
+        timeout = [path for path, err in not_rendered if isinstance(err, subprocess.TimeoutExpired)]
+        failed = [path for path, err in not_rendered if isinstance(err, subprocess.CalledProcessError)]
+        _render_queue.append(timeout)
+        if failed:
+            loglevel = logging.ERROR
+        elif timeout:
+            loglevel = logging.WARNING
+        else:
+            loglevel = logging.INFO
+        logger.log(loglevel, 'Rendered %d SVGs, %d timed out, %d failed', len(result) - len(timeout) - len(failed),
+                   len(timeout), len(failed))
