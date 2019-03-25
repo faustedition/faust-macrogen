@@ -259,34 +259,6 @@ def add_timeline_edges(graph):
             graph.add_edge(earlier, later, kind='timeline')
 
 
-def simplify_timeline(graph: nx.MultiDiGraph):
-    """
-    Remove superfluous date nodes (and timeline edges) from the graph.
-
-    When creating subgraphs of the base graph, the subgraph will sometimes contain date nodes that
-    are not linked to references remaining in the subgraph. This function will remove those nodes
-    and link the remaining date nodes instead. So, it will reduce
-
-                    1798-01-01  ->   1709-01-15   ->   1798-02-01
-                       `-------------> H.x ---------------^
-
-    to
-
-                    1798-01-01  ->  1798-02-01
-                       `-----> H.x -----^
-    """
-    date_nodes = sorted(node for node in graph.nodes if isinstance(node, date))
-    prev = None
-    for node in date_nodes:
-        if prev is not None and graph.in_degree(node) == graph.out_degree(node) == 1 and isinstance(
-                graph.successors(node)[0], date):
-            graph.remove_node(node)
-        else:
-            if prev is not None:
-                graph.add_edge(prev, node, kind='timeline')
-            prev = node
-
-
 def build_datings_graph() -> nx.MultiDiGraph:
     """
     Builds the raw datings graph by parsing the datings from all macrogenesis files from the default directory,

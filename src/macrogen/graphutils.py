@@ -5,6 +5,7 @@ from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callab
 
 import networkx as nx
 
+from macrogen.datings import add_timeline_edges
 from .uris import Witness, Reference
 from .bibliography import BiblSource
 from .datings import parse_datestr
@@ -151,7 +152,7 @@ def add_iweight(graph: nx.MultiDiGraph):
             elif attr['weight'] > 0:
                 attr['iweight'] = 1 / attr['weight']
             else:
-                attr['iweight'] = 0
+                attr['iweight'] = 2_000_000
 
 
 def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
@@ -202,3 +203,34 @@ def in_path(edge: Tuple[T, T], path: Sequence[T], cycle=False) -> bool:
             return False
     except ValueError:
         return False
+
+
+def simplify_timeline(graph: nx.MultiDiGraph):
+    """
+    Remove superfluous date nodes (and timeline edges) from the graph.
+
+    When creating subgraphs of the base graph, the subgraph will sometimes contain date nodes that
+    are not linked to references remaining in the subgraph. This function will remove those nodes
+    and link the remaining date nodes instead. So, it will reduce
+
+                    1798-01-01  ->   1709-01-15   ->   1798-02-01
+                       `-------------> H.x ---------------^
+
+    to
+
+                    1798-01-01  ->  1798-02-01
+                       `-----> H.x -----^
+    """
+    graph = remove_edges(graph, lambda u, v, attr: attr.get('kind') == 'timeline').copy()
+    add_timeline_edges(graph)
+    return graph
+    # date_nodes = sorted(node for node in graph.nodes if isinstance(node, date))
+    # prev = None
+    # for node in date_nodes:
+    #     if prev is not None and graph.in_degree(node) == graph.out_degree(node) == 1 and isinstance(
+    #             one(graph.successors(node)), date):
+    #         graph.remove_node(node)
+    #     else:
+    #         if prev is not None:
+    #             graph.add_edge(prev, node, kind='timeline')
+    #         prev = node
