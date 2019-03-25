@@ -67,13 +67,13 @@ def _simplify_attrs(attrs):
 
 
 def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
-              highlight=None, record='auto', edge_labels=True):
+              highlight=None, record='auto', edge_labels=True) -> AGraph:
     """
     Writes a properly styled graphviz file for the given graph.
 
     Args:
         graph: the subgraph to draw
-        target: dot file that should be written, may be a Path
+        target: dot file that should be written, may be a Path. If none, nothing is written but the AGraph returns
         style (dict): rules for styling the graph
         highlight: if a node, highlight that in the graph. If a tuple of nodes, highlight the shortest path(s) from the
                    first to the second node
@@ -81,13 +81,11 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
         edge_labels (bool): Should we paint edge labels?
 
     Returns:
-        None.
+        the AGraph, can be used to write the thing yourself.
     """
     if style is None:
         style = config.styles
     logger.info('Writing %s ...', target)
-    target_path = Path(target)
-    target_path.parent.mkdir(exist_ok=True, parents=True)
     try:
         if record == 'auto' and config.render_node_limit >= 0:
             record = graph.number_of_nodes() < config.render_node_limit
@@ -168,12 +166,16 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
                 getattr(timeline, t + '_attr', {}).update(timeline_style[t])
                 logger.debug('timeline style: %s = %s', t, getattr(timeline, t + '_attr').items())  ## Doesn’t work
 
-    dotfilename = str(target)
-    agraph.write(dotfilename)
-    if record:
-        _render_queue.append(dotfilename)
-    else:
-        logger.warning('%s has not been queued for rendering', dotfilename)
+    if target is not None:
+        target_path = Path(target)
+        target_path.parent.mkdir(exist_ok=True, parents=True)
+        dotfilename = str(target)
+        agraph.write(dotfilename)
+        if record:
+            _render_queue.append(dotfilename)
+        else:
+            logger.warning('%s has not been queued for rendering', dotfilename)
+    return agraph
 
 
 def render_file(filename):

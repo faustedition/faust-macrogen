@@ -364,14 +364,15 @@ class MacrogenesisInfo:
         """
         try:
             if edges_from is None:
-                edges_from = self.base
+                edges_from = self.dag
             path = nx.shortest_path(edges_from, source, target, weight, method)
+            logger.info('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
             edges = expand_edges(edges_from, nx.utils.pairwise(path))
             graph.add_edges_from(edges)
+            return path
         except nx.NetworkXNoPath as e:
             if must_exist:
                 raise e
-        return path
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool=True,
                  path_from: Iterable[Node] = {}, pathes: Iterable[Node] = {}, keep_timeline=False) -> nx.MultiDiGraph:
@@ -416,7 +417,7 @@ class MacrogenesisInfo:
                 prev = max((d for d in self.closure.pred[node] if isinstance(d, date)), default=None)
                 if prev is not None and prev not in central_nodes:
                     self.add_path(subgraph, prev, node, edges_from=self.dag)
-                next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)))
+                next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
                 if next_ is not None and next not in central_nodes:
                     self.add_path(subgraph, node, next_, edges_from=self.dag)
 

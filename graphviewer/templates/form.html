@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Kontextgraph</title>
+</head>
+<body>
+
+{{ svg }}
+
+<form method="get">
+    <p><label for="nodes">Zentrale(r) Knoten: </label><input type="text" name="nodes" id="nodes" value="{{ nodes }}"></p>
+    <h3>Kontextknoten:</h3>
+    <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
+    <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
+    <p><label for="extra">Pfade von/zu (falls verfügbar): </label><input type="text" name="extra" id="extra" value="{{ extra }}"></p>
+    <h3>Kantenauswahl und -Gestaltung:</h3>
+    <p><input type="checkbox" name="induced_edges" id="induced_edges" {% if induced_edges %}checked{% endif %}> <label for="induced_edges">alle induzierten Kanten</label></p>
+    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" {% if ignored_edges %}checked{% endif %}> <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
+    <p><input type="checkbox" name="tred" id="tred" {% if tred %}checked{% endif %}> <label for="tred">Transitive Hülle</label> </p>
+    <p><input type="submit"></p>
+</form>
+
+</body>
+</html>
