@@ -15,7 +15,7 @@ import networkx as nx
 from .graphutils import mark_edges_to_delete, remove_edges, in_path
 from .bibliography import BiblSource
 from .config import config
-from .datings import build_datings_graph
+from .datings import build_datings_graph, parse_datestr
 from macrogen.graphutils import simplify_timeline
 from .fes import eades, FES_Baharev, V
 from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
@@ -335,6 +335,16 @@ class MacrogenesisInfo:
         try:
             if isinstance(spec, Reference) or isinstance(spec, date):
                 return first(node for node in self.base.nodes if node == spec)
+            try:
+                d = parse_datestr(spec)
+                return first(node for node in self.base.nodes if node == d)
+            except ValueError:
+                pass
+            except KeyError:
+                pass
+            except StopIteration:
+                pass
+
             if spec.startswith('faust://'):
                 ref = Witness.get(spec)
                 return first(node for node in self.base.nodes if node == ref)
