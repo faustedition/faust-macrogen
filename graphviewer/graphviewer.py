@@ -56,9 +56,8 @@ def prepare_agraph():
 def render_form():
     try:
         agraph = prepare_agraph()
-        p = subprocess.run(['dot', '-T', 'svg'], input=agraph.to_string(), capture_output=True, timeout=30,
-                           encoding='utf-8')
-        svg = Markup(p.stdout)
+        output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
+        svg = Markup(codecs.decode(output))
     except NoNodes:
         svg = 'Bitte Knoten und Optionen im Formular angeben.'
     return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **request.args)
@@ -67,8 +66,9 @@ def render_form():
 @app.route('/macrogenesis/subgraph/pdf')
 def render_pdf():
     agraph = prepare_agraph()
-    p = subprocess.run(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
-    return Response(p.stdout, mimetype='application/pdf')
+    output = subprocess.check_output(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), timeout=30)
+    # p = subprocess.run(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
+    return Response(output, mimetype='application/pdf')
 
 
 @app.route('/macrogenesis/subgraph/dot')
@@ -79,5 +79,5 @@ def render_dot():
 @app.route('/macrogenesis/subgraph/svg')
 def render_svg():
     agraph = prepare_agraph()
-    p = subprocess.run(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
-    return Response(p.stdout, mimetype='image/svg+xml')
+    output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
+    return Response(output, mimetype='image/svg+xml')
