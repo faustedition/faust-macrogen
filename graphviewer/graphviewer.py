@@ -1,19 +1,34 @@
+import codecs
 import subprocess
 
-import networkx as nx
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, Response
 from markupsafe import Markup
+from werkzeug.contrib.cache import SimpleCache
 
 from macrogen import MacrogenesisInfo, write_dot
 from macrogen.graphutils import remove_edges, simplify_timeline
 
 app = Flask(__name__)
-from pathlib import Path
 
-info = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')
+info = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')  # FIXME evil
 
-@app.route('/')
-def hello_world():
+
+class NoNodes(ValueError):
+    pass
+
+
+def parse_nodes(node_str):
+    nodes = []
+    if node_str:
+        for node_spec in node_str.split(','):
+            try:
+                nodes.append(info.node(node_spec.strip()))
+            except KeyError:
+                ...  # flash("Knoten »%s« nicht gefunden", node_spec.strip())
+    return nodes
+
+
+def prepare_agraph():
     node_str = request.args.get('nodes')
     nodes = parse_nodes(node_str)
     context = request.args.get('context', False)
@@ -27,27 +42,42 @@ def hello_world():
         if induced_edges:
             g = info.base.subgraph(g.nodes).copy()
         if not ignored_edges or tred:
-            g = remove_edges(g, lambda u,v,attr: attr.get('ignore', False))
+            g = remove_edges(g, lambda u, v, attr: attr.get('ignore', False))
         if tred:
             g = remove_edges(g, lambda u, v, attr: attr.get('delete', False))
         g = simplify_timeline(g)
         agraph = write_dot(g, target=None, highlight=nodes[0])
-        p = subprocess.run(['dot', '-T', 'svg'], input=agraph.to_string(), capture_output=True, timeout=30, encoding='UTF-8')
-        svg = Markup(p.stdout)
+        return agraph
     else:
-        svg = ':( Keine Knoten'
+        raise NoNodes('No nodes in graph')
 
 
+@app.route('/macrogenesis/subgraph')
+def render_form():
+    try:
+        agraph = prepare_agraph()
+        p = subprocess.run(['dot', '-T', 'svg'], input=agraph.to_string(), capture_output=True, timeout=30,
+                           encoding='utf-8')
+        svg = Markup(p.stdout)
+    except NoNodes:
+        svg = 'Bitte Knoten und Optionen im Formular angeben.'
+    return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **request.args)
 
-    return render_template('form.html', svg=svg, **request.args)
+
+@app.route('/macrogenesis/subgraph/pdf')
+def render_pdf():
+    agraph = prepare_agraph()
+    p = subprocess.run(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
+    return Response(p.stdout, mimetype='application/pdf')
 
 
-def parse_nodes(node_str):
-    nodes = []
-    if node_str:
-        for node_spec in node_str.split(','):
-            try:
-                nodes.append(info.node(node_spec.strip()))
-            except KeyError:
-                ...  # flash("Knoten »%s« nicht gefunden", node_spec.strip())
-    return nodes
+@app.route('/macrogenesis/subgraph/dot')
+def render_dot():
+    agraph = prepare_agraph()
+    return Response(agraph.to_string(), mimetype='text/vnd.graphviz')
+
+@app.route('/macrogenesis/subgraph/svg')
+def render_svg():
+    agraph = prepare_agraph()
+    p = subprocess.run(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
+    return Response(p.stdout, mimetype='image/svg+xml')

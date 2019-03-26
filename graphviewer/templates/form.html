@@ -8,16 +8,23 @@
 
 {{ svg }}
 
+<p>Download:
+    <a href="subgraph/pdf?{{ query }}">PDF</a> ·
+    <a href="subgraph/dot?{{ query }}">GraphViz .dot</a> ·
+    <a href="subgraph/svg?{{ query }}">SVG</a>
+</p>
+
 <form method="get">
-    <p><label for="nodes">Zentrale(r) Knoten: </label><input type="text" name="nodes" id="nodes" value="{{ nodes }}"></p>
+    <p><label for="nodes">Zentrale(r) Knoten: </label><input type="text" name="nodes" id="nodes" value="{{ nodes }}" placeholder="2 V H.13"></p>
     <h3>Kontextknoten:</h3>
     <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
     <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
-    <p><label for="extra">Pfade von/zu (falls verfügbar): </label><input type="text" name="extra" id="extra" value="{{ extra }}"></p>
+    <p><label for="extra">Pfade von/zu (falls verfügbar): </label>
+        <input type="text" name="extra" id="extra" value="{{ extra }}" placeholder="A, 2 H"></p>
     <h3>Kantenauswahl und -Gestaltung:</h3>
     <p><input type="checkbox" name="induced_edges" id="induced_edges" {% if induced_edges %}checked{% endif %}> <label for="induced_edges">alle induzierten Kanten</label></p>
     <p><input type="checkbox" name="ignored_edges" id="ignored_edges" {% if ignored_edges %}checked{% endif %}> <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
-    <p><input type="checkbox" name="tred" id="tred" {% if tred %}checked{% endif %}> <label for="tred">Transitive Hülle</label> </p>
+    <p><input disabled type="checkbox" name="tred" id="tred" {% if tred %}checked{% endif %}> <label for="tred">Transitive Reduktion</label> </p>
     <p><input type="submit"></p>
 </form>
 
