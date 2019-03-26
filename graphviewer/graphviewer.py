@@ -36,9 +36,11 @@ def prepare_agraph():
     extra = parse_nodes(request.args.get('extra', ''))
     induced_edges = request.args.get('induced_edges', False)
     ignored_edges = request.args.get('ignored_edges', False)
+    direct_assertions = request.args.get('assertions', False)
     tred = request.args.get('tred', False)
     if nodes:
-        g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, pathes=extra, keep_timeline=True)
+        g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, pathes=extra, keep_timeline=True,
+                          direct_assertions=direct_assertions)
         if induced_edges:
             g = info.base.subgraph(g.nodes).copy()
         if not ignored_edges or tred:

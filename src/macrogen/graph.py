@@ -385,7 +385,7 @@ class MacrogenesisInfo:
                 raise e
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool=True,
-                 path_from: Iterable[Node] = {}, pathes: Iterable[Node] = {}, keep_timeline=False) -> nx.MultiDiGraph:
+                 path_from: Iterable[Node] = {}, pathes: Iterable[Node] = {}, keep_timeline=False, direct_assertions: bool = False) -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
 
@@ -435,6 +435,10 @@ class MacrogenesisInfo:
                 self.add_path(subgraph, source, node)
             for target in targets:
                 self.add_path(subgraph, node, target)
+
+            if direct_assertions:
+                subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))
+                subgraph.add_edges_from(self.base.out_edges(node, keys=True, data=True))
 
         if not keep_timeline:
             subgraph = simplify_timeline(subgraph)
