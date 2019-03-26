@@ -130,8 +130,6 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
             for styled_attr in attr.keys() & style['edge']:
                 if attr[styled_attr]:
                     simplified.edges[u, v, k].update(style['edge'][styled_attr])
-            if not attr.get('ignored', False):
-                attr['headlabel'] = attr.get('weight', '·')
 
     if 'node' in style:
         for node, attr in simplified.nodes(data=True):
