@@ -289,7 +289,7 @@ class MacrogenesisInfo:
 
         # Now reconstruct the other data:
         self.working: nx.MultiDiGraph = self.base.copy()
-        self.working = cleanup_graph(self.working)
+        self.working = cleanup_graph(self.working).copy()
         self.dag = self.working.copy()
 
         for u, v, k, attr in self.working.edges(keys=True, data=True):
@@ -308,6 +308,7 @@ class MacrogenesisInfo:
         check_acyclic(self.dag,
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.closure = nx.transitive_closure(self.dag)
+        self._augment_details()
 
     def node(self, spec: Union[Reference, date, str]):
         """
