@@ -3,7 +3,6 @@ import subprocess
 
 from flask import Flask, render_template, request, Response
 from markupsafe import Markup
-from werkzeug.contrib.cache import SimpleCache
 
 from macrogen import MacrogenesisInfo, write_dot
 from macrogen.graphutils import remove_edges, simplify_timeline
@@ -17,23 +16,12 @@ class NoNodes(ValueError):
     pass
 
 
-def parse_nodes(node_str):
-    nodes = []
-    if node_str:
-        for node_spec in node_str.split(','):
-            try:
-                nodes.append(info.node(node_spec.strip()))
-            except KeyError:
-                ...  # flash("Knoten »%s« nicht gefunden", node_spec.strip())
-    return nodes
-
-
 def prepare_agraph():
     node_str = request.args.get('nodes')
-    nodes = parse_nodes(node_str)
+    nodes = info.nodes(node_str)
     context = request.args.get('context', False)
     abs_dates = request.args.get('abs_dates', False)
-    extra = parse_nodes(request.args.get('extra', ''))
+    extra = info.nodes(request.args.get('extra', ''))
     induced_edges = request.args.get('induced_edges', False)
     ignored_edges = request.args.get('ignored_edges', False)
     direct_assertions = request.args.get('assertions', False)

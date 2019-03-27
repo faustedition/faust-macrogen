@@ -357,6 +357,33 @@ class MacrogenesisInfo:
         except StopIteration:
             raise KeyError("No node matching {!r} in the base graph.".format(spec))
 
+    def nodes(self, node_str: str, check: bool = False) -> List[Node]:
+        """
+        Find nodes for a comma-separated list of node strings.
+
+        Args:
+            node_str:
+            check: if true, raise exception when a node has not been found
+
+        See also:
+            MacrogenesisInfo.node
+
+        Returns:
+
+        """
+        nodes = []
+        if node_str:
+            for node_spec in node_str.split(','):
+                try:
+                    stripped = node_spec.strip()
+                    nodes.append(self.node(stripped))
+                except KeyError:
+                    if check:
+                        raise
+                    else:
+                        logger.warning('Requested node %s not found in the graph', stripped)
+        return nodes
+
     def add_path(self, graph: nx.MultiDiGraph, source: Node, target: Node, weight='iweight', method='dijkstra',
                  must_exist=False, edges_from: Optional[nx.MultiDiGraph] = None):
         """
