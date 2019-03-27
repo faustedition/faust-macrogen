@@ -7,6 +7,7 @@ from operator import itemgetter
 
 import pandas as pd
 import requests
+import urllib
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
@@ -383,7 +384,8 @@ class RefTable(HtmlTable):
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
             basename.stem + '-graph.svg').name}"></object>
-            <a href="subgraph?nodes={basename.stem}&amp;context=on&amp;abs_dates=on"><i class="fa fa-sliders"></i></a>\n"""
+            <a href="subgraph?{urllib.parse.urlencode(dict(nodes=str(ref), abs_dates='on', assertions='on',
+                                                           ignored='on'))}"><i class="fa fa-sliders"></i></a>\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
