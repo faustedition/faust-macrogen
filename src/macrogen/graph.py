@@ -2,6 +2,7 @@
 Functions to build the graphs and perform their analyses.
 """
 import pickle
+import re
 from collections import defaultdict, Counter
 from datetime import date, timedelta
 from io import TextIOWrapper
@@ -57,6 +58,10 @@ def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
         raise NotAcyclic(msg)
     else:
         return True
+
+_SIGIL_NORM = re.compile('[. ]+')
+def _normalize_sigil(sigil: str) -> str:
+    return _SIGIL_NORM.sub('', sigil).lower()
 
 
 class MacrogenesisInfo:
@@ -350,9 +355,10 @@ class MacrogenesisInfo:
                 ref = Witness.get(spec)
                 return first(node for node in self.base.nodes if node == ref)
             else:
+                norm_spec = _normalize_sigil(spec)
                 return first(ref for ref in self.base.nodes if isinstance(ref, Reference)
                              and (ref.uri == 'faust://document/faustedition/' + spec
-                                  or ref.label.lower() == spec.lower()))
+                                  or _normalize_sigil(ref.label) == norm_spec))
 
         except StopIteration:
             raise KeyError("No node matching {!r} in the base graph.".format(spec))
