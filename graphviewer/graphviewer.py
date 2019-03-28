@@ -41,6 +41,12 @@ def prepare_agraph():
     else:
         raise NoNodes('No nodes in graph')
 
+def _normalize_args(args):
+    result = dict(args)
+    for field in ['nodes', 'extra']:
+        if field in result:
+            result[field] = ", ".join(str(node) for node in info.nodes(result[field]))
+    return result
 
 @app.route('/macrogenesis/subgraph')
 def render_form():
@@ -50,7 +56,7 @@ def render_form():
         svg = Markup(codecs.decode(output))
     except NoNodes:
         svg = 'Bitte Knoten und Optionen im Formular angeben.'
-    return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **request.args)
+    return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **_normalize_args(request.args))
 
 
 @app.route('/macrogenesis/subgraph/pdf')

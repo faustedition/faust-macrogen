@@ -352,7 +352,7 @@ class MacrogenesisInfo:
             else:
                 return first(ref for ref in self.base.nodes if isinstance(ref, Reference)
                              and (ref.uri == 'faust://document/faustedition/' + spec
-                                  or ref.label == spec))
+                                  or ref.label.lower() == spec.lower()))
 
         except StopIteration:
             raise KeyError("No node matching {!r} in the base graph.".format(spec))
