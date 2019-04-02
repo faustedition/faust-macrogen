@@ -1174,6 +1174,26 @@ def report_stats(graphs: MacrogenesisInfo):
     return stat, dating_stat, edge_df
 
 
+def report_timeline(info: MacrogenesisInfo):
+    refs = info.order_refs()
+    data = [dict(start=ref.earliest.isoformat(), end=ref.latest.isoformat(),
+                 content=_fmt_node(ref))
+            for ref in refs
+            if ref.earliest > EARLIEST and ref.latest < LATEST]
+    (config.path.report_dir / 'timeline.html').write_text(f"""
+    <html><head><title>Zeitstrahl</title>
+    <script src="//unpkg.com/timeline-plus/dist/timeline.js"></script>
+    <link href="//unpkg.com/timeline-plus/dist/timeline.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+    <div id="timeline">Lade Zeitstrahl ...</div>
+    <script>
+    const Timeline = new timeline.Timeline(document.getElementById('timeline'), {json.dumps(data)});
+    </script>
+    </body></html>
+    """)
+
+
 def report_inscriptions(info: MacrogenesisInfo):
     # all documents that have inscriptions in their textual transcript
     from .witnesses import all_documents
