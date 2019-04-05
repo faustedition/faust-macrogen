@@ -894,9 +894,15 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
 
     i1 = Witness.get('faust://inscription/faustedition/2_IV_H.19/i_uebrige')
     i1w = i1.witness
-    g_orphan = demo_graph(i1, i1w, kind='orphan', source='faust://orphan/adoption')
+    g_orphan = demo_graph(i1, i1w, kind='orphan', source='Datierungsinhalt für')
 
-    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan)
+    i1 = Inscription(w1, 'i_1')
+    g6 = nx.MultiDiGraph()
+    g6.add_edge(d1-DAY, i1, kind='not_before', label='Quelle 1')
+    g6.add_edge(i1, w1, kind='inscription', label='Inskription von')
+    g6.add_edge(d1-DAY, w1, copy=True, kind='not_before', label='Quelle 1')
+
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6)
     for name, graph in help_graphs.items():
         write_dot(graph, str(target / f'help-{name}.dot'))
 
@@ -933,6 +939,8 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
         <tr><td><img src="help-orphan.svg"/></td>
             <td>{i1w} wird in den Makrogenesedaten nur indirekt über {i1} referenziert
                 und über eine künstliche Kante angebunden.</td></tr>
+        <tr><td><img src="help-copy.svg"/></td>
+            <td>Die Aussage über {i1} aus den Makrogenesedaten wurde kopiert, sodass sie auch für {w1} gilt.</td></tr>
         </tbody>
     </table>
     """
