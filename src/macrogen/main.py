@@ -27,15 +27,7 @@ def main(argv=sys.argv):
 
     if not options.skip_reports:
         report.write_order_xml(graphs)
-        report.report_help()
-        report.report_refs(graphs)
-        report.report_scenes(graphs)
-        report.report_missing(graphs)
-        report.report_components(graphs)
-        report.report_conflicts(graphs)
-        report.report_sources(graphs)
-        report.report_index(graphs)
-        report.report_downloads(graphs)
+        report.generate_reports(graphs)
         render_all()
 
 

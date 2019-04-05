@@ -315,7 +315,7 @@ class MacrogenesisInfo:
         self.closure = nx.transitive_closure(self.dag)
         self._augment_details()
 
-    def node(self, spec: Union[Reference, date, str]):
+    def node(self, spec: Union[Reference, date, str], default=KeyError):
         """
         Returns a node from the graph.
         Args:
@@ -361,7 +361,10 @@ class MacrogenesisInfo:
                                   or _normalize_sigil(ref.label) == norm_spec))
 
         except StopIteration:
-            raise KeyError("No node matching {!r} in the base graph.".format(spec))
+            if isinstance(default, KeyError):
+                raise KeyError("No node matching {!r} in the base graph.".format(spec))
+            else:
+                return default
 
     def nodes(self, node_str: str, check: bool = False) -> List[Node]:
         """

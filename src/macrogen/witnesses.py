@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional
 import reprlib
@@ -35,6 +36,8 @@ def faust_uri(sigil: str, idno_type: Optional[str] = None, inscription: Optional
         components.append(inscription)
     return '/'.join(components)
 
+def _ids(reference: str):
+    return [s.strip('#') for s in reference.split()]
 
 class Document:
 
@@ -47,11 +50,40 @@ class Document:
         tt_el: etree._Element = tree.find('//f:textTranscript', config.namespaces)
         if tt_el is not None:
             self.text_transcript: Path = config.path.data.joinpath(tt_el.base.replace('faust://xml/', ''), tt_el.get('uri'))
-            transcript: etree._Element = etree.parse(fspath(self.text_transcript))
+            transcript: etree._ElementTree = etree.parse(fspath(self.text_transcript))
             self.inscriptions = transcript.xpath('//tei:change[@type="segment"]/@xml:id', namespaces=config.namespaces)
         else:
             self.text_transcript = None
             self.inscriptions = []
+
+    def _verses(self, text_transcript: Optional[etree._ElementTree] = None):
+        if text_transcript is None:
+            text_transcript = etree.parse(fspath(self.text_transcript))
+
+        lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
+                text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
+        insc_lines = defaultdict(list)
+        if self.inscriptions:
+            for line in lines:
+                prec = line.xpath('preceding::tei:milestone[@unit="stage"][1]', namespaces=config.namespaces)
+                linenos = _ids(line.get('n'))
+                if prec:
+                    for insc in _ids(prec.get('change')):
+                        insc_lines[insc].extend(linenos)
+                else:
+                    insc_lines[''].extend(linenos)
+
+                contained = line.xpath('descendant-or-self::*/@change')
+                if contained is not None:
+                    for change in contained:
+                        for insc in _ids(change):
+                            insc_lines[insc].extend(linenos)
+
+        return insc_lines
+
+
+
+
 
     @property
     def uri(self) -> str:
