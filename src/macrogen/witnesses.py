@@ -42,6 +42,7 @@ def _ids(reference: str):
 class Document:
 
     def __init__(self, source: Path):
+        self.source = source
         tree: etree._ElementTree = etree.parse(fspath(source))
         self.kind = tree.getroot().tag
         idno_els: List[etree.ElementBase] = tree.findall('//f:idno', config.namespaces)
