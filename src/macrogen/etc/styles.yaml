@@ -34,8 +34,9 @@ edge:
     color: gray
     constraint: false
     style: dashed
-#  copy:
-#    color: lightblue
+  copy:
+    arrowhead: empty
+    penwidth: 0.5
 
   # additional style for conflicting edges
   delete:
