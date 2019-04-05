@@ -1,31 +1,29 @@
+import csv
 import json
 import os
+import urllib
 from collections import defaultdict, Counter
 from datetime import date, datetime
+from html import escape
 from itertools import chain, repeat, groupby
 from operator import itemgetter
+from pathlib import Path
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
 
+import networkx as nx
 import pandas as pd
 import requests
-import urllib
 from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
-
-import csv
-from html import escape
-from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Any, Optional
-
-import networkx as nx
 from pandas import DataFrame
 
-from .config import config
 from .bibliography import BiblSource
-from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, MultiEdge
-from .graphutils import pathlink, collapse_timeline, expand_edges, in_path
+from .config import config
 from .datings import get_datings, AbsoluteDating
+from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node
+from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
 
@@ -194,8 +192,8 @@ class HtmlTable:
             row_attrs = self.row_attrs
         if row_attrs is None:
             row_attrs = repeat({})
-        return self._format_header() + ''.join(
-                (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + self._format_footer()
+        return self._format_header() + '\n' + '\n'.join(
+                (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + '\n' + self._format_footer()
 
 
 def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
@@ -520,15 +518,15 @@ def report_downloads(graphs: MacrogenesisInfo):
     <h4>Nodes</h4>
     <p>The <strong>nodes</strong> are either URIs or dates in ISO 8601 format. URIs of the form
        <code>faust://document/<var>scheme</var>/<var>sigil</var></code> denote a witness (document)
-       that has the identifier <var>sigil</var> in the respective identifier scheme. 
-       <code>faust://inscription/<var>scheme</var>/<var>sigil</var>/<var>id</var></code> denote an 
+       that has the identifier <var>sigil</var> in the respective identifier scheme.
+       <code>faust://inscription/<var>scheme</var>/<var>sigil</var>/<var>id</var></code> denote an
        inscription (single “writing event”) on the respective document.</p>
         <p>If some URI has a <var>scheme</var> ≠ <code>faustedition</code>, then it was not possible to map it to
        a document in the edition. You may still try the sigil with the search. Otherwise, the document can be
        displayed at <code>http://faustedition.net/document?sigil=<var>sigil</var></code>.
        </p>
     <p>Dates are always of the form YYYY-MM-DD.</p>
-    
+
     <h4>Edges</h4>
     <p>The edges have attributes that describe them further:</p>
     <table class="pure-table">
@@ -578,7 +576,7 @@ def report_downloads(graphs: MacrogenesisInfo):
           with this assertion</td>
       </tr>
     </table>
-    
+
     <h4>MacrogenesisInfo</h4>
     <p>The <a href='macrogen-info.zip'>macrogen-info.zip</a> file contains the data required to recreate the graph info
     in the <a href='https://github.com/faustedition/faust-macrogen'>faust-macrogen</a> library. To do so, run:</p>
@@ -825,6 +823,7 @@ def report_index(graphs):
              ('missing', 'Fehlendes',
               'Zeugen, zu denen keine Aussagen zur Makrogenese vorliegen, und unbekannte Zeugen'),
              ('sources', 'Quellen', 'Aussagen nach Quelle aufgeschlüsselt'),
+             ('inscriptions', 'Inskriptionen', 'Inskriptionen in Makrogenese bzw. Transkript'),
              ('dag', 'sortierrelevanter Gesamtgraph',
               'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion',
@@ -867,7 +866,7 @@ def report_index(graphs):
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
 
-def report_help():
+def report_help(info: Optional[MacrogenesisInfo] = None):
     target = config.path.report_dir
 
     def demo_graph(u, v, extend=None, **edge_attr) -> nx.MultiDiGraph:
@@ -1070,8 +1069,8 @@ def report_stats(graphs: MacrogenesisInfo):
 
     # now collect some info per witness:
     for ref in refs:
-        preds = list(graphs.base.pred[ref])
-        succs = list(graphs.base.succ[ref])
+        preds = list(graphs.base.pred[ref]) if ref in graphs.base else []
+        succs = list(graphs.base.succ[ref]) if ref in graphs.base else []
 
         pred_dates = [p for p in preds if isinstance(p, date)]
         succ_dates = [s for s in succs if isinstance(s, date)]
@@ -1110,14 +1109,14 @@ def report_stats(graphs: MacrogenesisInfo):
     <h2>Kanten (Aussagen)</h2>
     <p>{len(edge_df)} Kanten, {(edge_df.kind != 'timeline').sum()} Datierungsaussagen:</p>
     <pre>{edge_df.kind.value_counts()}</pre>
-    <p>{edge_df.ignore.sum()} Aussagen (manuell) ignoriert, 
-    {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen 
+    <p>{edge_df.ignore.sum()} Aussagen (manuell) ignoriert,
+    {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen
     ({len(edge_df[edge_df.delete].groupby(['start', 'end']))} ohne Parallelaussagen)
     </p>
-    
+
     <h2>Absolute Datierungen</h2>
     <table class="pure-table">
-        
+
         <thead><tr><td/><th>direkt</th><th>erschlossen</th><th>angepasst</th><th>fehlend</th></tr></thead>
         <tbody>
         <tr><th>Datumsuntergrenze</th>
@@ -1138,3 +1137,89 @@ def report_stats(graphs: MacrogenesisInfo):
     write_html(config.path.report_dir / "stats.php", html, "Statistik")
 
     return stat, dating_stat, edge_df
+
+
+
+def report_inscriptions(info: MacrogenesisInfo):
+
+    # all documents that have inscriptions in their textual transcript
+    from .witnesses import all_documents
+    docs = all_documents()
+    docs_by_uri = {doc.uri: doc for doc in docs}
+    tt_inscriptions = {doc.uri : doc.inscriptions for doc in docs if doc.inscriptions}
+
+    # all documents that have inscriptions in the graph
+    inscriptions_from_graph = [ref for ref in info.base if isinstance(ref, Inscription)]
+    graph_inscriptions: Dict[str, Set[str]] = defaultdict(set)
+    for inscr in inscriptions_from_graph:
+        graph_inscriptions[inscr.witness.uri].add(inscr)
+
+    relevant_uris = {uri for uri in set(tt_inscriptions.keys()).union(graph_inscriptions.keys())}
+    stripped = remove_edges(info.base, lambda _, __ ,attr: attr.get('copy') or attr.get('kind') in ['inscription', 'orphan'])
+
+    table = (HtmlTable()
+             .column('Dokument', lambda uri: _fmt_node(Witness.get(uri)))
+             .column('Inskriptionen Makrogenese')
+             .column('Inskriptionen Transkript')
+             .column('Dok.-Aussagen'))
+
+    def uri_idx(uri):
+        wit = info.node(uri, None)
+        return wit.index if wit else 9999
+
+    def ghlink(path: Path):
+        ghroot = config.xmlroot[:config.xmlroot.rindex('/')+1]    # strip /macrogenesis
+        relative = str(path.relative_to(config.path.data))
+        return ghroot + relative
+
+
+
+    for doc_uri in sorted(relevant_uris, key=uri_idx):
+        wit = info.node(doc_uri, None)
+        if doc_uri in docs_by_uri:
+            document = docs_by_uri[doc_uri]
+            doc_tt_inscriptions = document.inscriptions
+            if document.text_transcript:
+                ttlink = ghlink(document.text_transcript)
+                if doc_tt_inscriptions:
+                    transcript_links = '<br/>'.join(
+                            f'<a href="{ttlink}#L{i.getparent().sourceline}">{i}</a>' for i in sorted(doc_tt_inscriptions))
+                else:
+                    transcript_links = f'<a href="{ttlink}">(keine)</a>'
+            else:
+                transcript_links = f'<a href="{ghlink(document.source)}">(kein Transkript)</a>'
+        else:
+            transcript_links = '(unbekanntes Dokument)'
+        table.row((doc_uri,
+                  '<br/>'.join(f'<a href="{wit.filename.stem}">{wit.inscription}</a>'
+                               for wit in sorted(graph_inscriptions[doc_uri])),
+                   transcript_links,
+                   stripped.in_degree(wit) + stripped.out_degree(wit) if wit and wit in stripped else ''))
+    write_html(config.path.report_dir / 'inscriptions.php',
+               table.format_table() + """
+               <h2>Erläuterungen</h2>
+               <p>
+               Im Idealfall stehen in den Makrogenese- und Transkriptspalten jedes Dokuments genau dieselben Inskriptionen und 
+               in der Spalte <em>Dok.-Aussagen</em> eine 0. Abweichungen können wie folgt erklärt werden:</p>
+               <ul>
+               <li>Inskriptionen, die <strong>nur in der Makrogenesespalte</strong> auftauchen, sind entweder falsch
+                   benannt oder nicht im Textuellen Transkript verzeichnet. Über den Link zur Inskription in der 
+                   Makrogenesespalte kommt man zu allen Aussagen über die Inskription, mit Links in die XML-Quellen.</li>
+               <li>Für Inskriptionen, die <strong>nur in der Transkriptspalte</strong> auftauchen, gibt es keine
+                   Aussagen in den Makrogenesedaten, oder nur mit falschen Referenzen</li>
+               <li><strong>(eingeklammertes)</strong> in der Transkriptspalte deutet auf Fehler in den Makrogenese-Verweisen hin</li> 
+               <li>Die Spalte <strong>Dok.-Aussagen</strong> enthält die Anzahl der Makrogenese-Aussagen über das 
+                   <em>Dokument</em> direkt statt über die Inskriptionen. Hier müsste das Verhältnis zwischen
+                   Dokument und Inskriptionen geklärt werden. (In den Graphen sind von den Inskriptionen
+                   kopierte Aussagen mit einer leeren Pfeilspitze dargestellt, direkte Aussagen mit einer schwarzen)
+               </li>
+               </ul>
+               """,
+               'Inskriptionen')
+
+
+
+def generate_reports(info: MacrogenesisInfo):
+    report_functions = [fn for name, fn in globals().items() if name.startswith('report_')]
+    for report in report_functions:
+        report(info)

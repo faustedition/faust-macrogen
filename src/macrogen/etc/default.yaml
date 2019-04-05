@@ -32,6 +32,7 @@ solver_options:       # pass options to the solvers. maps solver name or 'all' t
     verbose: false
 light_timeline: true  # use exclusion instead of high weight for timeline edges
 
+progressbar: true    # allow to show a progress bar in some situations
 
 
 ## Other data

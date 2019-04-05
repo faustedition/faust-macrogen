@@ -233,7 +233,7 @@ def render_all(timeout=None):
     with Pool() as pool:
         global _render_queue
         dots, _render_queue = _render_queue, []
-        result = list(tqdm(pool.imap_unordered(partial(render_file_alt, timeout=timeout), dots),
+        result = list(config.progress(pool.imap_unordered(partial(render_file_alt, timeout=timeout), dots),
                            desc='Rendering', total=len(dots), unit=' SVGs'))
         not_rendered = [entry for entry in result if isinstance(entry, tuple)]
         timeout = [path for path, err in not_rendered if isinstance(err, subprocess.TimeoutExpired)]

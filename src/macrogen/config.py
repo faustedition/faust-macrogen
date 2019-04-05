@@ -317,6 +317,16 @@ class Configuration:
     def getLogger(self, name):
         return _Proxy(logging.getLogger, name)
 
+    def progress(self, iterable, *args, **kwargs):
+        if self.progressbar:
+            try:
+                from tqdm import tqdm
+                return tqdm(iterable, *args, **kwargs)
+            except ImportError:
+                pass
+        return iterable
+
+
     def relative_path(self, absolute_path):
         return Path(absolute_path).relative_to(self.path.data)
 
