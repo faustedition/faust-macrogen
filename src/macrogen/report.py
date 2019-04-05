@@ -1173,7 +1173,7 @@ def report_inscriptions(info: MacrogenesisInfo):
 
     def uri_idx(uri):
         wit = info.node(uri, None)
-        return wit.index if wit else 9999
+        return getattr(wit, 'index', 9999)
 
     def ghlink(path: Path):
         ghroot = config.xmlroot[:config.xmlroot.rindex('/')+1]    # strip /macrogenesis
