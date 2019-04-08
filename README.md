@@ -9,9 +9,8 @@ Python ≥ 3.6 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separate
 
 ```bash
 git submodules update --init --remote
-pip install pipenv
-pipenv install
-pipenv run ./main.py
+pip install -e .
+macrogen
 ```
 
 will produce the output.
@@ -20,7 +19,9 @@ will produce the output.
 
 Macrogenesis data structure is documented elsewhere (TODO Link).
 
-* `faust.ini` is an ini-style file that contains some configuration options (paths to the data etc.)
+Use --help to see a list of options.
+
+* `src/macrogen/etc/default.yaml` is the main configuration file that can be copied and edited. It links to various extra files:
 * `logging.yaml` contains the logging configuration for the main script. It’s a YAML file containing the data in the [dictConfig](https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig) format of Python’s logging system.
 * `styles.yaml` contains styling information for the graphs.
 
