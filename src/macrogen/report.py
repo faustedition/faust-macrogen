@@ -656,7 +656,7 @@ def report_missing(graphs: MacrogenesisInfo):
         logger.info('Writing missing page for %s to %s', ref, missing_path)
         write_html(missing_path,
                    f"""
-                   <p class="pure-alert pure-alert-warning"><strong>Für {ref} liegen noch keine Makrogenesedaten vor.</strong>
+                   <p class="pure-alert pure-alert-warning"><strong>Für <a href="/document?sigil={ref.filename.stem}">{ref}</a> liegen noch keine Makrogenesedaten vor.</strong>
                    Ggf. fehlt auch nur die Zuordnung zur richtigen Sigle – siehe in der <a href="refs">Liste der Referenzen</a>.</p>
                    """,
                    head=format(ref))
