@@ -9,6 +9,7 @@ from itertools import chain, repeat, groupby
 from operator import itemgetter
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
+from urllib.parse import urlencode
 
 import networkx as nx
 import pandas as pd
@@ -381,7 +382,7 @@ class RefTable(HtmlTable):
         report = f"<!-- {repr(ref)} -->\n"
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
-            basename.stem + '-graph.svg').name}"></object>
+                basename.stem + '-graph.svg').name}"></object>
             <a href="subgraph?{urllib.parse.urlencode(dict(nodes=str(ref), abs_dates='on', assertions='on',
                                                            ignored='on'))}"><i class="fa fa-sliders"></i></a>\n"""
         kinds = {'not_before': 'nicht vor',
@@ -898,9 +899,9 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
 
     i1 = Inscription(w1, 'i_1')
     g6 = nx.MultiDiGraph()
-    g6.add_edge(d1-DAY, i1, kind='not_before', label='Quelle 1')
+    g6.add_edge(d1 - DAY, i1, kind='not_before', label='Quelle 1')
     g6.add_edge(i1, w1, kind='inscription', label='Inskription von')
-    g6.add_edge(d1-DAY, w1, copy=True, kind='not_before', label='Quelle 1')
+    g6.add_edge(d1 - DAY, w1, copy=True, kind='not_before', label='Quelle 1')
 
     help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6)
     for name, graph in help_graphs.items():
@@ -969,7 +970,7 @@ class ByScene:
         scene_xml: etree._ElementTree = etree.parse('scenes.xml')
         self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=config.namespaces)
         bargraph_info = requests.get(
-            'http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
+                'http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
         self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in
                           bargraph_info}
         self.ordering = list(enumerate(graphs.order_refs()))
@@ -1002,7 +1003,7 @@ class ByScene:
             write_dot(scene_subgraph, target / graph_name)
             write_html(target / subgraph_page,
                        f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix(
-                           '.svg')}"></object>""",
+                               '.svg')}"></object>""",
                        graph_id='refgraph',
                        head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
                                                         dict(caption=title, link=basename)])
@@ -1147,14 +1148,12 @@ def report_stats(graphs: MacrogenesisInfo):
     return stat, dating_stat, edge_df
 
 
-
 def report_inscriptions(info: MacrogenesisInfo):
-
     # all documents that have inscriptions in their textual transcript
     from .witnesses import all_documents
     docs = all_documents()
     docs_by_uri = {doc.uri: doc for doc in docs}
-    tt_inscriptions = {doc.uri : doc.inscriptions for doc in docs if doc.inscriptions}
+    tt_inscriptions = {doc.uri: doc.inscriptions for doc in docs if doc.inscriptions}
 
     # all documents that have inscriptions in the graph
     inscriptions_from_graph = [ref for ref in info.base if isinstance(ref, Inscription)]
@@ -1163,24 +1162,24 @@ def report_inscriptions(info: MacrogenesisInfo):
         graph_inscriptions[inscr.witness.uri].add(inscr)
 
     relevant_uris = {uri for uri in set(tt_inscriptions.keys()).union(graph_inscriptions.keys())}
-    stripped = remove_edges(info.base, lambda _, __ ,attr: attr.get('copy') or attr.get('kind') in ['inscription', 'orphan'])
+    stripped = remove_edges(info.base,
+                            lambda _, __, attr: attr.get('copy') or attr.get('kind') in ['inscription', 'orphan'])
 
     table = (HtmlTable()
              .column('Dokument', lambda uri: _fmt_node(Witness.get(uri)))
              .column('Inskriptionen Makrogenese')
              .column('Inskriptionen Transkript')
-             .column('Dok.-Aussagen'))
+             .column('Dok.-Aussagen')
+             .column('Graph'))
 
     def uri_idx(uri):
         wit = info.node(uri, None)
         return getattr(wit, 'index', 9999)
 
     def ghlink(path: Path):
-        ghroot = config.xmlroot[:config.xmlroot.rindex('/')+1]    # strip /macrogenesis
+        ghroot = config.xmlroot[:config.xmlroot.rindex('/') + 1]  # strip /macrogenesis
         relative = str(path.relative_to(config.path.data))
         return ghroot + relative
-
-
 
     for doc_uri in sorted(relevant_uris, key=uri_idx):
         wit = info.node(doc_uri, None)
@@ -1191,20 +1190,25 @@ def report_inscriptions(info: MacrogenesisInfo):
                 ttlink = ghlink(document.text_transcript)
                 if doc_tt_inscriptions:
                     transcript_links = '<br/>'.join(
-                            f'<a href="{ttlink}#L{i.getparent().sourceline}">{i}</a>' for i in sorted(doc_tt_inscriptions))
+                            f'<a href="{ttlink}#L{i.getparent().sourceline}">{i}</a>' for i in
+                            sorted(doc_tt_inscriptions))
                 else:
                     transcript_links = f'<a href="{ttlink}">(keine)</a>'
             else:
                 transcript_links = f'<a href="{ghlink(document.source)}">(kein Transkript)</a>'
         else:
             transcript_links = '(unbekanntes Dokument)'
+        nodestr = ", ".join(map(str, [wit] + sorted(graph_inscriptions.get(doc_uri, []))))
         table.row((doc_uri,
-                  '<br/>'.join(f'<a href="{wit.filename.stem}">{wit.inscription}</a>'
-                               for wit in sorted(graph_inscriptions[doc_uri])),
+                   '<br/>'.join(f'<a href="{wit.filename.stem}">{wit.inscription}</a>'
+                                for wit in sorted(graph_inscriptions[doc_uri])),
                    transcript_links,
-                   stripped.in_degree(wit) + stripped.out_degree(wit) if wit and wit in stripped else ''))
+                   str(stripped.in_degree(wit) + stripped.out_degree(wit)) if wit and wit in stripped else '',
+                  f'<a href="subgraph?{urllib.parse.urlencode(dict(nodes=nodestr, assertions=True, ignored=True))}"><i class="fa fa-sliders"></i></a>'))
     write_html(config.path.report_dir / 'inscriptions.php',
                table.format_table() + """
+               <div class="pure-g-r">
+               <section class="pure-u-1">
                <h2>Erläuterungen</h2>
                <p>
                Im Idealfall stehen in den Makrogenese- und Transkriptspalten jedes Dokuments genau dieselben Inskriptionen und 
@@ -1222,9 +1226,9 @@ def report_inscriptions(info: MacrogenesisInfo):
                    kopierte Aussagen mit einer leeren Pfeilspitze dargestellt, direkte Aussagen mit einer schwarzen)
                </li>
                </ul>
+               </section></div>
                """,
                'Inskriptionen')
-
 
 
 def generate_reports(info: MacrogenesisInfo):
