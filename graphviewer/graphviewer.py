@@ -4,9 +4,10 @@ import subprocess
 import networkx as nx
 from flask import Flask, render_template, request, Response
 from markupsafe import Markup
+from networkx import DiGraph
 
 from macrogen import MacrogenesisInfo, write_dot
-from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges
+from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_edges
 
 app = Flask(__name__)
 
@@ -43,7 +44,7 @@ def prepare_agraph():
                 g = g.edge_subgraph([(u, v, k) for u, v, k, _ in expand_edges(g, reduction.edges)])
             else:
                 g.add_node('Cannot produce DAG!?')  # FIXME improve error reporting
-        agraph = write_dot(g, target=None, highlight=nodes[0])
+        agraph = write_dot(g, target=None, highlight=nodes)
         return agraph
     else:
         raise NoNodes('No nodes in graph')

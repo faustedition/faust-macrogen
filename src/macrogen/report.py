@@ -1182,10 +1182,17 @@ def report_inscriptions(info: MacrogenesisInfo):
         return ghroot + relative
 
     for doc_uri in sorted(relevant_uris, key=uri_idx):
+        relevance = 1
         wit = info.node(doc_uri, None)
         if doc_uri in docs_by_uri:
             document = docs_by_uri[doc_uri]
             doc_tt_inscriptions = document.inscriptions
+            graph_inscr_uris = {inscr.uri for inscr in graph_inscriptions[doc_uri]}
+            tt_inscr_uris = set(document.inscription_uris) if doc_tt_inscriptions else set()
+            if graph_inscr_uris == tt_inscr_uris:
+                relevance -= 1
+            elif graph_inscr_uris - tt_inscr_uris:
+                relevance += 1
             if document.text_transcript:
                 ttlink = ghlink(document.text_transcript)
                 if doc_tt_inscriptions:
@@ -1198,14 +1205,30 @@ def report_inscriptions(info: MacrogenesisInfo):
                 transcript_links = f'<a href="{ghlink(document.source)}">(kein Transkript)</a>'
         else:
             transcript_links = '(unbekanntes Dokument)'
+
+
+        doc_assertions = (stripped.in_degree(wit) + stripped.out_degree(wit)) if wit and wit in stripped else 0
+        if doc_assertions:
+            relevance += 1
+
+        if not isinstance(Witness.get(doc_uri), Witness):
+            relevance += 1
+
+        relevance_class = ['ignore', '', 'warning', 'error'][max(0, min(relevance, 3))]
+
         nodestr = ", ".join(map(str, [wit] + sorted(graph_inscriptions.get(doc_uri, []))))
         table.row((doc_uri,
                    '<br/>'.join(f'<a href="{wit.filename.stem}">{wit.inscription}</a>'
                                 for wit in sorted(graph_inscriptions[doc_uri])),
                    transcript_links,
-                   str(stripped.in_degree(wit) + stripped.out_degree(wit)) if wit and wit in stripped else '',
-                  f'<a href="subgraph?{urllib.parse.urlencode(dict(nodes=nodestr, assertions=True, ignored=True))}"><i class="fa fa-sliders"></i></a>'))
+                   str(doc_assertions) if doc_assertions else '',
+                   f'<a href="subgraph?{urllib.parse.urlencode(dict(nodes=nodestr, assertions=True, ignored=True))}"><i class="fa fa-sliders"></i></a>'), class_=relevance_class)
     write_html(config.path.report_dir / 'inscriptions.php',
+               """<style>
+               .warning td { background-color: rgba(220,160,0,0.2); }
+               .error td { background-color: rgba(190,0,0,0.1); }
+               .ignore td * { color: lightgray; }
+               </style>""" +
                table.format_table() + """
                <div class="pure-g-r">
                <section class="pure-u-1">
