@@ -2,7 +2,7 @@ import shutil
 import subprocess
 from functools import partial
 from os import PathLike
-from typing import Sequence, Optional, Union, Tuple
+from typing import Sequence, Optional, Union, Tuple, Dict
 from datetime import date, timedelta
 from time import perf_counter
 from multiprocessing.pool import Pool
@@ -18,6 +18,7 @@ from .datings import add_timeline_edges
 from macrogen import BiblSource
 from macrogen.graphutils import pathlink
 from .uris import Reference
+from .graph import Node
 import logging
 
 logger: logging.Logger = config.getLogger(__name__)
@@ -66,8 +67,9 @@ def _simplify_attrs(attrs):
             attrs[key] = str(value)
 
 
-def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
-              highlight=None, record='auto', edge_labels=True) -> AGraph:
+def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph.dot', style: Optional[Dict] = None,
+              highlight: Optional[Union[Node, Sequence[Node]]]=None, highlight_path: Optional[Tuple[Node, Node]] = None,
+              record: Union[bool, str]='auto', edge_labels: bool = True) -> AGraph:
     """
     Writes a properly styled graphviz file for the given graph.
 
@@ -75,7 +77,8 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
         graph: the subgraph to draw
         target: dot file that should be written, may be a Path. If none, nothing is written but the AGraph returns
         style (dict): rules for styling the graph
-        highlight: if a node, highlight that in the graph. If a tuple of nodes, highlight the shortest path(s) from the
+        highlight: if a node, highlight that in the graph.
+        highlight_path: If a tuple of nodes, highlight the shortest path(s) from the
                    first to the second node
         record: record in the queue for `render_all`. If ``"auto"`` dependent on graph size
         edge_labels (bool): Should we paint edge labels?
@@ -101,20 +104,27 @@ def write_dot(graph: nx.MultiDiGraph, target='base_graph.dot', style=None,
             vis.nodes[node]['URL'] = node.filename.stem
             vis.nodes[node]['target'] = '_top'
 
+    if highlight_path is not None:
+        if highlight is None:
+            highlight = list(highlight_path)
+        else:
+            highlight = list(highlight)
+            highlight.extend(highlight_path)
+            if 'highlight' in style['edge']:
+                try:
+                    vis.edges[highlight].update(style['edge']['highlight'])
+                except KeyError:
+                    logger.warning('Highlight key %s not found while writing %s', highlight, target)
+
     if highlight is not None:
-        if isinstance(highlight, tuple) and 'highlight' in style['edge']:
-            try:
-                vis.edges[highlight].update(style['edge']['highlight'])
-                if 'highlight' in style['node']:
-                    vis.nodes[highlight[0]].update(style['node']['highlight'])
-                    vis.nodes[highlight[1]].update(style['node']['highlight'])
-            except KeyError:
-                logger.warning('Highlight key %s not found while writing %s', highlight, target)
-        elif not isinstance(highlight, tuple) and 'highlight' in style['node']:
-            try:
-                vis.nodes[highlight].update(style['node']['highlight'])
-            except KeyError:
-                logger.warning('Highlight key %s not found while writing %s', highlight, target)
+        if not isinstance(highlight, Sequence):
+            highlight = [highlight]
+        elif 'highlight' in style['node']:
+            for highlight_node in highlight:
+                try:
+                    vis.nodes[highlight_node].update(style['node']['highlight'])
+                except KeyError:
+                    logger.warning('Highlight key %s not found while writing %s', highlight, target)
 
     simplified: MultiDiGraph = simplify_graph(vis)
 

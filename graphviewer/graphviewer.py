@@ -37,13 +37,13 @@ def prepare_agraph():
             g = remove_edges(g, lambda u, v, attr: attr.get('ignore', False))
         if tred:
             g = remove_edges(g, lambda u, v, attr: attr.get('delete', False))
-        g = simplify_timeline(g)
         if tred:
             if nx.is_directed_acyclic_graph(g):
                 reduction = nx.transitive_reduction(g)
                 g = g.edge_subgraph([(u, v, k) for u, v, k, _ in expand_edges(g, reduction.edges)])
             else:
                 g.add_node('Cannot produce DAG!?')  # FIXME improve error reporting
+        g = simplify_timeline(g)
         agraph = write_dot(g, target=None, highlight=nodes)
         return agraph
     else:
