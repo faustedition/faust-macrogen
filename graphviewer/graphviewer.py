@@ -87,3 +87,7 @@ def render_svg():
     agraph = prepare_agraph()
     output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
     return Response(output, mimetype='image/svg+xml')
+
+@app.route('/macrogenesis/subgraph/help')
+def render_help():
+    return render_template('help.html')

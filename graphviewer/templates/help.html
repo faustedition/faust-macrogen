@@ -1,0 +1,82 @@
+{% extends "faustedition.html" %}
+{% block content %}
+
+    <article class="center pure-g-r">
+        <section class="pure-u-1">
+            <p>Der interaktive Subgraphviewer zeigt einen Ausschnitt aus dem Gesamtgraphen an, dessen Inhalt über ein
+                Formular gewählt werden kann. Eine vorbelegte Ansicht bekommt man, indem man auf den Makrogeneseseiten
+                auf das Symbol <i class="fa fa-sliders"></i> klickt, das z.B. neben den Graphen auf den Zeugenseiten
+                erscheint.</p>
+            <p>Die Gestaltung und Bedienung der eigentlichen Graphen erfolgt wie gewohnt, d.h. Klick auf einen Knoten
+                führt zur Knotenseite, Klick auf eine Konfliktkante zur Konfliktseite.</p>
+            <p>Die <strong>Eingabefelder</strong> erlauben das Auflisten von einem oder mehreren Knoten. Mehrere Knoten
+                müssen durch <code>,</code> getrennt werden, zusätzliche Leerzeichen außerhalb der Siglen etc. werden
+                ignoriert. Als Knotenbezeichnung möglich sind:</p>
+            <ul>
+                <li>Knotenlabels wie im Graph, also
+                    <ul>
+                        <li>Sigle</li>
+                        <li>Sigle <em>Leerzeichen</em> Inskription</li>
+                        <li>Datum in der Form YYYY-MM-TT</li>
+                    </ul>
+                </li>
+                <li>URIs wie in den Makrogenese-Dateien</li>
+            </ul>
+            </ul>
+            <h2 id="graphaufbau">Graphaufbau</h2>
+            <p>Die <strong>Zentralen Knoten</strong> bilden die Grundlage für den Graphaufbau in
+                <strong>Kontext</strong>. Der dabei entstehende Graph kann dann im Bereich
+                <strong>Kantenauswahl</strong> weiter beeinflusst werden, ohne dass nennenswerte Kanten hinzukommen. Die
+                zentralen Knoten werden im Graphen hervorgehoben.</p>
+            <h3 id="kontext">Kontext</h3>
+            <dl>
+                <dt>Nachbarknoten</dt>
+                <dd>zu jedem zentralen Knoten werden die Nachbarknoten eingeschlossen, d.h. diejenigen Knoten, die im
+                    DAG unmittelbar vor oder nach dem Kontextknoten liegen.
+                </dd>
+                <dt>absolute Datierungen rechtfertigen</dt>
+                <dd>zu jedem zentralen Knoten wird versucht, das früheste von diesem Knoten aus erreichbare Datum sowie
+                    das späteste Datum, von dem der zentrale Knoten erreichbar ist, zu ermitteln. Der kürzeste Pfad
+                    zwischen dem zentralen Knoten und den jeweiligen Daten wird mitsamt Parallelkanten in den Graphen
+                    aufgenommen. Diese Pfade rechtfertigen die ‘engstmögliche’ Datierung, die für den Zeugen angegeben
+                    werden kann.
+                </dd>
+                <dt>unmittelbare Aussagen</dt>
+                <dd>alle Aussagen, die den Kernknoten unmittelbar betreffen, werden in den Graphen eingeschlossen. Dies
+                    unterscheidet sich von den Nachbarknoten dadurch, dass hier auch Konflikt- und ggf. ignorierte
+                    Kanten mit einbezogen werden.
+                </dd>
+                <dt>Pfade von/zu</dt>
+                <dd>Werden hier Knoten aufgeführt, so werden die kürzesten Pfade zwischen jedem Kernknoten und jedem der
+                    hier aufgeführten Pfade in den Graphen aufgenommen, falls existent. Auf diese Weise können die
+                    Kernknoten in einen Kontext zu relevanten Meilensteinen gesetzt werden.
+                </dd>
+            </dl>
+            <h2 id="kantenauswahl">Kantenauswahl</h2>
+            <p>Der so aufgebaute Graph kann nun noch weiter manipuliert werden:</p>
+            <dl>
+                <dt>alle induzierten Kanten</dt>
+                <dd>alle Kanten zwischen den bislang im Graphen befindlichen Knoten werden eingeschlossen (ignorierte
+                    Kanten aber nur, wenn zusätzlich das nächste Kästchen angekreuzt wird)
+                </dd>
+                <dt>ignorierte (graue) Kanten</dt>
+                <dd>wenn dieses Kästchen <em>nicht</em> angekreuzt ist, werden ignorierte (graue) Kanten wieder entfernt
+                    bevor der Graph visualisiert wird.
+                </dd>
+                <dt>Transitive Reduktion</dt>
+                <dd>zunächst werden alle Konfliktkanten und ignorierten Kanten entfernt, aus dem verbleibenden Graphen
+                    wird dann die Transitive Reduktion berechnet. D.h. es werden alle “überflüssigen” Kanten in Bezug
+                    auf die Erreichbarkeitsrelation entfernt: wenn <span
+                            class="math inline"><em>u</em> → <em>v</em> → <em>w</em></span> und <span
+                            class="math inline"><em>u</em> → <em>w</em></span> im Graphen ist, ist <span
+                            class="math inline"><em>u</em> → <em>w</em></span> überflüssig, da <span
+                            class="math inline"><em>w</em></span> von <span class="math inline"><em>u</em></span> auch
+                    über <span class="math inline"><em>v</em></span> erreichbar ist.
+                </dd>
+            </dl>
+            <h2>Download</h2>
+            <p>Im Download-Bereich (<i class="fa fa-download"></i>) stehen Versionen als PDF, SVG und GraphViz zur
+                Verfügung. </p>
+        </section>
+    </article>
+{% endblock %}
