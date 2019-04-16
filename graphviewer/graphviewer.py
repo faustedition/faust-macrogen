@@ -48,6 +48,7 @@ def prepare_agraph():
         g = simplify_timeline(g)
         g.add_nodes_from(nodes)
         agraph = write_dot(g, target=None, highlight=nodes)
+        agraph.graph_attr['basename'] = ",".join([str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
         return agraph
     else:
         raise NoNodes('No nodes in graph')
@@ -75,19 +76,25 @@ def render_pdf():
     agraph = prepare_agraph()
     output = subprocess.check_output(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), timeout=30)
     # p = subprocess.run(['dot', '-T', 'pdf'], input=codecs.encode(agraph.to_string()), capture_output=True, timeout=30)
-    return Response(output, mimetype='application/pdf')
+    response = Response(output, mimetype='application/pdf')
+    response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.pdf"'
+    return response
 
 
 @app.route('/macrogenesis/subgraph/dot')
 def render_dot():
     agraph = prepare_agraph()
-    return Response(agraph.to_string(), mimetype='text/vnd.graphviz')
+    response = Response(agraph.to_string(), mimetype='text/vnd.graphviz')
+    response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.dot"'
+    return response
 
 @app.route('/macrogenesis/subgraph/svg')
 def render_svg():
     agraph = prepare_agraph()
     output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
-    return Response(output, mimetype='image/svg+xml')
+    response = Response(output, mimetype='image/svg+xml')
+    response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.svg"'
+    return response
 
 @app.route('/macrogenesis/subgraph/help')
 def render_help():
