@@ -46,6 +46,7 @@ def prepare_agraph():
             else:
                 g.add_node('Cannot produce DAG!?')  # FIXME improve error reporting
         g = simplify_timeline(g)
+        g.add_nodes_from(nodes)
         agraph = write_dot(g, target=None, highlight=nodes)
         return agraph
     else:

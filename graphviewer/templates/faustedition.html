@@ -196,6 +196,14 @@ requirejs(['jquery', 'jquery.chocolat', 'jquery.overlays', 'jquery.clipboard', '
         });
         $('#cookie-consent').show();
     }
+
+    {% block breadcrumb_js %}
+    document.getElementById('breadcrumbs').appendChild(Faust.createBreadcrumbs(
+        {%- block breadcrumbs %}
+            [{caption:''}]
+        {% endblock -%}
+    ));
+    {% endblock %}
 });
 </script>
 

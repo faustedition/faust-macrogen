@@ -30,9 +30,9 @@
 
 {% endblock %}
 
-{% block title %}
+{%- block title -%}
  · Makrogenese-Teilgraph: {{ nodes }}
-{% endblock %}
+{%- endblock -%}
 
 {% block download_current %}
     <div class="pure-u-1-3 pure-gap">
@@ -44,3 +44,7 @@
 {% endblock %}
 
 {% block helpurl %}subgraph/help{% endblock %}
+
+{%- block breadcrumbs -%}
+[{caption: 'Makrogenese', link: '/macrogenesis'}, {caption: 'Teilgraph: {{ nodes }}'}]
+{%- endblock -%}
