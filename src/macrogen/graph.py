@@ -361,7 +361,7 @@ class MacrogenesisInfo:
                                   or _normalize_sigil(ref.label) == norm_spec))
 
         except StopIteration:
-            if isinstance(default, KeyError):
+            if default is KeyError:
                 raise KeyError("No node matching {!r} in the base graph.".format(spec))
             else:
                 return default
@@ -459,7 +459,7 @@ class MacrogenesisInfo:
             for node in central_nodes:
                 relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node])
 
-        subgraph = nx.subgraph(self.base, relevant_nodes).copy()
+        subgraph: nx.MultiDiGraph = nx.subgraph(self.base, relevant_nodes).copy()
         sources = set(path_from).union(paths)
         targets = set(path_from).union(paths)
 
@@ -490,6 +490,9 @@ class MacrogenesisInfo:
             if direct_assertions:
                 subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))
                 subgraph.add_edges_from(self.base.out_edges(node, keys=True, data=True))
+
+        # make sure the central nodes actually are in the subgraph
+        subgraph.add_nodes_from(central_nodes)
 
         if not keep_timeline:
             subgraph = simplify_timeline(subgraph)
