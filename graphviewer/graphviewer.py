@@ -28,6 +28,7 @@ def prepare_agraph():
     ignored_edges = request.args.get('ignored_edges', False)
     direct_assertions = request.args.get('assertions', False)
     paths_wo_timeline = request.args.get('paths_wo_timeline', False)
+    no_edge_labels = request.args.get('no_edge_labels', False)
     tred = request.args.get('tred', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
@@ -47,7 +48,7 @@ def prepare_agraph():
                 g.add_node('Cannot produce DAG!?')  # FIXME improve error reporting
         g = simplify_timeline(g)
         g.add_nodes_from(nodes)
-        agraph = write_dot(g, target=None, highlight=nodes)
+        agraph = write_dot(g, target=None, highlight=nodes, edge_labels=not no_edge_labels)
         agraph.graph_attr['basename'] = ",".join([str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
         return agraph
     else:
