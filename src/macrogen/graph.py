@@ -422,7 +422,9 @@ class MacrogenesisInfo:
                 raise e
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool=True,
-                 path_from: Iterable[Node] = {}, pathes: Iterable[Node] = {}, keep_timeline=False, direct_assertions: bool = False) -> nx.MultiDiGraph:
+                 path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
+                 paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False) \
+            -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
 
@@ -432,7 +434,9 @@ class MacrogenesisInfo:
                      the dag
             path_to: Nodes to which the shortest path should be included, if any
             path_from: Node from which the shortest path should be included, if any
-            pathes: Node(s) from / to which the spp should be included, if any
+            paths: Node(s) from / to which the spp should be included, if any
+            paths_without_timeline: Paths should be built without considering the timeline
+
 
         Description:
             This method can be used to extract an 'interesting' subgraph around one or more nodes from the base
@@ -456,22 +460,32 @@ class MacrogenesisInfo:
                 relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node])
 
         subgraph = nx.subgraph(self.base, relevant_nodes).copy()
-        sources = set(path_from).union(pathes)
-        targets = set(path_from).union(pathes)
+        sources = set(path_from).union(paths)
+        targets = set(path_from).union(paths)
+
+        if paths_without_timeline:
+            path_base = remove_edges(self.dag, lambda u,v,attr: attr.get('kind') == 'timeline')
+        else:
+            path_base = self.dag
 
         for node in central_nodes:
             if abs_dates:
                 prev = max((d for d in self.closure.pred[node] if isinstance(d, date)), default=None)
                 if prev is not None and prev not in central_nodes:
-                    self.add_path(subgraph, prev, node, edges_from=self.dag)
+                    self.add_path(subgraph, prev, node, edges_from=path_base)
                 next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
                 if next_ is not None and next not in central_nodes:
-                    self.add_path(subgraph, node, next_, edges_from=self.dag)
+                    self.add_path(subgraph, node, next_, edges_from=path_base)
 
             for source in sources:
-                self.add_path(subgraph, source, node)
+                self.add_path(subgraph, source, node, edges_from=path_base)
             for target in targets:
-                self.add_path(subgraph, node, target)
+                self.add_path(subgraph, node, target, edges_from=path_base)
+            if paths_between_nodes:
+                for other in central_nodes:
+                    if other != node:
+                        self.add_path(subgraph, node, other, edges_from=path_base)
+                        self.add_path(subgraph, other, node, edges_from=path_base)
 
             if direct_assertions:
                 subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))
