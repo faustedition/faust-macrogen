@@ -42,6 +42,21 @@
         </nav>
     </header>
     <main>
+        {% block errors %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="error-container center pure-g-r">
+                        {% for category, message in messages %}
+                            <div class="pure-u-1 pure-alert pure-alert-{{ category }}">
+                                <i class="fa fa-cancel pure-pull-right closebtn"
+                                   onclick="this.parentElement.parentElement.removeChild(this.parentElement);"></i>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% endblock %}
         {% block content %}
         {% endblock %}
     </main>

@@ -366,32 +366,41 @@ class MacrogenesisInfo:
             else:
                 return default
 
-    def nodes(self, node_str: str, check: bool = False) -> List[Node]:
+    def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[List[Node], Tuple[List[Node], List[str]]]:
         """
         Find nodes for a comma-separated list of node strings.
 
         Args:
             node_str:
             check: if true, raise exception when a node has not been found
+            report_errors: if True, return an additional list of strings that couldn’t be resolved
 
         See also:
             MacrogenesisInfo.node
 
         Returns:
+            unless report_errors, a list of Nodes (i.e. each item is either a Reference or a date).
+            Otherwise, a pair: first a list of Nodes, then a list of strings which could not be resolved; both possibly empty.
 
         """
-        nodes = []
+        nodes: List[Node] = []
+        errors: List[str] = []
         if node_str:
             for node_spec in node_str.split(','):
                 try:
                     stripped = node_spec.strip()
                     nodes.append(self.node(stripped))
                 except KeyError:
+                    if report_errors:
+                        errors.append(node_spec)
                     if check:
                         raise
                     else:
                         logger.warning('Requested node %s not found in the graph', stripped)
-        return nodes
+        if report_errors:
+            return nodes, errors
+        else:
+            return nodes
 
     def add_path(self, graph: nx.MultiDiGraph, source: Node, target: Node, weight='iweight', method='dijkstra',
                  must_exist=False, edges_from: Optional[nx.MultiDiGraph] = None):

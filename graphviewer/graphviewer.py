@@ -2,7 +2,7 @@ import codecs
 import subprocess
 
 import networkx as nx
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, flash
 from markupsafe import Markup
 from networkx import DiGraph
 
@@ -10,6 +10,14 @@ from macrogen import MacrogenesisInfo, write_dot
 from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_edges
 
 app = Flask(__name__)
+
+try:
+    from gv_config import SECRET_KEY
+    app.secret_key = SECRET_KEY
+except ImportError:
+    app.logger.error('No secret key config -- using unsafe default')
+    app.secret_key = b'not-really-a-secret-key'
+
 
 info = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')  # FIXME evil
 
@@ -20,10 +28,14 @@ class NoNodes(ValueError):
 
 def prepare_agraph():
     node_str = request.args.get('nodes')
-    nodes = info.nodes(node_str)
+    nodes, errors = info.nodes(node_str, report_errors=True)
+    if errors:
+        flash('Die folgenden zentralen Knoten wurden nicht gefunden: ' + ', '.join(errors), 'warning')
     context = request.args.get('context', False)
     abs_dates = request.args.get('abs_dates', False)
-    extra = info.nodes(request.args.get('extra', ''))
+    extra, errors = info.nodes(request.args.get('extra', ''), report_errors=True)
+    if errors:
+        flash('Die folgenden Pfadziele wurden nicht gefunden: ' + ', '.join(errors), 'warning')
     induced_edges = request.args.get('induced_edges', False)
     ignored_edges = request.args.get('ignored_edges', False)
     direct_assertions = request.args.get('assertions', False)
@@ -45,7 +57,7 @@ def prepare_agraph():
                 reduction = nx.transitive_reduction(g)
                 g = g.edge_subgraph([(u, v, k) for u, v, k, _ in expand_edges(g, reduction.edges)])
             else:
-                g.add_node('Cannot produce DAG!?')  # FIXME improve error reporting
+                flash('Cannot produce DAG – subgraph is not acyclic!?', 'error')
         g = simplify_timeline(g)
         g.add_nodes_from(nodes)
         agraph = write_dot(g, target=None, highlight=nodes, edge_labels=not no_edge_labels)
@@ -68,7 +80,8 @@ def render_form():
         output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
         svg = Markup(codecs.decode(output))
     except NoNodes:
-        svg = 'Bitte Knoten und Optionen im Formular angeben.'
+        flash(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), 'danger')
+        svg = ''
     return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **_normalize_args(request.args))
 
 
