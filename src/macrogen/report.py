@@ -748,6 +748,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
                {table.format_table()}
                {counter_html}
                <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg')}"></object>
+               {_subgraph_link(u, v)}
                """,
                graph_id='refgraph',
                head=f'Entfernte Kante {u} → {v}', breadcrumbs=[dict(caption="Entfernte Kanten", link='conflicts')])
