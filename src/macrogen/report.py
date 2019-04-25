@@ -327,6 +327,26 @@ def _edition_link(ref: Reference):
         return format(ref)
 
 
+def _subgraph_link(*nodes: List[Node], html_content: Optional[str] = None, **options) -> str:
+    """
+    Creates a link to the dynamic subgraph page for the given nodes.
+
+    Args:
+        *nodes: The nodes to visualize.
+        html_content: HTML content for the link. If none given, a slider icon is shown.
+        **options: Additional parameters for the subgraph generation.
+
+    Returns:
+        String containing a HTML link.
+    """
+    if html_content is None:
+        html_content = '<i class="fa fa-sliders"></i>'
+    nodestr = ", ".join(str(node) for node in nodes)
+    params = dict(nodes=nodestr)
+    params.update(options)
+    return f'<a href="subgraph?{urllib.parse.urlencode(params)}">{html_content}</a>'
+
+
 class RefTable(HtmlTable):
     """
     Builds a table of references.
@@ -383,8 +403,7 @@ class RefTable(HtmlTable):
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
                 basename.stem + '-graph.svg').name}"></object>
-            <a href="subgraph?{urllib.parse.urlencode(dict(nodes=str(ref), abs_dates='on', assertions='on',
-                                                           ignored='on'))}"><i class="fa fa-sliders"></i></a>\n"""
+                {_subgraph_link(ref, abs_dates=True, assertions=True, ignored=True)}\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
@@ -1206,7 +1225,6 @@ def report_inscriptions(info: MacrogenesisInfo):
         else:
             transcript_links = '(unbekanntes Dokument)'
 
-
         doc_assertions = (stripped.in_degree(wit) + stripped.out_degree(wit)) if wit and wit in stripped else 0
         if doc_assertions:
             relevance += 1
@@ -1216,13 +1234,13 @@ def report_inscriptions(info: MacrogenesisInfo):
 
         relevance_class = ['ignore', '', 'warning', 'error'][max(0, min(relevance, 3))]
 
-        nodestr = ", ".join(map(str, [wit] + sorted(graph_inscriptions.get(doc_uri, []))))
         table.row((doc_uri,
                    '<br/>'.join(f'<a href="{wit.filename.stem}">{wit.inscription}</a>'
                                 for wit in sorted(graph_inscriptions[doc_uri])),
                    transcript_links,
                    str(doc_assertions) if doc_assertions else '',
-                   f'<a href="subgraph?{urllib.parse.urlencode(dict(nodes=nodestr, assertions=True, ignored=True))}"><i class="fa fa-sliders"></i></a>'), class_=relevance_class)
+                   _subgraph_link(wit, *sorted(graph_inscriptions.get(doc_uri, [])), assertions=True, ignored=True)),
+                  class_=relevance_class)
     write_html(config.path.report_dir / 'inscriptions.php',
                """<style>
                .warning td { background-color: rgba(220,160,0,0.2); }
