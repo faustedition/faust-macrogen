@@ -104,6 +104,10 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
             vis.nodes[node]['URL'] = node.filename.stem
             vis.nodes[node]['target'] = '_top'
 
+    # single node highlight
+    if highlight is not None and not isinstance(highlight, Sequence):
+        highlight = [highlight]
+
     if highlight_path is not None:
         if highlight is None:
             highlight = list(highlight_path)
