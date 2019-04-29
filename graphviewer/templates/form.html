@@ -8,7 +8,9 @@
 
 <form method="get" class="pure-g-r pure-form">
     <section class="pure-u-1-3">
-    <h3>Zentrale Knoten</h3>
+    <h3>Zentrale Knoten
+    <small class="pull-right"><label><input type="checkbox" name="nohl" id="nohl" {% if nohl %}checked{% endif %}> nicht hervorheben</label></small>
+    </h3>
     <p><input type="text" name="nodes" id="nodes" value="{{ nodes }}" style="width: 100%;" placeholder="2 V H.13"></p>
     <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
     <p><input type="checkbox" name="assertions" id="assertions" {% if assertions %}checked{% endif %} <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>

@@ -42,6 +42,7 @@ def prepare_agraph():
     paths_wo_timeline = request.args.get('paths_wo_timeline', False)
     no_edge_labels = request.args.get('no_edge_labels', False)
     tred = request.args.get('tred', False)
+    nohl = request.args.get('nohl', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
@@ -60,7 +61,7 @@ def prepare_agraph():
                 flash('Cannot produce DAG – subgraph is not acyclic!?', 'error')
         g = simplify_timeline(g)
         g.add_nodes_from(nodes)
-        agraph = write_dot(g, target=None, highlight=nodes, edge_labels=not no_edge_labels)
+        agraph = write_dot(g, target=None, highlight=None if nohl else nodes, edge_labels=not no_edge_labels)
         agraph.graph_attr['basename'] = ",".join([str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
         return agraph
     else:
