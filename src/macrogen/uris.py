@@ -59,6 +59,9 @@ class Reference(metaclass=ABCMeta):
 
     def __init__(self, uri):
         self.uri = uri
+        self.rank = -1
+        self.earliest = None
+        self.latest = None
 
     def __lt__(self, other):
         if isinstance(other, Reference):
@@ -132,6 +135,8 @@ class Inscription(Reference):
     """
 
     def __init__(self, witness, inscription):
+        uri = "/".join([witness.uri.replace('faust://document/', 'faust://inscription/'), inscription])
+        super().__init__(uri)
         self.witness = witness
         self.inscription = inscription
         self.known_witness = isinstance(witness, Witness)
@@ -143,10 +148,6 @@ class Inscription(Reference):
                 self.status = 'unknown-inscription'
         else:
             self.status = 'unknown'
-
-    @property
-    def uri(self) -> str:
-        return "/".join([self.witness.uri.replace('faust://document/', 'faust://inscription/'), self.inscription])
 
     @property
     def label(self):

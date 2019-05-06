@@ -6,7 +6,7 @@ from collections import defaultdict, Counter
 from datetime import date, datetime
 from html import escape
 from itertools import chain, repeat, groupby
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
 from urllib.parse import urlencode
@@ -385,7 +385,7 @@ class RefTable(HtmlTable):
         """
         if ref in self.base:
             if index is None:
-                index = self.base.node[ref]['index']
+                index = ref.rank # self.base.node[ref]['index']
             assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
             self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
@@ -1022,22 +1022,24 @@ def report_scenes(graphs: MacrogenesisInfo):
                   .column('#')
                   .column('Szene')
                   .column('Verse', format_spec=lambda t: '{} – {}'.format(*t))
-                  .column('Zeugen'))
-                 #.column('Inskriptionen')
-                 #.column('Gesamt'))
+                  .column('Dokumente')
+                  .column('Inskriptionen')
+                  .column('Gesamt'))
     for scene in SceneInfo.get().scenes:
         items = WitInscrInfo.get().by_scene[scene]
         witnessTable = RefTable(graphs.base)
         scene_docs = [doc for doc in items if isinstance(doc, DocumentCoverage)]
         scene_inscr = [inscr for inscr in items if isinstance(inscr, InscriptionCoverage)]
-        scene_wits = {graphs.node(doc.uri, default=None) for doc in scene_docs} - {None}
+        scene_refs = scene_docs + scene_inscr
+        scene_wits = {graphs.node(doc.uri, default=None) for doc in scene_refs} - {None}
         scene_graph = graphs.subgraph(*scene_wits, context=False, abs_dates=True)
-        for wit in scene_wits:
+        for wit in sorted(scene_wits, key=attrgetter('rank')):
             witnessTable.reference(wit)
         basename = 'scene_' + scene.n.replace('.', '-')
         subgraph_page = Path(basename + '-subgraph.php')
         graph_name = Path(basename + '-graph.dot')
-        sceneTable.row((scene.n, f'<a href="{basename}">{scene.title}</a>', (scene.first, scene.last), len(scene_wits)))
+        sceneTable.row((scene.n, f'<a href="{basename}">{scene.title}</a>', (scene.first, scene.last),
+                        len(scene_docs), len(scene_inscr), len(scene_wits)))
         write_dot(scene_graph, target / graph_name)
         write_html(target / subgraph_page,
                    f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix(
@@ -1048,8 +1050,9 @@ def report_scenes(graphs: MacrogenesisInfo):
         write_html(target / (basename + '.php'),
                    f"""
                        <p><a href="{subgraph_page.stem}">Szenengraph</a> ·
+                          {_subgraph_link(*scene_wits)} ·
                        <a href="/genesis_bargraph?rangeStart={scene.first}&amp;rangeEnd={scene.last}">Balkendiagramm</a></p>
-                       {witnessTable.format_table(sort_key=itemgetter(0))}""",
+                       {witnessTable.format_table()}""",
                    head=scene.title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
 
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
