@@ -20,6 +20,7 @@ from lxml.etree import Comment
 from more_itertools import pairwise
 from pandas import DataFrame
 
+from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
@@ -174,7 +175,7 @@ class HtmlTable:
     def _format_footer(self):
         return '</tbody></table>'
 
-    def format_table(self, rows=None, row_attrs=None):
+    def format_table(self, rows=None, row_attrs=None, sort_key=None):
         """
         Actually formats the table.
 
@@ -184,6 +185,7 @@ class HtmlTable:
         Args:
             rows: If given, the rows to format. This is a list of n-tuples, for n columns.
             row_attrs: If given, this should be a list that contains a mapping with the attributes for each row.
+            sort_key: If given, a function that returns a sort key for each row
 
         Returns:
             string containing HTML code for the table
@@ -191,10 +193,17 @@ class HtmlTable:
         if rows is None:
             rows = self.rows
             row_attrs = self.row_attrs
+        rows = list(rows)
         if row_attrs is None:
-            row_attrs = repeat({})
-        return self._format_header() + '\n' + '\n'.join(
-                (self._format_row(row, **attrs) for row, attrs in zip(rows, row_attrs))) + '\n' + self._format_footer()
+            row_attrs = [{} for _ in range(len(rows))]
+        if sort_key is None:
+            order = range(len(rows))
+        else:
+            order = [i for (i, _) in sorted(enumerate(rows), key=lambda er: sort_key(er[1]))]
+
+        formatted_rows = [self._format_row(rows[i], **row_attrs[i]) for i in order]
+
+        return self._format_header() + '\n' + '\n'.join(formatted_rows) + '\n' + self._format_footer()
 
 
 def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
@@ -1007,71 +1016,43 @@ def _yearlabel(ref: Reference):
         return result if result != sep else ""
 
 
-class ByScene:
-    def __init__(self, graphs: MacrogenesisInfo):
-        scene_xml: etree._ElementTree = etree.parse('scenes.xml')
-        self.scenes = scene_xml.xpath('//f:scene[@first-verse]', namespaces=config.namespaces)
-        bargraph_info = requests.get(
-                'http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json').json()
-        self.intervals = {Witness.get('faust://document/faustedition/' + doc['sigil_t']): doc['intervals'] for doc in
-                          bargraph_info}
-        self.ordering = list(enumerate(graphs.order_refs()))
-        self.graphs = graphs
-
-    def report(self):
-        target = config.path.report_dir
-        sceneTable = (HtmlTable()
-                      .column('#')
-                      .column('Szene')
-                      .column('Verse', format_spec=lambda t: '{} – {}'.format(*t))
-                      .column('Zeugen'))
-        for scene in self.scenes:
-            witnessTable = RefTable(self.graphs.base)
-            title = scene.xpath('f:title/text()', namespaces=config.namespaces)[0]
-            start, end = int(scene.get('first-verse')), int(scene.get('last-verse'))
-            scene_wits = [(index, wit) for index, wit in self.ordering if self.relevant(wit, start, end)]
-            for index, witness in scene_wits:
-                witnessTable.reference(witness, index)
-            scene_wits = {wit for _, wit in scene_wits}
-            scene_nodes = scene_wits | {node for wit in scene_wits if wit in self.graphs.base
-                                        for node in chain(self.graphs.base.predecessors(wit),
-                                                          self.graphs.base.successors(wit))
-                                        if isinstance(node, date)}
-            scene_subgraph = self.graphs.base.subgraph(scene_nodes)
-            basename = 'scene_' + scene.get('n').replace('.', '-')
-            subgraph_page = Path(basename + '-subgraph.php')
-            graph_name = Path(basename + '-graph.dot')
-            sceneTable.row((scene.get('n'), f'<a href="{basename}">{title}</a>', (start, end), len(scene_wits)))
-            write_dot(scene_subgraph, target / graph_name)
-            write_html(target / subgraph_page,
-                       f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix(
-                               '.svg')}"></object>""",
-                       graph_id='refgraph',
-                       head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
-                                                        dict(caption=title, link=basename)])
-            write_html(target / (basename + '.php'),
-                       f"""
+def report_scenes(graphs: MacrogenesisInfo):
+    target = config.path.report_dir
+    sceneTable = (HtmlTable()
+                  .column('#')
+                  .column('Szene')
+                  .column('Verse', format_spec=lambda t: '{} – {}'.format(*t))
+                  .column('Zeugen'))
+                 #.column('Inskriptionen')
+                 #.column('Gesamt'))
+    for scene in SceneInfo.get().scenes:
+        items = WitInscrInfo.get().by_scene[scene]
+        witnessTable = RefTable(graphs.base)
+        scene_docs = [doc for doc in items if isinstance(doc, DocumentCoverage)]
+        scene_inscr = [inscr for inscr in items if isinstance(inscr, InscriptionCoverage)]
+        scene_wits = {graphs.node(doc.uri, default=None) for doc in scene_docs} - {None}
+        scene_graph = graphs.subgraph(*scene_wits, context=False, abs_dates=True)
+        for wit in scene_wits:
+            witnessTable.reference(wit)
+        basename = 'scene_' + scene.n.replace('.', '-')
+        subgraph_page = Path(basename + '-subgraph.php')
+        graph_name = Path(basename + '-graph.dot')
+        sceneTable.row((scene.n, f'<a href="{basename}">{scene.title}</a>', (scene.first, scene.last), len(scene_wits)))
+        write_dot(scene_graph, target / graph_name)
+        write_html(target / subgraph_page,
+                   f"""<object id="refgraph" type="image/svg+xml" data="{graph_name.with_suffix(
+                           '.svg')}"></object>""",
+                   graph_id='refgraph',
+                   head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
+                                                    dict(caption=scene.title, link=basename)])
+        write_html(target / (basename + '.php'),
+                   f"""
                        <p><a href="{subgraph_page.stem}">Szenengraph</a> ·
-                       <a href="/genesis_bargraph?rangeStart={start}&amp;rangeEnd={end}">Balkendiagramm</a></p>
-                       {witnessTable.format_table()}""",
-                       head=title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
-        write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
+                       <a href="/genesis_bargraph?rangeStart={scene.first}&amp;rangeEnd={scene.last}">Balkendiagramm</a></p>
+                       {witnessTable.format_table(sort_key=itemgetter(0))}""",
+                   head=scene.title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
 
-    def relevant(self, witness: Reference, first_verse: int, last_verse: int) -> bool:
-        try:
-            for interval in self.intervals[witness]:
-                if first_verse <= interval['start'] <= last_verse or \
-                        first_verse <= interval['end'] <= last_verse or \
-                        interval['start'] <= first_verse <= interval['end'] or \
-                        interval['start'] <= last_verse <= interval['end']:
-                    return True
-        except KeyError:
-            return False
-        return False
-
-
-def report_scenes(graphs):
-    ByScene(graphs).report()
+    write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
 
 
 def write_order_xml(graphs):

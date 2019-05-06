@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 import reprlib
 
 from .config import config
@@ -221,7 +221,7 @@ class WitInscrInfo:
     def __init__(self):
         bargraph = config.genetic_bar_graph
         self.documents = [DocumentCoverage(doc) for doc in bargraph]
-        self.by_scene = defaultdict(list)
+        self.by_scene: Dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         for doc in self.documents:
             for inscription in doc.inscriptions:
                 for scene in inscription.relevant_scenes:
