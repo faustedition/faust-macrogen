@@ -642,6 +642,24 @@ def _invert_mapping(mapping: Mapping) -> Dict:
     return result
 
 
+def _flatten(items: List) -> List:
+    """
+    Flattens and cleans a potentially nested list by removing intermediate list layers and
+    contained Nones.
+
+    Examples:
+        >>> _flatten([1, 2, [3, [4, None]]])
+        [1, 2, 3, 4]
+    """
+    result = []
+    for item in items:
+        if isinstance(item, list):
+            result.extend(_flatten(item))
+        elif item is not None:
+            result.append(item)
+    return result
+
+
 def report_missing(graphs: MacrogenesisInfo):
     target = config.path.report_dir
     refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
@@ -666,9 +684,13 @@ def report_missing(graphs: MacrogenesisInfo):
             (ref, wits_with_inscr[ref]) for ref in sorted(missing_wits, key=lambda r: r.sort_tuple()))
     report += '\n<h3 id="unknown">Unbekannte Referenzen</h3>'
     unknown_table = (HtmlTable()
-                     .column('Referenz')
-                     .column('URI'))
-    report += unknown_table.format_table((ref, ref.uri) for ref in sorted(unknown_refs))
+                     .column('Referenz', _fmt_node)
+                     .column('URI')
+                     .column('XML', _fmt_xml, style='width:50%'))
+    for ref in sorted(unknown_refs):
+        assertions: nx.MultiDiGraph = graphs.subgraph(ref, context=False, abs_dates=False, direct_assertions=True)
+        unknown_table.row((ref, ref.uri, _flatten([x for u, v, x in assertions.edges(data='xml')])))
+    report += unknown_table.format_table()
     write_html(target / 'missing.php', report, head="Fehlendes")
     for ref in missing_wits:
         missing_path = target / ref.filename.with_suffix('.php')
