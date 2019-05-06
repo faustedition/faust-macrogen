@@ -654,7 +654,7 @@ def _invert_mapping(mapping: Mapping) -> Dict:
 def _flatten(items: List) -> List:
     """
     Flattens and cleans a potentially nested list by removing intermediate list layers and
-    contained Nones.
+    contained Nones as well as removing duplicates.
 
     Examples:
         >>> _flatten([1, 2, [3, [4, None]]])
@@ -666,7 +666,7 @@ def _flatten(items: List) -> List:
             result.extend(_flatten(item))
         elif item is not None:
             result.append(item)
-    return result
+    return sorted(set(result))
 
 
 def report_missing(graphs: MacrogenesisInfo):
