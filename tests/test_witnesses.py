@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from macrogen import witnesses, config
+from macrogen.witnesses import SceneInfo, WitInscrInfo
 
 
 def test_document():
@@ -11,3 +12,12 @@ def test_document():
 def test_all_documents():
     docs = witnesses.all_documents()
     assert docs
+
+
+def test_scenes():
+    si = SceneInfo()
+    assert si.toplevel[0].n == '1.0.1'
+    assert si.scenes[-1].n == '2.5.5'
+
+def test_witinfo():
+    wi = WitInscrInfo.get()

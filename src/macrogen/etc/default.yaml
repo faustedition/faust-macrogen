@@ -8,9 +8,10 @@ references: # CSV file featuring manual normalizations for references
 bibscores:  # TSV file (FIXME) with scores by source
 sigils: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json # JSON file mapping URIs to sigils
 paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js # JSON file mapping paralipomena to sources
-genetic_bar_graph: # JSON file
+genetic_bar_graph: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json # JSON file
 report_dir: target/macrogenesis  # where to save reports and graphs
 save_config: target/config.yaml  # YAML file to save the config actually used
+scene_xml:   # XML file with scene information
 
 
 bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/master/xslt/bibliography.xml # The bibliography

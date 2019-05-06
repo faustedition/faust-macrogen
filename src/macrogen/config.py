@@ -237,11 +237,12 @@ class Configuration:
     # bibscores.tsv
     sigils = LazyConfigLoader('sigils', json.load)
     paralipomena = LazyConfigLoader('paralipomena', json.load)
-    genetic_bar_graph = LazyConfigLoader('bargraph', json.load)
+    genetic_bar_graph = LazyConfigLoader('genetic_bar_graph', json.load)
     bibliography = LazyConfigLoader('bibliography', parse_bibliography)
     uri_corrections = LazyConfigLoader('uri_corrections', parse_kvcsv, (_config_package, 'etc/uri-corrections.csv'))
     bibscores = LazyConfigLoader('bibscores', partial(parse_kvcsv, default=1, value_type=int, delimiter='\t'),
                                  (_config_package, 'etc/bibscores.tsv'))
+    scenes_xml = LazyConfigLoader('scenes_xml', etree.parse, (_config_package, 'etc/scenes.xml'))
 
     def __init__(self, config_override=None):
         self._config_override = {}
