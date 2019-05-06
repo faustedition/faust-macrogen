@@ -1,7 +1,8 @@
 import re
 from collections import defaultdict
+from itertools import chain
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 import reprlib
 
 from .config import config
@@ -201,6 +202,8 @@ class InscriptionCoverage(IntervalsMixin):
         self.intervals = json['intervals']
         self._init_relevant_scenes()
 
+    def covered_lines(self):
+        return len(set(chain.from_iterable((range(i['start'], i['end']+1) for i in self.intervals))))
 
 
 class DocumentCoverage(BaseDocument, IntervalsMixin):
@@ -222,8 +225,11 @@ class WitInscrInfo:
         bargraph = config.genetic_bar_graph
         self.documents = [DocumentCoverage(doc) for doc in bargraph]
         self.by_scene: Dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
+        self.by_uri: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
         for doc in self.documents:
+            self.by_uri[doc.uri] = doc
             for inscription in doc.inscriptions:
+                self.by_uri[inscription.uri] = inscription
                 for scene in inscription.relevant_scenes:
                     self.by_scene[scene].append(inscription)
             for scene in doc.relevant_scenes:
@@ -236,6 +242,16 @@ class WitInscrInfo:
         if cls._instance is None:
             cls._instance = WitInscrInfo()
         return cls._instance
+
+    def resolve(self, arg: str, inscription: Optional[str]=None):
+        if arg.startswith('faust://'):
+            uri = arg
+        else:
+            uri = faust_uri(arg, inscription=inscription)
+        if inscription is not None and uri.startswith('faust://document/'):
+            uri = "/".join((uri.replace('faust://document', 'faust://inscription'), inscription))
+        return self.by_uri[uri]
+
 
 
 

@@ -1178,6 +1178,7 @@ def report_inscriptions(info: MacrogenesisInfo):
     # all documents that have inscriptions in their textual transcript
     from .witnesses import all_documents
     docs = all_documents()
+    witinfo = WitInscrInfo.get()
     docs_by_uri = {doc.uri: doc for doc in docs}
     tt_inscriptions = {doc.uri: doc.inscriptions for doc in docs if doc.inscriptions}
 
@@ -1223,8 +1224,8 @@ def report_inscriptions(info: MacrogenesisInfo):
                 ttlink = ghlink(document.text_transcript)
                 if doc_tt_inscriptions:
                     transcript_links = '<br/>'.join(
-                            f'<a href="{ttlink}#L{i.getparent().sourceline}">{i}</a>' for i in
-                            sorted(doc_tt_inscriptions))
+                            f"""<a href="{ttlink}#L{i.getparent().sourceline}">{i}</a> <small class="pure-fade">({witinfo.resolve(doc_uri, inscription=i).covered_lines()} V.)</small>"""
+                            for i in sorted(doc_tt_inscriptions))
                 else:
                     transcript_links = f'<a href="{ttlink}">(keine)</a>'
             else:
