@@ -422,11 +422,11 @@ class MacrogenesisInfo:
             if edges_from is None:
                 edges_from = self.dag
             path = nx.shortest_path(edges_from, source, target, weight, method)
-            logger.info('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
+            logger.debug('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
             edges = expand_edges(edges_from, nx.utils.pairwise(path))
             graph.add_edges_from(edges)
             return path
-        except nx.NetworkXNoPath as e:
+        except nx.NetworkXException as e:
             if must_exist:
                 raise e
 
@@ -479,12 +479,15 @@ class MacrogenesisInfo:
 
         for node in central_nodes:
             if abs_dates:
-                prev = max((d for d in self.closure.pred[node] if isinstance(d, date)), default=None)
-                if prev is not None and prev not in central_nodes:
-                    self.add_path(subgraph, prev, node, edges_from=path_base)
-                next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
-                if next_ is not None and next not in central_nodes:
-                    self.add_path(subgraph, node, next_, edges_from=path_base)
+                try:
+                    prev = max((d for d in self.closure.pred[node] if isinstance(d, date)), default=None)
+                    if prev is not None and prev not in central_nodes:
+                        self.add_path(subgraph, prev, node, edges_from=path_base)
+                    next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
+                    if next_ is not None and next not in central_nodes:
+                        self.add_path(subgraph, node, next_, edges_from=path_base)
+                except KeyError as e:
+                    logger.warning('%s is not in closure, so no date justification', node)
 
             for source in sources:
                 self.add_path(subgraph, source, node, edges_from=path_base)
