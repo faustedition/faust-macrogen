@@ -241,6 +241,11 @@ class MacrogenesisInfo:
         return refs
 
     def _build_index(self):
+        refs_diff = len(self.order) - len(set(self.order))
+        if refs_diff > 0:
+            refs_counts = Counter(self.order)
+            msg = ", ".join(f"{ref} ({n})" for ref, n in refs_counts.most_common(refs_diff))
+            logger.error('Some refs appear more than once in the order: %s', msg)
         self.index = {ref: i for (i, ref) in enumerate(self.order, start=1)}
 
     def _augment_details(self):

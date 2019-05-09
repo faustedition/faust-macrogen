@@ -1035,7 +1035,7 @@ def report_scenes(graphs: MacrogenesisInfo):
         scene_inscr = [inscr for inscr in items if isinstance(inscr, InscriptionCoverage)]
         scene_refs = scene_docs + scene_inscr
         scene_wits = {graphs.node(doc.uri, default=None) for doc in scene_refs} - {None}
-        scene_graph = graphs.subgraph(*scene_wits, context=False, abs_dates=True)
+        scene_graph = graphs.subgraph(*scene_wits, context=False, abs_dates=True, paths_between_nodes=False)
         for wit in sorted(scene_wits, key=lambda ref: graphs.index.get(ref, 0)):
             witnessTable.reference(wit)
         basename = 'scene_' + scene.n.replace('.', '-')
@@ -1121,33 +1121,43 @@ def report_stats(graphs: MacrogenesisInfo):
 
     """
     refs = graphs.order_refs()
+    extra_refs_count = len(refs) - len(set(refs))
+    logger.warning('Extra ref count: %s', extra_refs_count)
     wits = [ref for ref in refs if isinstance(ref, Witness)]
-    stat: DataFrame = pd.DataFrame(index=wits, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
+    stat: DataFrame = pd.DataFrame(index=refs, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
                                                         'succ_dates', 'auto_pre', 'auto_post', 'auto_len'])
 
     # now collect some info per witness:
     for ref in refs:
-        preds = list(graphs.base.pred[ref]) if ref in graphs.base else []
-        succs = list(graphs.base.succ[ref]) if ref in graphs.base else []
+        try:
+            preds = list(graphs.base.pred[ref]) if ref in graphs.base else []
+            succs = list(graphs.base.succ[ref]) if ref in graphs.base else []
 
-        pred_dates = [p for p in preds if isinstance(p, date)]
-        succ_dates = [s for s in succs if isinstance(s, date)]
+            pred_dates = [p for p in preds if isinstance(p, date)]
+            succ_dates = [s for s in succs if isinstance(s, date)]
 
-        auto_pre = max((d for d in graphs.closure.pred[ref] if isinstance(d, date)), default=None)
-        auto_post = min((d for d in graphs.closure.succ[ref] if isinstance(d, date)), default=None)
-        stat.loc[ref, :] = dict(
-                kind=ref.__class__.__name__,
-                pred=len(preds),
-                pred_dates=len(pred_dates),
-                pre=max((d for d in pred_dates), default=None),
-                post=min((d for d in succ_dates), default=None),
-                succ=len(succs),
-                succ_dates=len(succ_dates),
+            if ref in graphs.closure:
+                auto_pre = max((d for d in graphs.closure.pred[ref] if isinstance(d, date)), default=None)
+                auto_post = min((d for d in graphs.closure.succ[ref] if isinstance(d, date)), default=None)
+            else:
+                auto_pre = auto_post = None
+            row = dict(
+                    kind=ref.__class__.__name__,
+                    pred=len(preds),
+                    pred_dates=len(pred_dates),
+                    pre=max((d for d in pred_dates), default=None),
+                    post=min((d for d in succ_dates), default=None),
+                    succ=len(succs),
+                    succ_dates=len(succ_dates),
+                    in_closure=ref in graphs.closure,
 
-                auto_pre=auto_pre,
-                auto_post=auto_post,
-                auto_len=auto_post - auto_pre if auto_pre and auto_post else None
-        )
+                    auto_pre=auto_pre,
+                    auto_post=auto_post,
+                    auto_len=auto_post - auto_pre if auto_pre and auto_post else None
+            )
+            stat.loc[ref, :] = row
+        except Exception as e:
+            logger.error("Could not record %s in stats", ref, exc_info=True)
 
     def _dating_table():
         for dating in get_datings():
