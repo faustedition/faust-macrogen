@@ -14,6 +14,7 @@ filters:
     levels:
       macrogen.graph: INFO
       macrogen.fes: INFO
+      macrogen.witnesses: DEBUG
   file:
     (): macrogen.logging.LevelFilter
     default: INFO

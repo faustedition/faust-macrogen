@@ -164,7 +164,7 @@ class UnknownRef(Reference):
     """
 
     def __init__(self, uri):
-        self.uri = uri
+        super().__init__(uri)
         self.status = "unknown"
 
 
@@ -174,7 +174,7 @@ class AmbiguousRef(Reference):
     """
 
     def __init__(self, uri, wits):
-        self.uri = uri
+        super().__init__(uri)
         self.witnesses = frozenset(wits)
         self.status = 'ambiguous: ' + ", ".join(str(wit) for wit in sorted(self.witnesses))
 
@@ -207,6 +207,7 @@ class Witness(Reference):
 
     def __init__(self, doc_record):
         if isinstance(doc_record, dict):
+            super().__init__(doc_record.get('uri', '?'))
             self.__dict__.update(doc_record)
             self.status = '(ok)'
         else:

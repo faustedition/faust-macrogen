@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 import networkx as nx
 import pandas as pd
+import pkg_resources
 import requests
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -222,7 +223,8 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
     if head is not None:
         breadcrumbs = breadcrumbs + [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
-    prefix = """<?php include "../includes/header.php"?>
+    prefix = f"""<?php include "../includes/header.php"?>
+    <!-- Generiert: {datetime.now().isoformat()} -->
      <section>"""
     require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
     if graph_id is not None:
@@ -361,7 +363,7 @@ class RefTable(HtmlTable):
     Builds a table of references.
     """
 
-    def __init__(self, base: nx.MultiDiGraph, **table_attrs):
+    def __init__(self, graphs: MacrogenesisInfo, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
         (self.column('Nr.', data_sortable="numericplus")
          .column('Knoten davor', data_sortable="numericplus")
@@ -372,7 +374,8 @@ class RefTable(HtmlTable):
          .column('erster Vers', data_sortable="numericplus")
          .column('Aussagen', data_sortable="numericplus")
          .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
-        self.base = base
+        self.graphs = graphs
+        self.base = graphs.base
 
     def reference(self, ref: Reference, index: Optional[int] = None, write_subpage: bool = False):
         """
@@ -385,7 +388,7 @@ class RefTable(HtmlTable):
         """
         if ref in self.base:
             if index is None:
-                index = ref.rank # self.base.node[ref]['index']
+                index = self.graphs.index.get(ref, -1)
             assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
             self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
@@ -632,7 +635,7 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
 
     refs = graphs.order_refs()
-    overview = RefTable(graphs.base)
+    overview = RefTable(graphs)
 
     for index, ref in enumerate(refs, start=1):
         overview.reference(ref, index, write_subpage=True)
@@ -1027,13 +1030,13 @@ def report_scenes(graphs: MacrogenesisInfo):
                   .column('Gesamt'))
     for scene in SceneInfo.get().scenes:
         items = WitInscrInfo.get().by_scene[scene]
-        witnessTable = RefTable(graphs.base)
+        witnessTable = RefTable(graphs)
         scene_docs = [doc for doc in items if isinstance(doc, DocumentCoverage)]
         scene_inscr = [inscr for inscr in items if isinstance(inscr, InscriptionCoverage)]
         scene_refs = scene_docs + scene_inscr
         scene_wits = {graphs.node(doc.uri, default=None) for doc in scene_refs} - {None}
         scene_graph = graphs.subgraph(*scene_wits, context=False, abs_dates=True)
-        for wit in sorted(scene_wits, key=attrgetter('rank')):
+        for wit in sorted(scene_wits, key=lambda ref: graphs.index.get(ref, 0)):
             witnessTable.reference(wit)
         basename = 'scene_' + scene.n.replace('.', '-')
         subgraph_page = Path(basename + '-subgraph.php')
@@ -1056,6 +1059,26 @@ def report_scenes(graphs: MacrogenesisInfo):
                    head=scene.title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
 
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
+
+def report_unused(graphs: MacrogenesisInfo):
+    unused_nodes = set(node for node in graphs.base.node if isinstance(node, Reference)) - set(graphs.dag.node)
+    not_in_dag_table = RefTable(graphs)
+    for node in unused_nodes:
+        not_in_dag_table.reference(node)
+
+    unindexed = [node for node in graphs.base.node if isinstance(node, Reference) and not node in graphs.index]
+    unindexed_table = RefTable(graphs)
+    for node in unindexed:
+        unindexed_table.reference(node)
+
+    write_html(config.path.report_dir / 'unused.php',
+               f"""<p>{len(unused_nodes)} Zeugen existieren im Ausgangsgraphen, aber nicht im DAG:</p>
+               {not_in_dag_table.format_table()}
+               <p>{len(unindexed)} Knoten haben auf unerklärliche Weise keinen Index:</p>
+               {unindexed_table.format_table()}
+               """,
+               "Nicht eingeordnete Zeugen")
+
 
 
 def write_order_xml(graphs):
@@ -1174,24 +1197,25 @@ def report_stats(graphs: MacrogenesisInfo):
     return stat, dating_stat, edge_df
 
 
-def report_timeline(info: MacrogenesisInfo):
-    refs = info.order_refs()
+def report_timeline(graphs: MacrogenesisInfo):
+    witinfo = WitInscrInfo.get()
+
+    def rel_scenes(ref: Reference) -> List[str]:
+        info = witinfo.get().by_uri.get(ref.uri, None)
+        if info:
+            return sorted([scene.n for scene in info.max_scenes])
+        else:
+            return []
+
+    refs = graphs.order_refs()
     data = [dict(start=ref.earliest.isoformat(), end=ref.latest.isoformat(),
-                 content=_fmt_node(ref))
+                 content=_fmt_node(ref), id=ref.filename.stem, scenes=rel_scenes(ref),
+                 index=graphs.index[ref])
             for ref in refs
             if ref.earliest > EARLIEST and ref.latest < LATEST]
-    (config.path.report_dir / 'timeline.html').write_text(f"""
-    <html><head><title>Zeitstrahl</title>
-    <script src="//unpkg.com/timeline-plus/dist/timeline.js"></script>
-    <link href="//unpkg.com/timeline-plus/dist/timeline.css" rel="stylesheet" type="text/css" />
-    </head>
-    <body>
-    <div id="timeline">Lade Zeitstrahl ...</div>
-    <script>
-    const Timeline = new timeline.Timeline(document.getElementById('timeline'), {json.dumps(data)});
-    </script>
-    </body></html>
-    """)
+    with (config.path.report_dir / 'timeline.json').open("wt") as data_out:
+        json.dump(data, data_out)
+    (config.path.report_dir / 'timeline.html').write_binary(pkg_resources.resource_string('macrogen', 'timeline.html'))
 
 
 def report_inscriptions(info: MacrogenesisInfo):
@@ -1213,10 +1237,10 @@ def report_inscriptions(info: MacrogenesisInfo):
                             lambda _, __, attr: attr.get('copy') or attr.get('kind') in ['inscription', 'orphan'])
 
     table = (HtmlTable()
-             .column('Dokument', lambda uri: _fmt_node(Witness.get(uri)))
+             .column('Dokument', lambda uri: _fmt_node(Witness.get(uri)), data_sortable_type='sigil')
              .column('Inskriptionen Makrogenese')
              .column('Inskriptionen Transkript')
-             .column('Dok.-Aussagen')
+             .column('Dok.-Aussagen', data_sortable_type='numericplus')
              .column('Graph'))
 
     def uri_idx(uri):
@@ -1303,4 +1327,5 @@ def report_inscriptions(info: MacrogenesisInfo):
 def generate_reports(info: MacrogenesisInfo):
     report_functions = [fn for name, fn in globals().items() if name.startswith('report_')]
     for report in report_functions:
+        logger.info('Running %s', report.__name__)
         report(info)

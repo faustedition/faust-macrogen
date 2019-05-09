@@ -1,6 +1,7 @@
 """
 Functions to build the graphs and perform their analyses.
 """
+import json
 import pickle
 import re
 from collections import defaultdict, Counter
@@ -76,6 +77,8 @@ class MacrogenesisInfo:
         self.closure: nx.MultiDiGraph = None
         self.conflicts: List[MultiEdge] = []
         self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
+        self.order: List[Reference] = None
+        self.index: Dict[Reference, int] = None
 
         if load_from:
             self._load_from(load_from)
@@ -214,8 +217,8 @@ class MacrogenesisInfo:
         self._augment_details()
 
     def order_refs(self):
-        if hasattr(self, '_order'):
-            return self._order
+        if self.order:
+            return self.order
 
         logger.info('Creating sort order from DAG')
 
@@ -229,11 +232,16 @@ class MacrogenesisInfo:
 
         nodes = nx.lexicographical_topological_sort(self.dag, key=secondary_key)
         refs = [node for node in nodes if isinstance(node, Reference)]
-        self._order = refs
-        for index, ref in enumerate(refs):
+        self.order = refs
+        self._build_index()
+        for ref, index in self.index.items():
             if ref in self.base.node:
                 self.base.node[ref]['index'] = index
+            ref.index = index
         return refs
+
+    def _build_index(self):
+        self.index = {ref: i for (i, ref) in enumerate(self.order, start=1)}
 
     def _augment_details(self):
         logger.info('Augmenting refs with data from graphs')
@@ -277,6 +285,9 @@ class MacrogenesisInfo:
                 nx.write_gpickle(self.base, base_entry)
             with zip.open('simple_cycles.pickle', 'w') as sc_entry:
                 pickle.dump(self.simple_cycles, sc_entry)
+            with zip.open('order.json', 'w') as order_entry:
+                text = TextIOWrapper(order_entry, encoding='utf-8')
+                json.dump([ref.uri for ref in self.order], text)
             with zip.open('config.yaml', 'w') as config_entry:
                 config.save_config(config_entry)
             with zip.open('base.yaml', 'w') as base_entry:
@@ -291,6 +302,10 @@ class MacrogenesisInfo:
                 self.base = nx.read_gpickle(base_entry)
             with zip.open('simple_cycles.pickle', 'r') as sc_entry:
                 self.simple_cycles = pickle.load(sc_entry)
+            with zip.open('order.json', 'r') as order_entry:
+                uris = json.load(order_entry)
+                self.order = [Witness.get(uri) for uri in uris]
+                self._build_index()
 
         # Now reconstruct the other data:
         self.working: nx.MultiDiGraph = self.base.copy()

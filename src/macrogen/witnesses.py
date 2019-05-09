@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 from itertools import chain
 from pathlib import Path
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Set
 import reprlib
 
 from .config import config
@@ -17,6 +17,8 @@ Ziele:
 * Für jede Szene: Relevante Dokumente / Inskriptionen
 
 """
+
+logger = config.getLogger(__name__)
 
 
 def encode_sigil(sigil: str) -> str:
@@ -157,6 +159,7 @@ class SceneInfo:
         return cls._instance
 
     def __init__(self, et=None):
+        logger.debug('Reading scene info ...')
         if et is None:
             et = config.scenes_xml
         self.toplevel = [Scene(el) for el in et.xpath('/*/*')]
@@ -182,7 +185,6 @@ class IntervalsMixin:
                    first <= interval['start'] and interval['end'] <= last
                    for interval in self.intervals)
 
-
     def _init_relevant_scenes(self):
         relevant_scenes = set()
         for scene in SceneInfo.get().scenes:
@@ -191,6 +193,16 @@ class IntervalsMixin:
             elif self.is_relevant_for(scene.first, scene.last):
                 relevant_scenes.add(scene)
         self.relevant_scenes = frozenset(relevant_scenes)
+        self.max_scenes = self._reduce_scenes(relevant_scenes)
+
+    @staticmethod
+    def _reduce_scenes(scenes: Set[Scene]) -> Set[Scene]:
+        result = set(scenes)
+        while len(result) > 1 and any(scene.parent for scene in result):
+            result = {scene.parent if scene.parent else scene for scene in result}
+        return result
+
+
 
 
 class InscriptionCoverage(IntervalsMixin):
@@ -222,11 +234,12 @@ class DocumentCoverage(BaseDocument, IntervalsMixin):
 class WitInscrInfo:
 
     def __init__(self):
+        logger.debug('Loading document and witness coverage from bargraph ...')
         bargraph = config.genetic_bar_graph
         self.documents = [DocumentCoverage(doc) for doc in bargraph]
         self.by_scene: Dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         self.by_uri: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
-        for doc in self.documents:
+        for doc in config.progress(self.documents, desc='Analyzing documents', unit=' docs'):
             self.by_uri[doc.uri] = doc
             for inscription in doc.inscriptions:
                 self.by_uri[inscription.uri] = inscription
@@ -256,6 +269,7 @@ class WitInscrInfo:
 
 
 def all_documents(path: Optional[Path] = None):
+    logger.debug('Reading inscription info from sources ...')
     if path is None:
         path = config.path.data.joinpath('document')
     return [Document(doc) for doc in config.progress(list(path.rglob('**/*.xml')))]
