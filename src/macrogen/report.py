@@ -883,6 +883,7 @@ def report_index(graphs):
               'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion',
               '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
+             ('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
              ('downloads', 'Downloads', 'Graphen zum Download'),
              ('stats', 'Statistik', 'Der Graph in Zahlen')]
@@ -1218,7 +1219,7 @@ def report_timeline(graphs: MacrogenesisInfo):
             return []
 
     refs = graphs.order_refs()
-    data = [dict(start=ref.earliest.isoformat(), end=ref.latest.isoformat(),
+    data = [dict(start=ref.earliest.isoformat(), end=(ref.latest+DAY).isoformat(),
                  content=_fmt_node(ref), id=ref.filename.stem, scenes=rel_scenes(ref),
                  index=graphs.index[ref])
             for ref in refs
