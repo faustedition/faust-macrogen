@@ -246,6 +246,10 @@ class MacrogenesisInfo:
     def _augment_details(self):
         logger.info('Augmenting refs with data from graphs')
         for index, ref in enumerate(self.order_refs(), start=1):
+            if ref not in self.dag:
+                ref.earliest = EARLIEST
+                ref.latest = LATEST
+                continue
             ref.index = index
             ref.rank = self.closure.in_degree(ref)
             max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
@@ -287,7 +291,8 @@ class MacrogenesisInfo:
                 pickle.dump(self.simple_cycles, sc_entry)
             with zip.open('order.json', 'w') as order_entry:
                 text = TextIOWrapper(order_entry, encoding='utf-8')
-                json.dump([ref.uri for ref in self.order], text)
+                json.dump([ref.uri for ref in self.order], text, indent=True)
+                text.flush()
             with zip.open('config.yaml', 'w') as config_entry:
                 config.save_config(config_entry)
             with zip.open('base.yaml', 'w') as base_entry:
@@ -303,7 +308,8 @@ class MacrogenesisInfo:
             with zip.open('simple_cycles.pickle', 'r') as sc_entry:
                 self.simple_cycles = pickle.load(sc_entry)
             with zip.open('order.json', 'r') as order_entry:
-                uris = json.load(order_entry)
+                text = TextIOWrapper(order_entry, encoding='utf-8')
+                uris = json.load(text)
                 self.order = [Witness.get(uri) for uri in uris]
                 self._build_index()
 

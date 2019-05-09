@@ -1215,7 +1215,7 @@ def report_timeline(graphs: MacrogenesisInfo):
             if ref.earliest > EARLIEST and ref.latest < LATEST]
     with (config.path.report_dir / 'timeline.json').open("wt") as data_out:
         json.dump(data, data_out)
-    (config.path.report_dir / 'timeline.html').write_binary(pkg_resources.resource_string('macrogen', 'timeline.html'))
+    (config.path.report_dir / 'timeline.html').write_bytes(pkg_resources.resource_string('macrogen', 'timeline.html'))
 
 
 def report_inscriptions(info: MacrogenesisInfo):
