@@ -291,6 +291,9 @@ class Witness(Reference):
             cls._load_database()
             cls._load_paralipomena()
 
+        orig_uri = uri
+        uri = uri.replace('-', '_')
+
         if uri in cls.corrections:
             correction = cls.corrections[uri]
             if correction in cls.database:
@@ -299,8 +302,6 @@ class Witness(Reference):
                 logger.warning('Corrected %s to %s, but it is not in the database', uri, correction)
             uri = correction
 
-        orig_uri = uri
-        uri = uri.replace('-', '_')
 
 
         if uri in cls.database:
