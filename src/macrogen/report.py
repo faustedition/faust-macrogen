@@ -415,7 +415,7 @@ class RefTable(HtmlTable):
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
                 basename.stem + '-graph.svg').name}"></object>
-                {_subgraph_link(ref, abs_dates=True, assertions=True, ignored=True)}\n"""
+                {_subgraph_link(ref, abs_dates=True, assertions=True, ignored=True, induced_edges=True)}\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
