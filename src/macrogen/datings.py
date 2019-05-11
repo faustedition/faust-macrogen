@@ -173,19 +173,19 @@ class AbsoluteDating(_AbstractDating):
                 if self.start is not None:
                     G.add_edge(self.date_before, item, kind=self.start_attr[0], source=source, dating=self,
                                xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
-                    if self.end is None and not self.ignore:
+                    if self.end is None and config.half_interval_mode == 'always' and not self.ignore:
                         G.add_edge(item, min(self.date_before + timedelta(config.half_interval_correction),
                                              date(1832, 3, 23)), kind='not_after',
                                    trigger_node=self.date_before,
-                                   source=BiblSource('faust://heuristic'), xml=self.xmlsource)
+                                   source=BiblSource('faust://heuristic', source.citation), xml=self.xmlsource)
                 if self.end is not None:
                     G.add_edge(item, self.date_after, kind=self.end_attr[0], source=source, dating=self,
                                xml=self.xmlsource, ignore=self.ignore, comments=self.comments)
-                    if self.start is None and not self.ignore:
+                    if self.start is None and config.half_interval_mode == 'always' and not self.ignore:
                         G.add_edge(self.date_after - timedelta(config.half_interval_correction), item,
                                    kind='not_before',
                                    trigger_node=self.date_after,
-                                   source=BiblSource('faust://heuristic'), xml=self.xmlsource)
+                                   source=BiblSource('faust://heuristic', source.citation), xml=self.xmlsource)
 
 
 class RelativeDating(_AbstractDating):
@@ -268,6 +268,23 @@ def build_datings_graph() -> nx.MultiDiGraph:
     logger.info('Reading data to build base graph ...')
     for dating in _parse_files():
         dating.add_to_graph(graph)
+
+    if config.half_interval_mode == 'light':
+        for node in list(graph.nodes):
+            if isinstance(node, Reference):
+                post = [(v, attr) for (_, v, attr) in graph.out_edges(node, data=True) if isinstance(v, date)]
+                pre = [(u, attr) for (u, _, attr) in graph.in_edges(node, data=True) if isinstance(u, date)]
+                if pre and not post:
+                    other_limit = max(pre, key=lambda item: item[1]['source'].weight)
+                    graph.add_edge(node, other_limit[0] + timedelta(config.half_interval_correction),
+                                   source=BiblSource('faust://heuristic', other_limit[1]['source'].citation),
+                                   kind='not_after', xml=other_limit[1]['xml'])
+                elif post and not pre:
+                    other_limit = max(post, key=lambda item: item[1]['source'].weight)
+                    graph.add_edge(other_limit[0] - timedelta(config.half_interval_correction), node,
+                                   source=BiblSource('faust://heuristic', other_limit[1]['source'].citation),
+                                   kind='not_before', xml=other_limit[1]['xml'])
+
     add_timeline_edges(graph)
     return graph
 

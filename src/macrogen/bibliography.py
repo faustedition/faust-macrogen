@@ -14,6 +14,14 @@ _bib_labels = {
 class BiblSource:
     """
     A bibliographic source in a macrogenesis XML file.
+
+    Attributes and properties:
+        uri (str): The faust://bibliography URI
+        detail (str): Detail string like pages
+        weight (int): Score for the source
+        filename (str): Representation of the source (w/o detail) that is usable as part of a filename
+        citation (str): Short citation
+        long_citation (str): Detail string for the citation
     """
 
     def __init__(self, uri, detail=''):

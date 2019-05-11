@@ -19,6 +19,7 @@ bibliography: https://raw.githubusercontent.com/faustedition/faust-gen-html/mast
 xmlroot: https://github.com/faustedition/faust-xml/tree/master/xml/macrogenesis  # base for links to xml files
 
 ## Limits
+half_interval_mode: light          # off, light, always
 half_interval_correction: 182.5    # if we only have a start or end date, the other limit is max. this many days away
 render_node_limit: 1500            # do not layout graphs with more nodes than this
 render_timeout:                    # max number of seconds before rendering a dot file is aborted
