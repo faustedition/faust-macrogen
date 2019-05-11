@@ -1022,7 +1022,7 @@ def _yearlabel(ref: Reference):
 
 def report_scenes(graphs: MacrogenesisInfo):
     target = config.path.report_dir
-    sceneTable = (HtmlTable()
+    sceneTable = (HtmlTable(data_sortable="true")
                   .column('#')
                   .column('Szene')
                   .column('Verse', format_spec=lambda t: '{} – {}'.format(*t))
@@ -1247,7 +1247,7 @@ def report_inscriptions(info: MacrogenesisInfo):
     stripped = remove_edges(info.base,
                             lambda _, __, attr: attr.get('copy') or attr.get('kind') in ['inscription', 'orphan'])
 
-    table = (HtmlTable()
+    table = (HtmlTable(data_sortable="true")
              .column('Dokument', lambda uri: _fmt_node(Witness.get(uri)), data_sortable_type='sigil')
              .column('Inskriptionen Makrogenese')
              .column('Inskriptionen Transkript')
