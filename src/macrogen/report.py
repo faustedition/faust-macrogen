@@ -350,6 +350,9 @@ def _subgraph_link(*nodes: List[Node], html_content: Optional[str] = None, **opt
     Returns:
         String containing a HTML link.
     """
+    if not config.subgraph_links:
+        return ""
+
     if html_content is None:
         html_content = '<i class="fa fa-sliders"></i>'
     nodestr = ", ".join(str(node) for node in nodes)
