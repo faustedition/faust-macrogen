@@ -55,7 +55,12 @@
 
     <script>
         requirejs(['faust_common', 'timeline', 'jquery', 'json'],
-        function(Faust, timeline, $) {
+            function(Faust, timeline, $) {
+                var arraysEqual = function(first, second) {
+                    return (first.length === second.length) && 
+                        first.every((item, index) => item === second[index]);
+                }
+
             Faust.xhr.get('timeline.json')
                 .then((response) => {
                     let container = document.getElementById('timeline'),
@@ -67,7 +72,25 @@
                             min: "1750-01-01",
                             max: "1850-12-31",
                             order: (a, b) => b.index - a.index,
-                            zoomMin: 1000 * 60 * 60 * 24 * 15
+                            zoomMin: 1000 * 60 * 60 * 24 * 15,
+                            template: function(item, element, data) {
+                                var result;
+                                console.log('Item: ', item)
+                                if (item.isCluster) {
+                                    result = '<span class="cluster"><strong>' + item.items.length + '</strong> '
+                                    if (item.items[0].scenes.length > 0) {
+                                        result += ' aus ' + item.items[0].scenes[0];
+                                    }
+                                    result += '</span>';
+                                } else {
+                                    result = '<span>' + item.content + '</span>';
+                                }
+                                return result;
+                            },
+                            cluster: {
+                                maxItems: 3,
+                                clusterCriteria: (first, second) => arraysEqual(first.scenes, second.scenes)
+                            }
                         };
                     data.add(raw_data);
                     let tl = new timeline.Timeline(container, data, options);
