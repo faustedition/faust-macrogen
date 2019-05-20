@@ -1,5 +1,5 @@
 import re
-from collections import defaultdict
+from collections import defaultdict, Counter
 from itertools import chain
 from pathlib import Path
 from typing import List, Optional, Dict, Union, Set
@@ -177,6 +177,7 @@ class SceneInfo:
 
 
 class IntervalsMixin:
+    _group_re = re.compile(r"^(1\.0\.\d|\d\.\d).*")
 
     def is_relevant_for(self, first: int, last: int):
         assert isinstance(first, int) and isinstance(last, int), f"first ({first!r}) and last ({last!r}) must be ints!"
@@ -194,6 +195,8 @@ class IntervalsMixin:
                 relevant_scenes.add(scene)
         self.relevant_scenes = frozenset(relevant_scenes)
         self.max_scenes = self._reduce_scenes(relevant_scenes)
+        self.groups = {self._group_re.sub(r'\1', scene.n) for scene in self.relevant_scenes}
+        self.group = Counter(self.groups).most_common(1)[0][0] if self.relevant_scenes else None
 
     @staticmethod
     def _reduce_scenes(scenes: Set[Scene]) -> Set[Scene]:
@@ -239,6 +242,7 @@ class WitInscrInfo:
         self.documents = [DocumentCoverage(doc) for doc in bargraph]
         self.by_scene: Dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         self.by_uri: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
+        self.by_group: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         for doc in config.progress(self.documents, desc='Analyzing documents', unit=' docs'):
             self.by_uri[doc.uri] = doc
             for inscription in doc.inscriptions:
@@ -247,6 +251,7 @@ class WitInscrInfo:
                     self.by_scene[scene].append(inscription)
             for scene in doc.relevant_scenes:
                 self.by_scene[scene].append(doc)
+            self.by_group[doc.group].append(doc)
 
     _instance: 'WitInscrInfo' = None
 

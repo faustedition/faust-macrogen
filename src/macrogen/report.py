@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import urllib
+import re
 from collections import defaultdict, Counter
 from datetime import date, datetime
 from html import escape
@@ -1214,19 +1215,29 @@ def report_stats(graphs: MacrogenesisInfo):
 def report_timeline(graphs: MacrogenesisInfo):
     witinfo = WitInscrInfo.get()
 
-    def rel_scenes(ref: Reference) -> List[str]:
+    def ref_info(ref) -> dict:
+        result = dict(start=ref.earliest.isoformat(), end=(ref.latest+DAY).isoformat(),
+                 content=_fmt_node(ref), id=ref.filename.stem, index=graphs.index[ref])
         info = witinfo.get().by_uri.get(ref.uri, None)
         if info:
-            return sorted([scene.n for scene in info.max_scenes])
+            result['scenes'] = sorted([scene.n for scene in info.max_scenes])
+            result['groups'] = sorted(info.groups)
+            result['group'] = info.group
         else:
-            return []
+            result['scenes'] = []
+            result['groups'] = []
+            result['group'] = None
+        return result
 
     refs = graphs.order_refs()
-    data = [dict(start=ref.earliest.isoformat(), end=(ref.latest+DAY).isoformat(),
-                 content=_fmt_node(ref), id=ref.filename.stem, scenes=rel_scenes(ref),
-                 index=graphs.index[ref])
-            for ref in refs
-            if ref.earliest > EARLIEST and ref.latest < LATEST]
+    data = list()    # FIXME list comprehension after #25 is resolved
+    known = set()
+    for ref in refs:
+        if ref.earliest > EARLIEST and ref.latest < LATEST:
+            info = ref_info(ref)
+            if info['id'] not in known:
+                data.append(info)
+                known.add(info['id'])
     with (config.path.report_dir / 'timeline.json').open("wt") as data_out:
         json.dump(data, data_out)
     (config.path.report_dir / 'timeline.html').write_bytes(pkg_resources.resource_string('macrogen', 'timeline.html'))
