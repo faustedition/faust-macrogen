@@ -312,11 +312,11 @@ class MacrogenesisInfo:
                 self.base = nx.read_gpickle(base_entry)
             with zip.open('simple_cycles.pickle', 'r') as sc_entry:
                 self.simple_cycles = pickle.load(sc_entry)
-            with zip.open('order.json', 'r') as order_entry:
-                text = TextIOWrapper(order_entry, encoding='utf-8')
-                uris = json.load(text)
-                self.order = [Witness.get(uri) for uri in uris]
-                self._build_index()
+            # with zip.open('order.json', 'r') as order_entry:
+            #     text = TextIOWrapper(order_entry, encoding='utf-8')
+            #     uris = json.load(text)
+            #     self.order = [Witness.get(uri) for uri in uris]
+            #     self._build_index()
 
         # Now reconstruct the other data:
         self.working: nx.MultiDiGraph = self.base.copy()
@@ -338,6 +338,7 @@ class MacrogenesisInfo:
                 logger.info('Could not remove %s→%s (%d): %s', u, v, k, e)
         check_acyclic(self.dag,
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
+        self.order_refs()
         self.closure = nx.transitive_closure(self.dag)
         self._augment_details()
 
