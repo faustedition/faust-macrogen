@@ -7,7 +7,7 @@ _bib_labels = {
     'faust://self': 'Faustedition',
     'faust://model/inscription': 'Inskription von',
     'faust://orphan/adoption': 'Datierungsinhalt für',
-    'faust://heuristic': 'künstliche Datierung'
+    'faust://heuristic': '±6 Monate zu'
 }
 
 

@@ -962,7 +962,13 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     g6.add_edge(i1, w1, kind='inscription', label='Inskription von')
     g6.add_edge(d1 - DAY, w1, copy=True, kind='not_before', label='Quelle 1')
 
-    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6)
+    g7 = nx.MultiDiGraph()
+    hp47 = Witness.get('faust://document/faustedition/H_P47')
+    g7.add_edge(date(1808, 9, 30), hp47, source='Bohnenkamp 1994')
+    g7.add_edge(hp47, date(1809, 3, 31), source=BiblSource('faust://heuristic', 'Bohnenkamp 1994'))
+
+
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6, heuristic=g7)
     for name, graph in help_graphs.items():
         write_dot(graph, str(target / f'help-{name}.dot'))
 
@@ -1001,6 +1007,8 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
                 und über eine künstliche Kante angebunden.</td></tr>
         <tr><td><img src="help-copy.svg"/></td>
             <td>Die Aussage über {i1} aus den Makrogenesedaten wurde kopiert, sodass sie auch für {w1} gilt.</td></tr>
+        <tr><td><img src="help-heuristic.svg"/></td>
+            <td>Da zu {hp47} nur ein terminus a quo bekannt ist, wurde ein künstlicher terminus ante quem 6 Monate nach der Datierung durch Bohnenkamp 1994 ergänzt.</td></tr>
         </tbody>
     </table>
     """
