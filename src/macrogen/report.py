@@ -887,7 +887,7 @@ def report_index(graphs):
               'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion',
               '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
-             #('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
+             ('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
              ('downloads', 'Downloads', 'Graphen zum Download'),
              ('stats', 'Statistik', 'Der Graph in Zahlen')]
