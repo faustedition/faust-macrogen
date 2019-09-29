@@ -1095,8 +1095,8 @@ def report_unused(graphs: MacrogenesisInfo):
 
 
 def write_order_xml(graphs):
-    target: Path = config.path.report_dir
-    logger.debug('Writing reports to %s', target.absolute())
+    order_xml: Path = config.path.order or config.path.report_dir / 'order.xml'
+    logger.debug('Writing order file to %s', order_xml.absolute())
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
@@ -1110,12 +1110,12 @@ def write_order_xml(graphs):
               for index, witness in enumerate(graphs.order_refs(), start=1)
               if isinstance(witness, Witness)],
             generated=datetime.now().isoformat())
-    target.mkdir(parents=True, exist_ok=True)
-    root.getroottree().write(str(target / 'order.xml'), pretty_print=True)
+    order_xml.parent.mkdir(parents=True, exist_ok=True)
+    root.getroottree().write(str(order_xml), pretty_print=True)
 
     stats = graphs.year_stats()
     data = dict(max=max(stats.values()), counts=stats)
-    with (target / 'witness-stats.json').open('wt', encoding='utf-8') as out:
+    with (config.path.report_dir / 'witness-stats.json').open('wt', encoding='utf-8') as out:
         json.dump(data, out)
 
 

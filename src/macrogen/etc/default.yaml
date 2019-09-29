@@ -11,6 +11,7 @@ paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccess
 genetic_bar_graph: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json # JSON file
 report_dir: target/macrogenesis  # where to save reports and graphs
 save_config: target/config.yaml  # YAML file to save the config actually used
+order: target/macrogenesis/order.xml # where to save the determined order
 scene_xml:   # XML file with scene information
 
 

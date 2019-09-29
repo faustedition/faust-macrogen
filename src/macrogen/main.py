@@ -25,8 +25,10 @@ def main(argv=sys.argv):
     if options.output:
         graphs.save(options.output)
 
-    if not options.skip_reports:
+    if config.order:
         report.write_order_xml(graphs)
+
+    if not options.skip_reports:
         report.generate_reports(graphs)
         render_all()
 
