@@ -5,7 +5,7 @@ These scripts analyze the macrogenetic data from the data/xml/macrogenesis folde
 
 ### Installation and Usage
 
-Python ≥ 3.6 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separately.
+Python ≥ 3.7 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separately.
 
 ```bash
 git submodules update --init --remote
@@ -14,6 +14,10 @@ macrogen
 ```
 
 will produce the output.
+
+### Using the Gradle build
+
+The included Gradle script provides tasks to setup a suitable python version, install the macrogenesis library and all of its dependencies, and run the analysis. It still requires Graphviz to be installed.
 
 ### Additional Configuration
 
