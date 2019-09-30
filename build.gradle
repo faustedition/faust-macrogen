@@ -20,48 +20,30 @@ if (!project.hasProperty('dataDir')) {
 
 
 envs {
-    bootstrapDirectory = new File(buildDir, 'tools')
-    envsDirectory = new File(buildDir, 'envs')
+	bootstrapDirectory = new File(buildDir, 'tools')
+	envsDirectory = new File(buildDir, 'envs')
 
-    python "python37", "3.7.4", []
-    virtualenv "macrogen", "python37"
-    project.ext.venv = new File(buildDir, 'envs/macrogen')
+	python "python37", "3.7.4", []
+	virtualenv "macrogen", "python37"
 }
 
-def addInputArg(AbstractExecTask task, GString option, Object file) {
-	task.args(option, file)
-	task.inputs(file)
-}
-
-def configureMacrogenTasks(AbstractExecTask... tasks) {
-	for (AbstractExecTask task in tasks) {
-		task.group 'macrogen'
-		task.executable("$venv/bin/macrogen")
-
-		if (rootProject != project) {
-			addInputArg(task, '--sigils', "$buildDir/sigils.json")
-			addInputArg(task, '--paralipomena', "$buildDir/www/data/paralipomena.js")
-            task.args('--progressbar', 'false')
-		}
-	}
-}
 
 task installMacrogen(type: Exec) {
 	description 'Installs the macrogenesis tool and its requirements'
 	group 'macrogen'
 	dependsOn 'build_envs'
 
-	executable "$venv/bin/pip"
+	executable "$buildDir/envs/macrogen/bin/pip"
 	workingDir projectDir
 	args "install", "-U", "-e", "."
 }
 
-task runMacrogenComplete(type: Exec) {
+task runMacrogenComplete(type: MacrogenExec) {
 	description 'Runs the complete macrogenesis analysis and configuration'
 	dependsOn installMacrogen
 }
 
-task runMacrogenAnalysis(type: Exec) {
+task runMacrogenAnalysis(type: MacrogenExec) {
 	description 'Runs the macrogenesis analysis phase'
 	dependsOn installMacrogen
 	args "--skip-reports"
@@ -71,11 +53,9 @@ task runMacrogenAnalysis(type: Exec) {
 	outputs.file "$buildDir/order.xml"
 }
 
-task runMacrogenReporting(type: Exec) {
+task runMacrogenReporting(type: MacrogenExec) {
 	description 'Runs the macrogenesis reporting phase'
 	dependsOn runMacrogenAnalysis
 	args "-i", "$buildDir/macrogen-graphs.zip"
 	inputs.file("$buildDir/macrogen-graphs.zip")
 }
-
-configureMacrogenTasks(runMacrogenAnalysis, runMacrogenReporting, runMacrogenComplete)
