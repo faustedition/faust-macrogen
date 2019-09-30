@@ -25,6 +25,28 @@ envs {
 
 	python "python37", "3.7.4", []
 	virtualenv "macrogen", "python37"
+	project.ext.venv = "$buildDir/envs/macrogen"
+}
+
+task prepareMacrogenOptions {
+    project.ext.macrogenArgs = []
+	project.ext.macrogenInputs = []
+	project.ext.macrogenExecutable = "$venv/bin/macrogen"
+
+	if (project.rootProject != project) {
+		// project.macrogenArgs.add("--sigils=$buildDir/sigils.json")
+		// project.macrogenInputs.add("$buildDir/sigils.json")
+		project.macrogenArgs.add("--paralipomena=$buildDir/www/data/paralipomena.js")
+		project.macrogenInputs.add("$buildDir/www/data/paralipomena.js")
+		logger.info("Setup macrogen to use pregenerated data from $buildDir")
+		project.ext.macrogen_reports = "$buildDir/www/macrogenesis"
+	} else {
+	    project.ext.macrogen_reports = "$buildDir/macrogenesis"
+	}
+	project.macrogenArgs.add("--data=$dataDir")
+	project.macrogenInputs.add("$dataDir/macrogen")
+	project.macrogenArgs.add("--report-dir=$macrogen_reports")
+	project.macrogenArgs.add('--progressbar=false')
 }
 
 
@@ -33,29 +55,55 @@ task installMacrogen(type: Exec) {
 	group 'macrogen'
 	dependsOn 'build_envs'
 
-	executable "$buildDir/envs/macrogen/bin/pip"
+	executable "$venv/bin/pip"
 	workingDir projectDir
 	args "install", "-U", "-e", "."
 }
 
-task runMacrogenComplete(type: MacrogenExec) {
+task runMacrogenComplete {
 	description 'Runs the complete macrogenesis analysis and configuration'
-	dependsOn installMacrogen
+	dependsOn installMacrogen, prepareMacrogenOptions
+	doLast {
+		project.exec {
+			executable macrogenExecutable
+			args macrogenArgs
+			inputs.files(project.macrogenInputs)
+		}
+	}
 }
 
-task runMacrogenAnalysis(type: MacrogenExec) {
+task runMacrogenAnalysis {
 	description 'Runs the macrogenesis analysis phase'
+    group 'macrogen'
 	dependsOn installMacrogen
-	args "--skip-reports"
-	args "-o", "$buildDir/macrogen-graphs.zip"
-    args "--order", "$buildDir/order.xml"
+	dependsOn prepareMacrogenOptions
+	inputs.files(project.macrogenInputs)
+	doLast {
+		project.exec {
+			executable macrogenExecutable
+			args macrogenArgs
+			args "--skip-reports"
+			args "-o", "$buildDir/macrogen-graphs.zip"
+			args "--order", "$buildDir/order.xml"
+		}
+	}
 	outputs.file "$buildDir/macrogen-graphs.zip"
 	outputs.file "$buildDir/order.xml"
 }
 
-task runMacrogenReporting(type: MacrogenExec) {
+task runMacrogenReporting {
 	description 'Runs the macrogenesis reporting phase'
+	group 'macrogen'
 	dependsOn runMacrogenAnalysis
-	args "-i", "$buildDir/macrogen-graphs.zip"
+	dependsOn prepareMacrogenOptions
+	inputs.files(project.macrogenInputs)
+	doLast {
+		project.exec {
+			args "-i", "$buildDir/macrogen-graphs.zip"
+            args macrogenArgs
+			executable macrogenExecutable
+		}
+	}
 	inputs.file("$buildDir/macrogen-graphs.zip")
+	outputs.dir("$macrogen_reports")
 }
