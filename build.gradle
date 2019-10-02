@@ -33,6 +33,9 @@ task prepareMacrogenOptions {
 	project.ext.macrogenInputs = []
 	project.ext.macrogenExecutable = "$venv/bin/macrogen"
 
+	if (project.hasProperty('macrogenOptions'))
+		macrogenArgs.add(project.macrogenOptions)
+
 	if (project.rootProject != project) {
 		// project.macrogenArgs.add("--sigils=$buildDir/sigils.json")
 		// project.macrogenInputs.add("$buildDir/sigils.json")
@@ -58,6 +61,8 @@ task installMacrogen(type: Exec) {
 	executable "$venv/bin/pip"
 	workingDir projectDir
 	args "install", "-U", "-e", "."
+
+	outputs.file "$venv/bin/macrogen"
 }
 
 task runMacrogenComplete {
@@ -107,3 +112,5 @@ task runMacrogenReporting {
 	inputs.file("$buildDir/macrogen-graphs.zip")
 	outputs.dir("$macrogen_reports")
 }
+
+assemble.dependsOn(runMacrogenReporting)
