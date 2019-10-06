@@ -114,7 +114,7 @@ class Reference(metaclass=ABCMeta):
         Returns:
             Path, with extension `.dot`
         """
-        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?$', self.uri)
+        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?(#\S+?)$', self.uri)
         if match:
             result = f'{match.group(2)}.{match.group(3)}'
             if match.group(5):
