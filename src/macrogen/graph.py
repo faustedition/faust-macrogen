@@ -13,8 +13,9 @@ from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
+from macrogen.splitgraph import references, SplitReference
 
-from .graphutils import mark_edges_to_delete, remove_edges, in_path
+from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
 from .config import config
 from .datings import build_datings_graph, parse_datestr
@@ -216,7 +217,7 @@ class MacrogenesisInfo:
         add_inscription_links(base)
         self._augment_details()
 
-    def order_refs(self):
+    def order_refs(self) -> List[Reference]:
         if self.order:
             return self.order
 
@@ -354,16 +355,6 @@ class MacrogenesisInfo:
         Raises:
             KeyError if no node can be found
         """
-
-        def first(iterable):
-            iterator = iter(iterable)
-            item = next(iterator)
-            try:
-                second = next(iterator)
-                logger.warning('There should be only %s in iterable, but there was more (first: %s)', item, second)
-            except StopIteration:
-                pass
-            return item
 
         try:
             if isinstance(spec, Reference) or isinstance(spec, date):
@@ -708,10 +699,16 @@ def add_missing_wits(working: nx.MultiDiGraph):
     but it makes these nodes appear in the topological order.
     """
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
-    known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
-    missing_wits = all_wits - known_wits
+    if config.model == 'split':
+        known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
+        missing_wits = all_wits - known_wits
+        for wit in sorted(missing_wits, key=Witness.sigil_sort_key):
+            working.add_nodes_from(SplitReference.both(wit).values())
+    else:
+        known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
+        missing_wits = all_wits - known_wits
+        working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
     logger.debug('Adding %d otherwise unmentioned witnesses to the working graph', len(missing_wits))
-    working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
 
 
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
