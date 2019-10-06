@@ -29,6 +29,7 @@ from .datings import get_datings, AbsoluteDating
 from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
+from .splitgraph import Side, SplitReference, side_node
 from .visualize import write_dot, simplify_graph
 
 logger = config.getLogger(__name__)
@@ -388,38 +389,52 @@ class RefTable(HtmlTable):
         Args:
             ref: the object for which the row will be created
             index: if present, the index to display for the node.
-            write_subpage: if true, create a subpage with all assertions for the referende
+            write_subpage: if true, create a subpage with all assertions for the reference
         """
         if ref in self.base:
             if index is None:
                 index = self.graphs.index.get(ref, -1)
-            assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
+            if isinstance(ref, SplitReference):
+                wit = ref.reference
+                start_node = side_node(self.base, wit, Side.START)
+                end_node = side_node(self.base, wit, Side.END)
+            else:
+                start_node, wit, end_node = ref, ref, ref
+            assertions = list(chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
-                      getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
-                     id=f'idx{index}', class_=type(ref).__name__)
+            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, wit, wit, start_node.earliest, end_node.latest,
+                      getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
+                     id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
                 self._last_ref_subpage(DAY, ref)
         else:
-            self.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
+            wit = ref.reference if isinstance(ref, SplitReference) else ref
+            self.row((index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
                      class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     def _last_ref_subpage(self, DAY, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
         target = config.path.report_dir
-        basename = target / ref.filename
-        relevant_nodes = {ref} | set(self.base.predecessors(ref)) | set(self.base.successors(ref))
-        if ref.earliest != EARLIEST:
-            relevant_nodes |= set(nx.shortest_path(self.base, ref.earliest - DAY, ref))
-        if ref.latest != LATEST:
-            relevant_nodes |= set(nx.shortest_path(self.base, ref, ref.latest + DAY))
+        if isinstance(ref, SplitReference):
+            start_node = side_node(self.base, ref, Side.START)
+            end_node = side_node(self.base, ref, Side.END)
+            wit = ref.reference
+        else:
+            start_node, end_node, wit = ref, ref, ref
+
+        basename = target / wit.filename
+        relevant_nodes = {start_node, end_node} | set(self.base.predecessors(start_node)) | set(self.base.successors(end_node))
+        if start_node.earliest != EARLIEST:
+            relevant_nodes |= set(nx.shortest_path(self.base, start_node.earliest - DAY, ref))
+        if end_node.latest != LATEST:
+            relevant_nodes |= set(nx.shortest_path(self.base, end_node, end_node.latest + DAY))
         ref_subgraph = self.base.subgraph(relevant_nodes)
         write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
         report = f"<!-- {repr(ref)} -->\n"
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
                 basename.stem + '-graph.svg').name}"></object>
-                {_subgraph_link(ref, abs_dates=True, assertions=True, ignored=True, induced_edges=True)}\n"""
+                {_subgraph_link(wit, abs_dates=True, assertions=True, ignored=True, induced_edges=True)}\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
@@ -429,6 +444,7 @@ class RefTable(HtmlTable):
                  'temp-pre': 'entstanden nach',
                  'orphan': '(Verweis)',
                  'inscription': 'Inskription von',
+                 'progress': 'Schreibverlauf',
                  None: '???'
                  }
         assertionTable = (HtmlTable(data_sortable='true')
@@ -438,7 +454,7 @@ class RefTable(HtmlTable):
                           .column('Quelle', data_sortable_type='bibliography', format_spec=_fmt_source)
                           .column('Kommentare', format_spec=_fmt_comments)
                           .column('XML', format_spec=_fmt_xml))
-        for (u, v, attr) in self.base.in_edges(ref, data=True):
+        for (u, v, attr) in self.base.in_edges(start_node, data=True):
             delete_ = 'delete' in attr and attr['delete']
             assertionTable.row((
                 f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
@@ -450,7 +466,7 @@ class RefTable(HtmlTable):
                 attr.get('xml', [])),
                     class_='delete' if delete_ else str(attr['kind']))
         kinds['temp-pre'] = 'entstanden vor'
-        for (u, v, attr) in self.base.out_edges(ref, data=True):
+        for (u, v, attr) in self.base.out_edges(end_node, data=True):
             delete_ = 'delete' in attr and attr['delete']
             assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
                                 kinds[attr['kind']],
@@ -639,6 +655,8 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
 
     refs = graphs.order_refs()
+    if config.model == 'split':
+        refs = [ref for ref in refs if ref.side == Side.END]
     overview = RefTable(graphs)
 
     for index, ref in enumerate(refs, start=1):
@@ -1239,6 +1257,8 @@ def report_timeline(graphs: MacrogenesisInfo):
         return result
 
     refs = graphs.order_refs()
+    if config.model == 'split':
+        refs = [ref for ref in refs if ref.side == Side.END]
     data = list()    # FIXME list comprehension after #25 is resolved
     known = set()
     for ref in refs:
