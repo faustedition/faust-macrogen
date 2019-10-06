@@ -696,7 +696,8 @@ def _flatten(items: List) -> List:
 
 def report_missing(graphs: MacrogenesisInfo):
     target = config.path.report_dir
-    refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
+    refs = {node.reference if isinstance(node, SplitReference) else node
+            for node in graphs.base.nodes if isinstance(node, Reference)}
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     used_wits = {wit for wit in refs if isinstance(wit, Witness)}
     unknown_refs = {wit for wit in refs if isinstance(wit, UnknownRef)}

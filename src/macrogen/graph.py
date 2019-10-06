@@ -480,7 +480,13 @@ class MacrogenesisInfo:
         Returns:
             The constructed subgraph
         """
-        central_nodes = set(nodes)
+        if any(isinstance(node, SplitReference) for node in self.base.nodes):
+            central_nodes = set()
+            for graph_node in self.base:
+                if graph_node in nodes or isinstance(graph_node, SplitReference) and graph_node.reference in nodes:
+                    central_nodes.add(graph_node)
+        else:
+            central_nodes = set(nodes)
         relevant_nodes = set(central_nodes)
         if context:
             for node in central_nodes:
