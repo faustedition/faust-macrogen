@@ -358,7 +358,8 @@ class MacrogenesisInfo:
 
         try:
             if isinstance(spec, Reference) or isinstance(spec, date):
-                return first(node for node in self.base.nodes if node == spec)
+                return first(node for node in self.base.nodes
+                             if node == spec or isinstance(node, SplitReference) and node.reference == spec)
             try:
                 d = parse_datestr(spec)
                 return first(node for node in self.base.nodes if node == d)
@@ -371,7 +372,8 @@ class MacrogenesisInfo:
 
             if spec.startswith('faust://'):
                 ref = Witness.get(spec)
-                return first(node for node in self.base.nodes if node == ref)
+                return first(node for node in self.base.nodes
+                             if node == ref or isinstance(node, SplitReference) and node.reference == ref)
             else:
                 norm_spec = _normalize_sigil(spec)
                 return first(ref for ref in self.base.nodes if isinstance(ref, Reference)
@@ -485,6 +487,8 @@ class MacrogenesisInfo:
             for graph_node in self.base:
                 if graph_node in nodes or isinstance(graph_node, SplitReference) and graph_node.reference in nodes:
                     central_nodes.add(graph_node)
+                    if isinstance(graph_node, SplitReference):
+                        central_nodes.add(graph_node.other)
         else:
             central_nodes = set(nodes)
         relevant_nodes = set(central_nodes)

@@ -16,17 +16,19 @@ class Side(Enum):
     def label(self):
         return "Anfang" if self == Side.START else "Ende"
 
+
 class SplitReference(Reference):
     """
     Represents either the start or the end of the process of working on a reference.
     """
 
-    def __init__(self, reference: Reference, side: Side):
+    def __init__(self, reference: Reference, side: Side, other: Optional['SplitReference'] = None):
         if isinstance(reference, SplitReference):
             raise TypeError(f'Cannot create a SplitReference from SplitReference {reference}')
         super().__init__(reference.uri + '#' + side.value)
         self.reference = reference
         self.side = side
+        self.other = other
 
     def __getattr__(self, item):
         if hasattr(self.reference, item):
@@ -40,14 +42,17 @@ class SplitReference(Reference):
 
     @property
     def label(self) -> str:
-        return self.reference.label   # XXX start/end?
+        return self.reference.label  # XXX start/end?
 
     def __str__(self):
         return f"{self.reference} ({self.side.label})"
 
     @classmethod
     def both(cls, reference):
-        return {Side.START: cls(reference, Side.START), Side.END: cls(reference, Side.END)}
+        start = cls(reference, Side.START)
+        end = cls(reference, Side.END, other=start)
+        start.other = end
+        return {Side.START: start, Side.END: end}
 
 
 def start_end_graph(orig: nx.MultiDiGraph) -> nx.MultiDiGraph:
