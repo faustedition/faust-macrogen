@@ -15,10 +15,11 @@ from tqdm import tqdm
 
 from .config import config
 from .datings import add_timeline_edges
-from macrogen import BiblSource
-from macrogen.graphutils import pathlink
+from .bibliography import BiblSource
+from .graphutils import pathlink
 from .uris import Reference
 from .graph import Node
+from .splitgraph import SplitReference
 import logging
 
 logger: logging.Logger = config.getLogger(__name__)
@@ -38,9 +39,12 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attrs['kind'] = 'date'
             translation[node] = node.isoformat()
         elif isinstance(node, Reference):
-            attrs['kind'] = node.__class__.__name__
             attrs['label'] = node.label
             translation[node] = node.uri
+            if isinstance(node, SplitReference):
+                attrs['kind'] = node.side.value
+            else:
+                attrs['kind'] = node.__class__.__name__
         _simplify_attrs(attrs)
 
     nx.relabel_nodes(graph, translation, copy=False)

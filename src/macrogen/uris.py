@@ -292,6 +292,8 @@ class Witness(Reference):
             cls._load_paralipomena()
 
         orig_uri = uri
+        if '#' in uri:
+            uri = uri[:uri.index('#')]
         uri = uri.replace('-', '_')
 
         if uri in cls.corrections:

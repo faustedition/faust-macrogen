@@ -38,6 +38,10 @@ class SplitReference(Reference):
     def filename(self) -> Path:
         return self.reference.filename
 
+    @property
+    def label(self) -> str:
+        return self.reference.label   # XXX start/end?
+
     def __str__(self):
         return f"{self.reference} ({self.side.label})"
 
