@@ -80,8 +80,11 @@ class Reference(metaclass=ABCMeta):
         elif self.uri.startswith('faust://document'):
             kind, sigil = self.uri.split('/')[-2:]
             return f"{kind}: {sigil}"
-        else:
-            return self.uri
+        elif self.uri.startswith('faust://bibliography'):
+            bibentry = config.bibliography.get(self.uri)
+            if bibentry:
+                return bibentry.citation
+        return self.uri
 
     def sort_tuple(self):
         """
