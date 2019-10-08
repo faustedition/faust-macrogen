@@ -273,6 +273,12 @@ class MacrogenesisInfo:
             ref.index = index
         return refs
 
+    def order_refs_post_model(self) -> List[Reference]:
+        refs = self.order_refs()
+        if config.model == 'split':
+            refs = [ref for ref in refs if ref.side == Side.END]
+        return refs
+
     def _build_index(self):
         refs_diff = len(self.order) - len(set(self.order))
         if refs_diff > 0:
@@ -312,6 +318,16 @@ class MacrogenesisInfo:
                 ref.avg_year = ref.earliest.year
             else:
                 ref.avg_year = None
+        endrefs = (ref for ref in self.order_refs() if isinstance(ref, SplitReference) and ref.side == Side.END)
+        for splitref in endrefs:
+            ref = splitref.reference
+            start = splitref.other or first(node for node in self.base.nodes
+                                            if isinstance(node, SplitReference) and node.reference == ref
+                                            and node.side == Side.START)
+            end = splitref
+            ref.earliest = start.earliest
+            ref.latest = end.latest
+
 
     def year_stats(self):
         years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]

@@ -654,9 +654,7 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_gpickle(graphs.working, str(target / 'working.gpickle'))
     nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
 
-    refs = graphs.order_refs()
-    if config.model == 'split':
-        refs = [ref for ref in refs if ref.side == Side.END]
+    refs = graphs.order_refs_post_model()
     overview = RefTable(graphs)
 
     for index, ref in enumerate(refs, start=1):
@@ -1116,6 +1114,10 @@ def report_unused(graphs: MacrogenesisInfo):
 def write_order_xml(graphs):
     order_xml: Path = config.path.order or config.path.report_dir / 'order.xml'
     logger.debug('Writing order file to %s', order_xml.absolute())
+    ordered_refs = graphs.order_refs_post_model()
+    if any(isinstance(ref, SplitReference) for ref in ordered_refs):
+        ordered_refs = [sr.reference for sr in ordered_refs]
+    ordered_wits = [ref for ref in ordered_refs if isinstance(ref, Witness)]
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
@@ -1123,10 +1125,10 @@ def write_order_xml(graphs):
                      index=format(index),
                      uri=witness.uri,
                      sigil_t=witness.sigil_t,
-                     earliest=witness.earliest.isoformat() if witness.earliest != EARLIEST else '',
-                     latest=witness.latest.isoformat() if witness.latest != LATEST else '',
+                     earliest=witness.earliest.isoformat() if witness.earliest not in {EARLIEST, None} else '',
+                     latest=witness.latest.isoformat() if witness.latest not in {LATEST, None} else '',
                      yearlabel=_yearlabel(witness))
-              for index, witness in enumerate(graphs.order_refs(), start=1)
+              for index, witness in enumerate(ordered_wits, start=1)
               if isinstance(witness, Witness)],
             generated=datetime.now().isoformat())
     order_xml.parent.mkdir(parents=True, exist_ok=True)
