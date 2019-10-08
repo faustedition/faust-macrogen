@@ -406,13 +406,13 @@ class RefTable(HtmlTable):
                       getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
                      id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
-                self._last_ref_subpage(DAY, ref)
+                self._last_ref_subpage(ref)
         else:
             wit = ref.reference if isinstance(ref, SplitReference) else ref
             self.row((index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
                      class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
-    def _last_ref_subpage(self, DAY, ref):
+    def _last_ref_subpage(self, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
         target = config.path.report_dir
         if isinstance(ref, SplitReference):
@@ -477,7 +477,7 @@ class RefTable(HtmlTable):
                                class_='delete' if delete_ else str(attr['kind']))
         write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
                    breadcrumbs=[dict(caption='Referenzen', link='refs')],
-                   head=str(ref), graph_id='refgraph')
+                   head=ref.label, graph_id='refgraph')
 
 
 class AssertionTable(HtmlTable):
