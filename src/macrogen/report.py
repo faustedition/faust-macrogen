@@ -424,9 +424,9 @@ class RefTable(HtmlTable):
 
         basename = target / wit.filename
         relevant_nodes = {start_node, end_node} | set(self.base.predecessors(start_node)) | set(self.base.successors(end_node))
-        if start_node.earliest != EARLIEST:
+        if start_node.earliest not in {EARLIEST, None}:
             relevant_nodes |= set(nx.shortest_path(self.base, start_node.earliest - DAY, ref))
-        if end_node.latest != LATEST:
+        if end_node.latest not in {LATEST, None}:
             relevant_nodes |= set(nx.shortest_path(self.base, end_node, end_node.latest + DAY))
         ref_subgraph = self.base.subgraph(relevant_nodes)
         write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)

@@ -13,17 +13,17 @@ from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
-from macrogen.splitgraph import references, SplitReference
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
 from .config import config
 from .datings import build_datings_graph, parse_datestr
-from macrogen.graphutils import simplify_timeline
+from .graphutils import simplify_timeline
 from .fes import eades, FES_Baharev, V
 from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
 from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
+from .splitgraph import references, SplitReference, Side
 
 logger = config.getLogger(__name__)
 
@@ -64,6 +64,39 @@ def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
 _SIGIL_NORM = re.compile('[. ]+')
 def _normalize_sigil(sigil: str) -> str:
     return _SIGIL_NORM.sub('', sigil).lower()
+
+
+def handle_inscriptions(base):
+    methods = config.inscriptions
+    if not methods:
+        return
+    if isinstance(methods, str):
+        if "," in methods:
+            methods = re.split(r',\s*', methods)
+        else:
+            methods = [methods]
+
+    if 'inline' in methods:
+        inscriptions_inline(base)
+    if 'copy' in methods:
+        datings_from_inscriptions(base)
+    if 'orphans' in methods:
+        adopt_orphans(base)
+
+
+def inscriptions_inline(base):
+    if config.model == 'split':
+        split_refs = (node for node in base.nodes if isinstance(node, SplitReference))
+        split_inscrs = [ref for ref in split_refs if isinstance(ref.reference, Inscription)]
+        for split_inscr in split_inscrs:
+            wit_half = SplitReference(split_inscr.reference.witness, split_inscr.side)
+            if split_inscr.side == Side.START:
+                base.add_edge(wit_half, split_inscr, kind='temp-pre', source=BiblSource('faust://model/inscription/inline'))
+            else:
+                base.add_edge(split_inscr, wit_half, kind='temp-pre', source=BiblSource('faust://model/inscription/inline'))
+    else:
+        logger.error(
+            f"Ignoring inscription method 'inline' for global model '{config.model}', it is only supported for split models")
 
 
 class MacrogenesisInfo:
@@ -161,10 +194,9 @@ class MacrogenesisInfo:
         if base.number_of_edges() == 0:
             raise ValueError("Loading macrogenesis data resulted in an empty graph. Is there data at {}?".format(
                     config.path.data.absolute()))
-        datings_from_inscriptions(base)
+        handle_inscriptions(base)
         add_edge_weights(base)
         resolve_ambiguities(base)
-        adopt_orphans(base)
         base = collapse_edges_by_source(base)
         add_iweight(base)
         working = cleanup_graph(base).copy()
@@ -443,7 +475,7 @@ class MacrogenesisInfo:
                 edges_from = self.dag
             path = nx.shortest_path(edges_from, source, target, weight, method)
             logger.debug('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
-            edges = expand_edges(edges_from, nx.utils.pairwise(path))
+            edges = list(expand_edges(edges_from, nx.utils.pairwise(path), filter=True))
             graph.add_edges_from(edges)
             return path
         except nx.NetworkXException as e:
@@ -465,7 +497,9 @@ class MacrogenesisInfo:
             path_from: Node from which the shortest path should be included, if any
             paths: Node(s) from / to which the spp should be included, if any
             paths_without_timeline: Paths should be built without considering the timeline
-
+            paths_between_nodes: iff True (the default), include the shortest paths between the given nodes
+            keep_timeline: if True, keep the timeline as is, otherwise remove useless date nodes
+            direct_assertions: if True, include all edges induced by the given node(s)
 
         Description:
             This method can be used to extract an 'interesting' subgraph around one or more nodes from the base

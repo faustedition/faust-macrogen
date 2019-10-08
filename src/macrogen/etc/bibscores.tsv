@@ -8,6 +8,7 @@ faust://bibliography/gsa-datenbank	75
 faust://bibliography/inventare_2_2	50
 faust://self	10000
 faust://progress	20000
+faust://model/inscription/inline	5000
 faust://bibliography/hertz1931	0
 faust://bibliography/pniower1924	1
 faust://generalknowledge	50
@@ -33,7 +34,7 @@ faust://bibliography/wa_IV_13	25
 faust://bibliography/morris1900	1
 faust://bibliography/hohlfeld1955	10
 faust://bibliography/wa_I_13_2	30
-faust://faust://bibliography/wa_I_15_2	25
+faust://bibliography/wa_I_15_2	25
 faust://bibliography/niejahr1894	5
 faust://bibliography/mmommsen1953	25
 faust://bibliography/lohmeyer1927	1

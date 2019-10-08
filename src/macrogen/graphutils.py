@@ -43,22 +43,29 @@ def pathlink(*nodes) -> Path:
     return Path("--".join(node_names) + '.php')
 
 
-def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Generator[
-    Tuple[Any, Any, int, dict], None, None]:
+def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]], filter: bool = False) \
+        -> Generator[Tuple[Any, Any, int, dict], None, None]:
     """
     Expands a 'simple' edge list (of node pairs) to the corresponding full edge list, including keys and data.
     Args:
         graph: the graph with the edges
         edges: edge list, a list of (u, v) node tuples
+        filter: if true, remove missing edges instead of raising an exception
 
     Returns:
         all edges from the multigraph that are between any node pair from edges as tuple (u, v, key, attrs)
 
     """
     for u, v in edges:
-        atlas = graph[u][v]
-        for key in atlas:
-            yield u, v, key, atlas[key]
+        try:
+            atlas = graph[u][v]
+            for key in atlas:
+                yield u, v, key, atlas[key]
+        except KeyError as e:
+            if filter:
+                logger.warning('Edge %s→%s from edge list not in graph', u, v)
+            else:
+                raise e
 
 
 def collapse_edges(graph: nx.MultiDiGraph):
