@@ -31,6 +31,8 @@ class SplitReference(Reference):
         self.other = other
 
     def __getattr__(self, item):
+        if 'reference' not in self.__dict__:
+            raise AttributeError("Reference not associated yet!")
         if hasattr(self.reference, item):
             return getattr(self.reference, item)
         else:
