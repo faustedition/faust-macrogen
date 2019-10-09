@@ -37,9 +37,9 @@ solver_options:       # pass options to the solvers. maps solver name or 'all' t
     verbose: false
 light_timeline: true  # use exclusion instead of high weight for timeline edges
 
-model: split          # single: Individual wits, split: model start and end separately
+model: split-reverse          # single: Individual wits, split: model start and end separately
 inscriptions:         # zero or more of: orphan, copy, inline (the latter only for split models)
-  - inline
+#  - inline
 
 progressbar: true    # allow to show a progress bar in some situations
 

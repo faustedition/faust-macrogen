@@ -286,8 +286,8 @@ def build_datings_graph() -> nx.MultiDiGraph:
                                    source=BiblSource('faust://heuristic', other_limit[1]['source'].citation),
                                    kind='not_before', xml=other_limit[1]['xml'])
 
-    if config.model == 'split':
-        graph = start_end_graph(graph)
+    if config.model in ('split', 'split-reverse'):
+        graph = start_end_graph(graph, config.model)
     add_timeline_edges(graph)
     return graph
 

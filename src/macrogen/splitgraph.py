@@ -60,7 +60,7 @@ class SplitReference(Reference):
         return {Side.START: start, Side.END: end}
 
 
-def start_end_graph(orig: nx.MultiDiGraph) -> nx.MultiDiGraph:
+def start_end_graph(orig: nx.MultiDiGraph, mode='split') -> nx.MultiDiGraph:
     """
     Converts a graph containing References into a graph that represents start and end of the writing process for
     each reference by separate nodes.
@@ -76,15 +76,25 @@ def start_end_graph(orig: nx.MultiDiGraph) -> nx.MultiDiGraph:
     refs = {node: SplitReference.both(node) for node in orig.nodes if isinstance(node, Reference)}
     assert not any(isinstance(node, SplitReference) for node in refs)
     result = nx.MultiDiGraph()
-    for u, v, k, attr in orig.edges(keys=True, data=True):
-        if u in refs: u = refs[u][Side.END]
-        if v in refs: v = refs[v][Side.START]
-        result.add_edge(u, v, k, **attr)
+    if mode == 'split':
+        for u, v, k, attr in orig.edges(keys=True, data=True):
+            if u in refs: u = refs[u][Side.END]
+            if v in refs: v = refs[v][Side.START]
+            result.add_edge(u, v, k, **attr)
+        result.graph['model'] = mode
+    elif mode == 'split-reverse':
+        for u, v, k, attr in orig.edges(keys=True, data=True):
+            if u in refs: u = refs[u][Side.START]
+            if v in refs: v = refs[v][Side.END]
+            result.add_edge(u, v, k, **attr)
+        result.graph['model'] = 'split-reverse'
 
     for ref, sides in refs.items():
         result.add_edge(sides[Side.START], sides[Side.END], kind="progress", source=BiblSource('faust://progress'))
 
     return result
+
+
 
 
 def references(graph: nx.MultiDiGraph) -> Set[Reference]:

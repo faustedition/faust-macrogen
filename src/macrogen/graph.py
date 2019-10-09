@@ -275,7 +275,7 @@ class MacrogenesisInfo:
 
     def order_refs_post_model(self) -> List[Reference]:
         refs = self.order_refs()
-        if config.model == 'split':
+        if config.model in ['split', 'split-reverse']:
             refs = [ref for ref in refs if ref.side == Side.END]
         return refs
 
@@ -759,7 +759,7 @@ def add_missing_wits(working: nx.MultiDiGraph):
     but it makes these nodes appear in the topological order.
     """
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
-    if config.model == 'split':
+    if any(isinstance(ref, SplitReference) for ref in working.nodes):
         known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
         missing_wits = all_wits - known_wits
         for wit in sorted(missing_wits, key=Witness.sigil_sort_key):

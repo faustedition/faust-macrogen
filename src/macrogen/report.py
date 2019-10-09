@@ -637,7 +637,7 @@ def report_downloads(graphs: MacrogenesisInfo):
     from macrogen import MacrogenesisInfo
     graphs = MacrogenesisInfo('macrogen-info.zip')
     </pre>
-    <p>Note this is barely tested yet.</p>
+    <p>
     """, "Downloads")
 
 
@@ -1208,7 +1208,7 @@ def report_stats(graphs: MacrogenesisInfo):
 
     edge_df = pd.DataFrame([dict(start=u, end=v, key=k, **attr)
                             for u, v, k, attr in graphs.base.edges(keys=True, data=True)])
-    edge_df.delete = edge_df.delete.fillna(False)
+    edge_df['delete'] = edge_df['delete'].fillna(False) if 'delete' in edge_df.columns else False
     edge_df.ignore = edge_df.ignore.fillna(False)
 
     html = f"""
@@ -1430,7 +1430,7 @@ def report_config(info: MacrogenesisInfo):
     <p>Die folgenden Regeln wurden angewandt, um Inskriptionen und die zugehörigen Zeugen zu verbinden:</p>
     <ul>
     """
-    for option in config.inscriptions:
+    for option in config.inscriptions or []:
         content += f'<li>(<code>{option}</code>) {inscriptions[option]}</li>\n'
     content += f"""
     </ul>
