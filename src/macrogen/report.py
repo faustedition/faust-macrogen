@@ -422,14 +422,9 @@ class RefTable(HtmlTable):
             wit = ref.reference
         else:
             start_node, end_node, wit = ref, ref, ref
-
         basename = target / wit.filename
-        relevant_nodes = {start_node, end_node} | set(self.base.predecessors(start_node)) | set(self.base.successors(end_node))
-        if start_node.earliest not in {EARLIEST, None}:
-            relevant_nodes |= set(nx.shortest_path(self.base, start_node.earliest - DAY, ref))
-        if end_node.latest not in {LATEST, None}:
-            relevant_nodes |= set(nx.shortest_path(self.base, end_node, end_node.latest + DAY))
-        ref_subgraph = self.base.subgraph(relevant_nodes)
+
+        ref_subgraph = self.graphs.subgraph(ref, context=True, abs_dates=True, direct_assertions=True)
         write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
         report = f"<!-- {repr(ref)} -->\n"
         report += self.format_table(self.rows[-1:])
