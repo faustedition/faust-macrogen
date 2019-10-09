@@ -6,6 +6,7 @@ import re
 from collections import defaultdict, Counter
 from datetime import date, datetime
 from html import escape
+from io import StringIO
 from itertools import chain, repeat, groupby
 from operator import itemgetter, attrgetter
 from pathlib import Path
@@ -906,8 +907,10 @@ def report_index(graphs):
               '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
              ('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
+             ('stats', 'Statistik', 'Der Graph in Zahlen'),
+             ('config', 'Konfiguration', 'Einstellungen, mit denen der Graph generiert wurde'),
              ('downloads', 'Downloads', 'Graphen zum Download'),
-             ('stats', 'Statistik', 'Der Graph in Zahlen')]
+             ]
     links = "\n".join(
             ('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page
              in pages))
@@ -1380,6 +1383,84 @@ def report_inscriptions(info: MacrogenesisInfo):
                """,
                'Inskriptionen')
 
+
+def report_config(info: MacrogenesisInfo):
+    models = {
+        'default': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten repräsentiert wird.',
+        'split': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
+                 'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
+                 'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
+                 'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
+                 '<em>A wurde beendet, bevor mit B begonnen wurde</em>.',
+        'split-reverse': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
+                  'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
+                  'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
+                  'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
+                  '<em>A wurde begonnen, bevor B beendet wurde</em>.',
+    }
+
+    inscriptions = {
+        'orphan': 'Falls für einen Zeugen <var>w</var> keine Makrogeneseaussagen vorliegen, aber für mindestens eine '
+                  'Inskription <var>w<sub>i</sub></var> von <var>w</var>, so wird für jede Inskription von <var>w</var>'
+                  'eine Kante <var>w<sub>i</sub> → w</var> eingezogen.',
+        'copy':   'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert.',
+        'inline': 'Eine Inskription <var>w<sub>i</sub></var> eines Zeugen <var>w</var> wird so eingebunden, dass '
+                  'sie nach dem Beginn von <var>w</var> beginnt und vor dem Ende von <var>w</var> endet.',
+    }
+    half_interval_mode = {
+        'off': 'Abgeleitete Intervallgrenzen wurden niemals hinzugefügt.',
+        'light': 'Nur wenn für einen Zeugen keine einzige belegte Angabe der einen Intervallgrenze einer absoluten '
+                 'Datierung, aber mindestens '
+                 'eine Angabe der anderen Intervallgrenze existiert, wird eine künstliche Intervallgrenze eingezogen,'
+                 f'und zwar um <strong>{config.half_interval_correction}</strong> (<code>half_interval_correction</code>) '
+                 'Tage von der dem Zeugen nächsten Intervallgrenze entfernt.',
+        'always': 'Gibt eine Quelle für einen Zeugen nur eine Intervallgrenze zur absoluten Datierung an, so wird '
+                  f'automatisch eine um ± <strong>{config.half_interval_correction}</strong> '
+                  '(<code>half_interval_correction</code> Tage entfernte andere Intervallgrenze ergänzt.)'
+    }
+    content = f"""
+    <p>Durch die Konfiguration kann die makrogenetische Analyse beeinflusst werden. Diese Seite zeigt und erläutert 
+    wichtige Einstellungen, wie sie bei der Generierung dieser Daten aktuell waren.</p>
+    <h2 id="model">Graphmodell (<code>model</code>)</h2>
+    <dl>
+    <dt><code>{config.model}</code></dt>
+    <dd>{models[config.model]}</dd>
+    </dl>
+    <h3 id="inscriptions">Inskriptionsbehandlung</h3>
+    <p>Die folgenden Regeln wurden angewandt, um Inskriptionen und die zugehörigen Zeugen zu verbinden:</p>
+    <ul>
+    """
+    for option in config.inscriptions:
+        content += f'<li>(<code>{option}</code>) {inscriptions[option]}</li>\n'
+    content += f"""
+    </ul>
+    <h3 id="heuristics">Ergänzende Heuristiken</h3>
+    <p>Für manche Knoten existiert nur eine »halbe« absolute Datierung, d. h. nur die Angabe entweder eines frühesten
+       Beginns oder eines spätesten Endes. Eine Heuristik kann ggf. die andere Seite ergänzen 
+       (<code>half_interval_mode</code>):</p>
+    <dl><dt><code>{config.half_interval_mode}</code></dt><dd>{half_interval_mode[config.half_interval_mode]}</dd></dl>
+    """
+
+    content += """<h2 id="bibscores">Gewichte für bibliographische Quellen</h2>
+    <table class="pure-table" data-sortable="true">
+    <thead><tr><th data-sortable-type="alpha">Quelle</th><th data-sortable-type="numeric">Gewicht</th></tr></thead>
+    <tbody>
+    """
+    for uri, value in sorted(config.bibscores.items(), key=itemgetter(1)):
+        source = BiblSource(uri)
+        content += f"<tr><td><a href='{source.filename}' title='{source.long_citation}'>{source}</td><td class='pure-right'>{value}</td></tr>"
+    content += """</tbody></table>"""
+
+    config_io = StringIO()
+    config.save_config(config_io)
+    content += f"""
+    <h2 id="config.yaml">Konfigurationsdatei</h2>
+    <pre class="lang-yaml">
+    {config_io.getvalue()}
+    </pre>
+    """
+
+    write_html(config.path.report_dir / "config.php", content, head="Konfiguration")
 
 def generate_reports(info: MacrogenesisInfo):
     report_functions = [fn for name, fn in globals().items() if name.startswith('report_')]

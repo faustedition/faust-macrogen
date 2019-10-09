@@ -363,6 +363,8 @@ class Configuration:
             except AttributeError:
                 logger.debug('Could not extract comment from config option %s', key)
 
+
+
     def save_config(self, output: Optional[Union[Path, str, BytesIO]]):
         """
         Dumps the current configuration.
