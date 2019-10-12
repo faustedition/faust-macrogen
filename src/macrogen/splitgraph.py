@@ -1,11 +1,18 @@
 from enum import Enum
+from logging import Logger
 from pathlib import Path
 from typing import Set, Optional
 
 import networkx as nx
-from macrogen.uris import Reference
-from macrogen.bibliography import BiblSource
+from .uris import Reference
+from .bibliography import BiblSource
 from more_itertools import first
+
+from .config import config
+
+
+def _logger() -> Logger:
+    return config.getLogger(__name__)
 
 
 class Side(Enum):
@@ -28,7 +35,7 @@ class SplitReference(Reference):
         super().__init__(reference.uri + '#' + side.value)
         self.reference = reference
         self.side = side
-        self.other = other
+        self._other = other
 
     def __getattr__(self, item):
         if 'reference' not in self.__dict__:
@@ -45,6 +52,18 @@ class SplitReference(Reference):
     @property
     def label(self) -> str:
         return self.reference.label  # XXX start/end?
+
+    @property
+    def other(self):
+        if False and self._other is None:
+            side = Side.START if self.side == Side.END else Side.END
+            self._other = SplitReference(self.reference, side, self)
+            _logger().warning('Created artifical other for %s', self)
+        return self._other
+
+    @other.setter
+    def other(self, value):
+        self._other = value
 
     def __str__(self):
         return f"{self.reference} ({self.side.label})"
@@ -93,8 +112,6 @@ def start_end_graph(orig: nx.MultiDiGraph, mode='split') -> nx.MultiDiGraph:
         result.add_edge(sides[Side.START], sides[Side.END], kind="progress", source=BiblSource('faust://progress'))
 
     return result
-
-
 
 
 def references(graph: nx.MultiDiGraph) -> Set[Reference]:

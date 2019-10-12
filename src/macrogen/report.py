@@ -2,13 +2,12 @@ import csv
 import json
 import os
 import urllib
-import re
 from collections import defaultdict, Counter
 from datetime import date, datetime
 from html import escape
 from io import StringIO
-from itertools import chain, repeat, groupby
-from operator import itemgetter, attrgetter
+from itertools import chain, groupby
+from operator import itemgetter
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
 from urllib.parse import urlencode
@@ -16,8 +15,6 @@ from urllib.parse import urlencode
 import networkx as nx
 import pandas as pd
 import pkg_resources
-import requests
-from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
@@ -403,7 +400,8 @@ class RefTable(HtmlTable):
                 start_node, wit, end_node = ref, ref, ref
             assertions = list(chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, wit, wit, start_node.earliest, end_node.latest,
+            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, wit, wit,
+                      self.graphs.details.max_before_date[wit], self.graphs.details.min_after_date[wit],
                       getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
                      id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
@@ -1031,22 +1029,6 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     write_html(target / 'help.php', report, 'Legende')
 
 
-def _yearlabel(ref: Reference):
-    earliest_year = ref.earliest.year
-    latest_year = ref.latest.year
-    if earliest_year == latest_year:
-        return str(earliest_year)
-    else:
-        sep = " … "
-        result = ""
-        if ref.earliest != EARLIEST:
-            result += str(earliest_year)
-        result += sep
-        if ref.latest != LATEST:
-            result += str(latest_year)
-        return result if result != sep else ""
-
-
 def report_scenes(graphs: MacrogenesisInfo):
     target = config.path.report_dir
     sceneTable = (HtmlTable(data_sortable="true")
@@ -1109,7 +1091,7 @@ def report_unused(graphs: MacrogenesisInfo):
 
 
 
-def write_order_xml(graphs):
+def write_order_xml(graphs: MacrogenesisInfo):
     order_xml: Path = config.path.order or config.path.report_dir / 'order.xml'
     logger.debug('Writing order file to %s', order_xml.absolute())
     ordered_refs = graphs.order_refs_post_model()
@@ -1119,15 +1101,14 @@ def write_order_xml(graphs):
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
-            *[F.item(format(witness),
-                     index=format(index),
-                     uri=witness.uri,
-                     sigil_t=witness.sigil_t,
-                     earliest=witness.earliest.isoformat() if witness.earliest not in {EARLIEST, None} else '',
-                     latest=witness.latest.isoformat() if witness.latest not in {LATEST, None} else '',
-                     yearlabel=_yearlabel(witness))
-              for index, witness in enumerate(ordered_wits, start=1)
-              if isinstance(witness, Witness)],
+            *[F.item(format(row.Index),
+                     index=format(row.position),
+                     uri=row.uri,
+                     sigil_t=row.Index.sigil_t,
+                     earliest=(row.max_before_date+DAY).isoformat() if not pd.isna(row.max_before_date) else '',
+                     latest=(row.min_after_date-DAY).isoformat() if not pd.isna(row.min_after_date) else '',
+                     yearlabel=row.yearlabel)
+              for row in graphs.details.query('kind == "Witness"').itertuples(index=True)],
             generated=datetime.now().isoformat())
     order_xml.parent.mkdir(parents=True, exist_ok=True)
     root.getroottree().write(str(order_xml), pretty_print=True)
@@ -1243,9 +1224,13 @@ def report_stats(graphs: MacrogenesisInfo):
 def report_timeline(graphs: MacrogenesisInfo):
     witinfo = WitInscrInfo.get()
 
-    def ref_info(ref) -> dict:
-        result = dict(start=ref.earliest.isoformat(), end=(ref.latest+DAY).isoformat(),
-                 content=_fmt_node(ref), id=ref.filename.stem, index=graphs.index[ref])
+    def ref_info(row) -> dict:
+        ref = row.Index
+        result = dict(start=row.max_before_date.isoformat(),
+                      end=row.min_after_date.isoformat(),
+                      content=_fmt_node(ref),
+                      id=ref.filename.stem,
+                      index=row.position)
         info = witinfo.get().by_uri.get(ref.uri, None)
         if info:
             result['scenes'] = sorted([scene.n for scene in info.max_scenes])
@@ -1257,14 +1242,12 @@ def report_timeline(graphs: MacrogenesisInfo):
             result['group'] = None
         return result
 
-    refs = graphs.order_refs()
-    if config.model == 'split':
-        refs = [ref for ref in refs if ref.side == Side.END]
+    rows = graphs.details.itertuples(index=True)
     data = list()    # FIXME list comprehension after #25 is resolved
     known = set()
-    for ref in refs:
-        if ref.earliest > EARLIEST and ref.latest < LATEST:
-            info = ref_info(ref)
+    for row in rows:
+        if not (pd.isna(row.max_before_date) or pd.isna(row.min_after_date)):
+            info = ref_info(row)
             if info['id'] not in known:
                 data.append(info)
                 known.add(info['id'])

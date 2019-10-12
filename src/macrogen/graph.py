@@ -7,12 +7,14 @@ import re
 from collections import defaultdict, Counter
 from datetime import date, timedelta
 from io import TextIOWrapper
+from operator import itemgetter
 from pathlib import Path
 from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
+import pandas as pd
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
@@ -61,7 +63,10 @@ def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
     else:
         return True
 
+
 _SIGIL_NORM = re.compile('[. ]+')
+
+
 def _normalize_sigil(sigil: str) -> str:
     return _SIGIL_NORM.sub('', sigil).lower()
 
@@ -85,18 +90,32 @@ def handle_inscriptions(base):
 
 
 def inscriptions_inline(base):
-    if config.model == 'split':
+    if any(isinstance(ref, SplitReference) for ref in base.nodes):
         split_refs = (node for node in base.nodes if isinstance(node, SplitReference))
         split_inscrs = [ref for ref in split_refs if isinstance(ref.reference, Inscription)]
+        # add potentially missing nodes
+        for inscr in split_inscrs:
+            base.add_nodes_from(SplitReference.both(inscr.reference.witness).values())
+
         for split_inscr in split_inscrs:
             wit_half = SplitReference(split_inscr.reference.witness, split_inscr.side)
             if split_inscr.side == Side.START:
-                base.add_edge(wit_half, split_inscr, kind='temp-pre', source=BiblSource('faust://model/inscription/inline'))
+                base.add_edge(wit_half, split_inscr, kind='temp-pre',
+                              source=BiblSource('faust://model/inscription/inline'))
             else:
-                base.add_edge(split_inscr, wit_half, kind='temp-pre', source=BiblSource('faust://model/inscription/inline'))
+                base.add_edge(split_inscr, wit_half, kind='temp-pre',
+                              source=BiblSource('faust://model/inscription/inline'))
     else:
         logger.error(
-            f"Ignoring inscription method 'inline' for global model '{config.model}', it is only supported for split models")
+                f"Ignoring inscription method 'inline' for global model '{config.model}', it is only supported for split models")
+
+
+def yearlabel(max_date_before: date, min_date_after: date) -> str:
+    earliest_year = max_date_before and (max_date_before + DAY).year
+    latest_year = min_date_after and (min_date_after - DAY).year
+    if earliest_year == latest_year:
+        return earliest_year and str(earliest_year) or ""
+    return " … ".join(str(year) for year in [earliest_year, latest_year] if year is not None)
 
 
 class MacrogenesisInfo:
@@ -113,6 +132,7 @@ class MacrogenesisInfo:
         self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
         self.order: List[Reference] = None
         self.index: Dict[Reference, int] = None
+        self.details: pd.DataFrame = None
 
         if load_from:
             self._load_from(load_from)
@@ -247,7 +267,7 @@ class MacrogenesisInfo:
 
         self.closure = nx.transitive_closure(result_graph)
         add_inscription_links(base)
-        self._augment_details()
+        self._infer_details()
 
     def order_refs(self) -> List[Reference]:
         if self.order:
@@ -287,51 +307,56 @@ class MacrogenesisInfo:
             logger.error('Some refs appear more than once in the order: %s', msg)
         self.index = {ref: i for (i, ref) in enumerate(self.order, start=1)}
 
-    def _augment_details(self):
-        logger.info('Augmenting refs with data from graphs')
-        for index, ref in enumerate(self.order_refs(), start=1):
-            if ref not in self.dag:
-                ref.earliest = EARLIEST
-                ref.latest = LATEST
-                continue
-            ref.index = index
-            ref.rank = self.closure.in_degree(ref)
-            max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
-                                  default=EARLIEST - DAY)
-            max_abs_before_date = max((d for d, _ in self.dag.in_edges(ref) if isinstance(d, date)),
-                                      default=None)
-            ref.earliest = max_before_date + DAY
-            ref.earliest_abs = max_abs_before_date + DAY if max_abs_before_date is not None else None
-            min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)),
-                                 default=LATEST + DAY)
-            min_abs_after_date = min((d for _, d in self.dag.out_edges(ref) if isinstance(d, date)),
-                                     default=None)
-            ref.latest = min_after_date - DAY
-            ref.latest_abs = min_abs_after_date - DAY if min_abs_after_date is not None else None
+    def _infer_details(self):
+        """Prepares a table with details on witnesses"""
+        logger.info('Preparing details on references')
+        ordered_ref_nodes = self.order_refs()
+        is_split = any(isinstance(node, SplitReference) for node in ordered_ref_nodes)
+        if is_split:
+            refs_from_graphs = [ref for ref in ordered_ref_nodes if ref.side == Side.END]  # FIXME Configurable?
+            refs_from_data = [ref.reference for ref in refs_from_graphs]
+            total_positions = {ref: pos for pos, ref in enumerate(ordered_ref_nodes, start=1)}
+            start_positions = {ref.reference: pos for ref, pos in total_positions.items() if ref.side == Side.START}
+            end_positions = {ref.reference: pos for ref, pos in total_positions.items() if ref.side == Side.END}
+        else:
+            refs_from_graphs = ordered_ref_nodes
+            refs_from_data = ordered_ref_nodes
 
-            if ref.earliest != EARLIEST and ref.latest != LATEST:
-                avg_date = ref.earliest + (ref.latest - ref.earliest) / 2
-                ref.avg_year = avg_date.year
-            elif ref.latest != LATEST:
-                ref.avg_year = ref.latest.year
-            elif ref.earliest != EARLIEST:
-                ref.avg_year = ref.earliest.year
-            else:
-                ref.avg_year = None
-        endrefs = (ref for ref in self.order_refs() if isinstance(ref, SplitReference) and ref.side == Side.END)
-        for splitref in endrefs:
-            ref = splitref.reference
-            start = splitref.other or first(node for node in self.base.nodes
-                                            if isinstance(node, SplitReference) and node.reference == ref
-                                            and node.side == Side.START)
-            end = splitref
-            ref.earliest = start.earliest
-            ref.latest = end.latest
-
+        table = pd.DataFrame(data=dict(uri=[ref.uri for ref in refs_from_data],
+                                       label=[ref.label for ref in refs_from_data],
+                                       kind=[type(ref).__name__ for ref in refs_from_data],
+                                       inscription_of=[ref.witness if isinstance(ref, Inscription) else None
+                                                       for ref in refs_from_data],
+                                       position=list(range(1, len(refs_from_data) + 1))),
+                             index=refs_from_data)
+        if is_split:
+            table['start_pos'] = pd.Series(start_positions)
+            table['end_pos'] = pd.Series(end_positions)
+        table['rank'] = [self.closure.in_degree(ref) for ref in refs_from_graphs]
+        for ref in refs_from_data:
+            max_before = max(
+                    (d for d, _ in self.closure.in_edges(SplitReference(ref, Side.START) if is_split else ref)
+                     if isinstance(d, date)), default=None)
+            max_abs_before = max((d for d, _ in self.dag.in_edges(SplitReference(ref, Side.START) if is_split else ref)
+                                  if isinstance(d, date)), default=None)
+            min_after = min((d for _, d in self.closure.out_edges(SplitReference(ref, Side.END) if is_split else ref)
+                             if isinstance(d, date)), default=None)
+            min_abs_after = min((d for _, d in self.dag.out_edges(SplitReference(ref, Side.END) if is_split else ref)
+                                 if isinstance(d, date)), default=None)
+            avg = max_before + (min_after - max_before) / 2 if max_before and min_after else max_before or min_after
+            table.loc[ref, 'max_before_date'] = max_before
+            table.loc[ref, 'max_abs_before_date'] = max_abs_before
+            table.loc[ref, 'min_after_date'] = min_after
+            table.loc[ref, 'min_abs_after_date'] = min_abs_after
+            table.loc[ref, 'avg'] = avg
+            table.loc[ref, 'avg_year'] = avg and avg.year
+            table.loc[ref, 'yearlabel'] = yearlabel(max_before, min_after)
+        self.details = table
 
     def year_stats(self):
-        years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
-        return Counter(years)
+        stats: pd.Series = self.details.avg_year.value_counts()
+        stats.index = pd.Int64Index(stats.index)
+        return Counter(stats.to_dict())
 
     def conflict_stats(self):
         return [_ConflictInfo(self, edge) for edge in self.conflicts]
@@ -343,6 +368,11 @@ class MacrogenesisInfo:
                 nx.write_gpickle(self.base, base_entry)
             with zip.open('simple_cycles.pickle', 'w') as sc_entry:
                 pickle.dump(self.simple_cycles, sc_entry)
+            with zip.open('ref_info.csv', 'w') as detail_entry:
+                text = TextIOWrapper(detail_entry, encoding='utf-8')
+                ref_info = self.details.set_index('uri')
+                ref_info.inscription_of.apply(lambda ref: ref and ref.uri)
+                ref_info.to_csv(text, date_format='iso')
             with zip.open('order.json', 'w') as order_entry:
                 text = TextIOWrapper(order_entry, encoding='utf-8')
                 json.dump([ref.uri for ref in self.order], text, indent=True)
@@ -389,7 +419,8 @@ class MacrogenesisInfo:
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.order_refs()
         self.closure = nx.transitive_closure(self.dag)
-        self._augment_details()
+        self._infer_details()
+        # self._augment_details()
 
     def node(self, spec: Union[Reference, date, str], default=KeyError):
         """
@@ -434,7 +465,8 @@ class MacrogenesisInfo:
             else:
                 return default
 
-    def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[List[Node], Tuple[List[Node], List[str]]]:
+    def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[
+        List[Node], Tuple[List[Node], List[str]]]:
         """
         Find nodes for a comma-separated list of node strings.
 
@@ -498,7 +530,7 @@ class MacrogenesisInfo:
             if must_exist:
                 raise e
 
-    def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool=True,
+    def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
                  paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False) \
             -> nx.MultiDiGraph:
@@ -551,7 +583,7 @@ class MacrogenesisInfo:
         targets = set(path_from).union(paths)
 
         if paths_without_timeline:
-            path_base = remove_edges(self.dag, lambda u,v,attr: attr.get('kind') == 'timeline')
+            path_base = remove_edges(self.dag, lambda u, v, attr: attr.get('kind') == 'timeline')
         else:
             path_base = self.dag
 
@@ -588,8 +620,6 @@ class MacrogenesisInfo:
             subgraph = simplify_timeline(subgraph)
 
         return subgraph
-
-
 
 
 def macrogenesis_graphs() -> MacrogenesisInfo:

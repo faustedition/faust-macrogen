@@ -127,6 +127,11 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
     if highlight is not None:
         if not isinstance(highlight, Sequence):
             highlight = [highlight]
+
+        for node in list(highlight):
+            if isinstance(node, SplitReference) and node.other:
+                highlight.append(node.other)
+
         if 'highlight' in style['node']:
             for highlight_node in highlight:
                 try:
