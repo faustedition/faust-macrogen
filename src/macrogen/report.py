@@ -1195,6 +1195,10 @@ def report_stats(graphs: MacrogenesisInfo):
     {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen
     ({len(edge_df[edge_df.delete].groupby(['start', 'end']))} ohne Parallelaussagen)
     </p>
+    
+    <h2>Sortierung</h2>
+    <p>Korrelation um <strong><var>ρ</var> = {graphs.spearman_rank_correlation():+.5f}</strong> ∈ [-1, +1] 
+       mit einer Sortierung ohne Makrogeneseinformationen.</p>
 
     <h2>Absolute Datierungen</h2>
     <table class="pure-table">

@@ -2,6 +2,7 @@
 Functions to build the graphs and perform their analyses.
 """
 import json
+import logging
 import pickle
 import re
 from collections import defaultdict, Counter
@@ -27,7 +28,7 @@ from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
 from .splitgraph import references, SplitReference, Side
 
-logger = config.getLogger(__name__)
+logger: logging.Logger = config.getLogger(__name__)
 
 EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
@@ -269,21 +270,61 @@ class MacrogenesisInfo:
         add_inscription_links(base)
         self._infer_details()
 
+    @staticmethod
+    def _secondary_key(node):
+        """Returns a tuple suitable as secondary sort key for a topological sort."""
+        if isinstance(node, Reference):
+            return node.sort_tuple()
+        elif isinstance(node, date):
+            return node.year, format(node.month, '02d'), node.day, ''
+        else:
+            return 99999, "zzzzzz", 99999, "zzzzzz"
+
+    def baseline_order(self) -> pd.Series:
+        """
+        Sorts the references in the base graph using _only_ the immanent sort key,
+        ignoring the graph topology.
+
+        Returns:
+            a series mapping References to unique integers as rank numbers
+
+        See Also:
+            spearman_rank_correlation
+        """
+        if any(isinstance(node, SplitReference) for node in self.base.nodes):
+            unsorted_refs = [ref.reference for ref in self.base.nodes
+                             if isinstance(ref, SplitReference) and ref.side == Side.END]
+        else:
+            unsorted_refs = [node for node in self.base.nodes if isinstance(node, Reference)]
+        refs = sorted(unsorted_refs, key=self._secondary_key)
+        return pd.Series(index=refs, data=range(1, len(refs) + 1))
+
+    def spearman_rank_correlation(self) -> float:
+        """
+        Calculates Spearman’s Rank Correlation Coefficient between a baseline ordering (that ignores
+        graph topology) and the topological ordering evoked by the model using its current settings.
+
+        Returns:
+            a float between -1 and +1. +1 would mean the ordering hasn’t changed at all by
+            the model, -1 means a complete permutation.
+        """
+        model_order: pd.Series = self.details.position
+        baseline_order = self.baseline_order()
+        n = model_order.index.size
+        if n != baseline_order.index.size:
+            delta = model_order.index.symmetric_difference(baseline_order.index)
+            logger.error("Warning: Baseline order has %d elements while model order has %d: Δ = %s.",
+                         baseline_order.size, n, delta)
+        Q = ((model_order - baseline_order) ** 2).sum()
+        r_s = 1 - (6 * Q) / (n * (n - 1) * (n + 1))
+        return r_s
+
     def order_refs(self) -> List[Reference]:
         if self.order:
             return self.order
 
         logger.info('Creating sort order from DAG')
-
-        def secondary_key(node):
-            if isinstance(node, Reference):
-                return node.sort_tuple()
-            elif isinstance(node, date):
-                return node.year, format(node.month, '02d'), node.day, ''
-            else:
-                return 99999, "zzzzzz", 99999, "zzzzzz"
-
-        nodes = nx.lexicographical_topological_sort(self.dag, key=secondary_key)
+        nodes = nx.lexicographical_topological_sort(self.dag, key=self._secondary_key)
         refs = [node for node in nodes if isinstance(node, Reference)]
         self.order = refs
         self._build_index()
