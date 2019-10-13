@@ -160,6 +160,9 @@ class Inscription(Reference):
         v, s1, n, s2 = super().sort_tuple()
         return (v, s1, n, s2 + " " + self.inscription)
 
+    def sigil_sort_key(self):
+        return self.witness.sigil_sort_key() + (self.inscription,)
+
 
 class UnknownRef(Reference):
     """

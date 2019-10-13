@@ -219,13 +219,13 @@ class MacrogenesisInfo:
         add_edge_weights(base)
         resolve_ambiguities(base)
         base = collapse_edges_by_source(base)
+        self.base = base
         add_iweight(base)
         working = cleanup_graph(base).copy()
-        add_missing_wits(working)
+        self.working = working
+        self.add_missing_wits(working)
         sccs = scc_subgraphs(working)
 
-        self.base = base
-        self.working = working
 
         logger.info('Calculating minimum feedback arc set for %d strongly connected components', len(sccs))
 
@@ -291,11 +291,11 @@ class MacrogenesisInfo:
         See Also:
             spearman_rank_correlation
         """
-        if any(isinstance(node, SplitReference) for node in self.base.nodes):
-            unsorted_refs = [ref.reference for ref in self.base.nodes
+        if any(isinstance(node, SplitReference) for node in self.dag.nodes):
+            unsorted_refs = [ref.reference for ref in self.dag.nodes
                              if isinstance(ref, SplitReference) and ref.side == Side.END]
         else:
-            unsorted_refs = [node for node in self.base.nodes if isinstance(node, Reference)]
+            unsorted_refs = [node for node in self.dag.nodes if isinstance(node, Reference)]
         refs = sorted(unsorted_refs, key=self._secondary_key)
         return pd.Series(index=refs, data=range(1, len(refs) + 1))
 
@@ -318,6 +318,29 @@ class MacrogenesisInfo:
         Q = ((model_order - baseline_order) ** 2).sum()
         r_s = 1 - (6 * Q) / (n * (n - 1) * (n + 1))
         return r_s
+
+    def add_missing_wits(self, working: nx.MultiDiGraph):
+        """
+        Add known witnesses that are not in the graph yet.
+
+        The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
+        but it makes these nodes appear in the topological order.
+        """
+        all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
+        if any(isinstance(ref, SplitReference) for ref in working.nodes):
+            known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
+            mentioned_refs = {ref.reference for ref in self.base.nodes if isinstance(ref.reference, Reference)}
+            inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
+            missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
+            for wit in sorted(missing_wits, key=lambda ref: ref.sort_tuple()):
+                working.add_nodes_from(SplitReference.both(wit).values())
+        else:
+            known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
+            mentioned_refs = {ref for ref in self.base.nodes if isinstance(ref, Reference)}
+            inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
+            missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
+            working.add_nodes_from(sorted(missing_wits, key=lambda ref: ref.sort_tuple()))
+        logger.info('Adding %d otherwise unmentioned references to the working graph', len(missing_wits))
 
     def order_refs(self) -> List[Reference]:
         if self.order:
@@ -822,25 +845,6 @@ def add_inscription_links(base: nx.MultiDiGraph):
         if isinstance(node, Inscription):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
 
-
-def add_missing_wits(working: nx.MultiDiGraph):
-    """
-    Add known witnesses that are not in the graph yet.
-
-    The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
-    but it makes these nodes appear in the topological order.
-    """
-    all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
-    if any(isinstance(ref, SplitReference) for ref in working.nodes):
-        known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
-        missing_wits = all_wits - known_wits
-        for wit in sorted(missing_wits, key=Witness.sigil_sort_key):
-            working.add_nodes_from(SplitReference.both(wit).values())
-    else:
-        known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
-        missing_wits = all_wits - known_wits
-        working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
-    logger.debug('Adding %d otherwise unmentioned witnesses to the working graph', len(missing_wits))
 
 
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
