@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from html import escape
 from io import StringIO
-from itertools import chain, groupby
+from itertools import chain, groupby, zip_longest
 from operator import itemgetter
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
@@ -157,8 +157,9 @@ class HtmlTable:
             return f'<tr{attributes}>' + ''.join(
                     self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
         except:
-            logger.exception('Error formatting row %s', row)
-            return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
+            row_str = ", ".join(f"{title!s}: {value!r}" for title, value in zip_longest(self.titles, row))
+            logger.exception('Error formatting row (%s)', row_str)
+            return f'<tr class="pure-alert pure-error"><td colspan="{len(self.titles)}">Error formatting row ({row_str})</td></tr>'
 
     def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str, None, None]:
         """Formats the given rows."""
@@ -409,6 +410,7 @@ class RefTable(HtmlTable):
             index: if present, the index to display for the node.
             write_subpage: if true, create a subpage with all assertions for the reference
         """
+        details = self.graphs.details
         if ref in self.base:
             if index is None:
                 index = self.graphs.index.get(ref, -1)
@@ -421,7 +423,6 @@ class RefTable(HtmlTable):
             assertions = list(
                 chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            details = self.graphs.details
             self.row((f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit,'rank'],
                       wit, wit, details.max_before_date[wit], details.min_after_date[wit],
                       getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
@@ -430,7 +431,9 @@ class RefTable(HtmlTable):
                 self._last_ref_subpage(ref)
         else:
             wit = ref.reference if isinstance(ref, SplitReference) else ref
-            self.row((index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
+            self.row((f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit,'rank'],
+                      wit, wit, details.max_before_date[wit], details.min_after_date[wit],
+                      getattr(wit, 'min_verse', ''), 0, 0), #(index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
                      class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     def _last_ref_subpage(self, ref):
@@ -1392,7 +1395,7 @@ def report_inscriptions(info: MacrogenesisInfo):
 
 def report_config(info: MacrogenesisInfo):
     models = {
-        'default': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten repräsentiert wird.',
+        'single': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten repräsentiert wird.',
         'split': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
                  'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
                  'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
@@ -1437,7 +1440,7 @@ def report_config(info: MacrogenesisInfo):
     <ul>
     """
     for option in config.inscriptions or []:
-        content += f'<li>(<code>{option}</code>) {inscriptions[option]}</li>\n'
+        content += f'<li>(<code>{option}</code>) {inscriptions.get(option, "…")}</li>\n'
     content += f"""
     </ul>
     <h3 id="heuristics">Ergänzende Heuristiken</h3>
