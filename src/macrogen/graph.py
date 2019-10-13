@@ -392,6 +392,7 @@ class MacrogenesisInfo:
             table.loc[ref, 'avg'] = avg
             table.loc[ref, 'avg_year'] = avg and avg.year
             table.loc[ref, 'yearlabel'] = yearlabel(max_before, min_after)
+        table['baseline_position'] = self.baseline_order()
         self.details = table
 
     def year_stats(self):

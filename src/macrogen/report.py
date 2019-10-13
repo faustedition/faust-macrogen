@@ -3,7 +3,8 @@ import json
 import os
 import urllib
 from collections import defaultdict, Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from functools import partial
 from html import escape
 from io import StringIO
 from itertools import chain, groupby
@@ -361,6 +362,24 @@ def _subgraph_link(*nodes: List[Node], html_content: Optional[str] = None, **opt
     return f'<a href="subgraph?{urllib.parse.urlencode(params)}">{html_content}</a>'
 
 
+def _fmt_date(d: date, delta: timedelta = timedelta(), na: str = '') -> str:
+    """
+    Helper to format a given date.
+
+    Args:
+        d: The date to format
+        delta: If present, a difference to add to d before formatting
+        na: When date is a N/A value, return this string instead
+
+    Returns:
+        iso-formatted, delta corrected date or the given na string
+    """
+    if not d or pd.isna(d):
+        return na
+    else:
+        return (d + delta).isoformat()
+
+
 class RefTable(HtmlTable):
     """
     Builds a table of references.
@@ -368,15 +387,16 @@ class RefTable(HtmlTable):
 
     def __init__(self, graphs: MacrogenesisInfo, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
-        (self.column('Nr.', data_sortable="numericplus")
-         .column('Knoten davor', data_sortable="numericplus")
-         .column('Objekt', data_sortable="sigil", format_spec=_fmt_node)
-         .column('Typ / Edition', data_sortable="sigil", format_spec=_edition_link)
-         .column('nicht vor', data_sortable="alpha", format_spec=lambda d: format(d) if d != EARLIEST else "")
-         .column('nicht nach', data_sortable="alpha", format_spec=lambda d: format(d) if d != LATEST else "")
-         .column('erster Vers', data_sortable="numericplus")
-         .column('Aussagen', data_sortable="numericplus")
-         .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
+        (self.column('Nr.', data_sortable_type="numericplus")
+         .column('(BL)', data_sortable_type="numericplus", format_spec=lambda f: str(int(f)) if f else '')
+         .column('Knoten davor', data_sortable_type="numericplus")
+         .column('Objekt', data_sortable_type="sigil", format_spec=_fmt_node)
+         .column('Typ / Edition', data_sortable_type="sigil", format_spec=_edition_link)
+         .column('nicht vor', data_sortable_type="alpha", format_spec=partial(_fmt_date, delta=DAY))
+         .column('nicht nach', data_sortable_type="alpha", format_spec=partial(_fmt_date, delta=-DAY))
+         .column('erster Vers', data_sortable_type="numericplus")
+         .column('Aussagen', data_sortable_type="numericplus")
+         .column('<a href="conflicts">Konflikte</a>', data_sortable_type="numericplus"))
         self.graphs = graphs
         self.base = graphs.base
 
@@ -398,10 +418,12 @@ class RefTable(HtmlTable):
                 end_node = side_node(self.base, wit, Side.END)
             else:
                 start_node, wit, end_node = ref, ref, ref
-            assertions = list(chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
+            assertions = list(
+                chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, wit, wit,
-                      self.graphs.details.max_before_date[wit], self.graphs.details.min_after_date[wit],
+            details = self.graphs.details
+            self.row((f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit,'rank'],
+                      wit, wit, details.max_before_date[wit], details.min_after_date[wit],
                       getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
                      id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
@@ -980,8 +1002,8 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     g7.add_edge(date(1808, 9, 30), hp47, source='Bohnenkamp 1994')
     g7.add_edge(hp47, date(1809, 3, 31), source=BiblSource('faust://heuristic', 'Bohnenkamp 1994'))
 
-
-    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6, heuristic=g7)
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6,
+                       heuristic=g7)
     for name, graph in help_graphs.items():
         write_dot(graph, str(target / f'help-{name}.dot'))
 
@@ -1070,6 +1092,7 @@ def report_scenes(graphs: MacrogenesisInfo):
 
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
 
+
 def report_unused(graphs: MacrogenesisInfo):
     unused_nodes = set(node for node in graphs.base.node if isinstance(node, Reference)) - set(graphs.dag.node)
     not_in_dag_table = RefTable(graphs)
@@ -1090,7 +1113,6 @@ def report_unused(graphs: MacrogenesisInfo):
                "Nicht eingeordnete Zeugen")
 
 
-
 def write_order_xml(graphs: MacrogenesisInfo):
     order_xml: Path = config.path.order or config.path.report_dir / 'order.xml'
     logger.debug('Writing order file to %s', order_xml.absolute())
@@ -1105,8 +1127,8 @@ def write_order_xml(graphs: MacrogenesisInfo):
                      index=format(row.position),
                      uri=row.uri,
                      sigil_t=row.Index.sigil_t,
-                     earliest=(row.max_before_date+DAY).isoformat() if not pd.isna(row.max_before_date) else '',
-                     latest=(row.min_after_date-DAY).isoformat() if not pd.isna(row.min_after_date) else '',
+                     earliest=(row.max_before_date + DAY).isoformat() if not pd.isna(row.max_before_date) else '',
+                     latest=(row.min_after_date - DAY).isoformat() if not pd.isna(row.min_after_date) else '',
                      yearlabel=row.yearlabel)
               for row in graphs.details.query('kind == "Witness"').itertuples(index=True)],
             generated=datetime.now().isoformat())
@@ -1118,6 +1140,8 @@ def write_order_xml(graphs: MacrogenesisInfo):
     config.path.report_dir.mkdir(exist_ok=True, parents=True)
     with (config.path.report_dir / 'witness-stats.json').open('wt', encoding='utf-8') as out:
         json.dump(data, out)
+
+    graphs.details.to_csv(config.path.report_dir / 'ref_info.csv', date_format='iso')
 
 
 def report_stats(graphs: MacrogenesisInfo):
@@ -1247,7 +1271,7 @@ def report_timeline(graphs: MacrogenesisInfo):
         return result
 
     rows = graphs.details.itertuples(index=True)
-    data = list()    # FIXME list comprehension after #25 is resolved
+    data = list()  # FIXME list comprehension after #25 is resolved
     known = set()
     for row in rows:
         if not (pd.isna(row.max_before_date) or pd.isna(row.min_after_date)):
@@ -1375,17 +1399,17 @@ def report_config(info: MacrogenesisInfo):
                  'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
                  '<em>A wurde beendet, bevor mit B begonnen wurde</em>.',
         'split-reverse': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
-                  'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
-                  'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
-                  'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
-                  '<em>A wurde begonnen, bevor B beendet wurde</em>.',
+                         'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
+                         'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
+                         'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
+                         '<em>A wurde begonnen, bevor B beendet wurde</em>.',
     }
 
     inscriptions = {
         'orphan': 'Falls für einen Zeugen <var>w</var> keine Makrogeneseaussagen vorliegen, aber für mindestens eine '
                   'Inskription <var>w<sub>i</sub></var> von <var>w</var>, so wird für jede Inskription von <var>w</var>'
                   'eine Kante <var>w<sub>i</sub> → w</var> eingezogen.',
-        'copy':   'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert.',
+        'copy': 'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert.',
         'inline': 'Eine Inskription <var>w<sub>i</sub></var> eines Zeugen <var>w</var> wird so eingebunden, dass '
                   'sie nach dem Beginn von <var>w</var> beginnt und vor dem Ende von <var>w</var> endet.',
     }
@@ -1443,6 +1467,7 @@ def report_config(info: MacrogenesisInfo):
     """
 
     write_html(config.path.report_dir / "config.php", content, head="Konfiguration")
+
 
 def generate_reports(info: MacrogenesisInfo):
     report_functions = [fn for name, fn in globals().items() if name.startswith('report_')]
