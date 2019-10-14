@@ -1,9 +1,10 @@
 from datetime import date
+from pathlib import Path
 
 import macrogen
 from macrogen.config import config
 import pytest
-from macrogen.graph import yearlabel
+from macrogen.graph import yearlabel, MacrogenesisInfo
 
 
 @pytest.fixture('session')
@@ -31,3 +32,12 @@ def test_yearlabel(start, end, label):
     start_ = start and date.fromisoformat(start)
     end_ = end and date.fromisoformat(end)
     assert yearlabel(start_, end_) == label
+
+
+def test_save_invariance(eades_graphs: MacrogenesisInfo, tmp_path: Path):
+    info_file = tmp_path / "eades.zip"
+    eades_graphs.save(info_file)
+    loaded = MacrogenesisInfo(info_file)
+    assert set(eades_graphs.base.nodes) == set(loaded.base.nodes)
+    difference = eades_graphs.details.index.symmetric_difference(loaded.details.index)
+    assert difference.empty, difference

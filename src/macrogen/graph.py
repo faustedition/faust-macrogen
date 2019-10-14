@@ -465,6 +465,7 @@ class MacrogenesisInfo:
         # Now reconstruct the other data:
         self.working: nx.MultiDiGraph = self.base.copy()
         self.working = cleanup_graph(self.working).copy()
+        self.add_missing_wits(self.working)
         self.dag = self.working.copy()
 
         for u, v, k, attr in self.working.edges(keys=True, data=True):
