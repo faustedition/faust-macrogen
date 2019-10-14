@@ -915,9 +915,7 @@ def add_syn_nodes(source_graph: nx.MultiDiGraph, mode: Optional[str] = None) -> 
         logger.warning('No temp-syn handling (mode==%s)', mode)
         return source_graph
 
-    syn_only = source_graph.edge_subgraph((u, v, k) for (u, v, k, kind) in source_graph.edges(keys=True, data='kind')
-                                          if kind == 'temp-syn')
-    syn_groups = [comp for comp in nx.weakly_connected_components(syn_only) if len(comp) > 1]
+    syn_groups = temp_syn_groups(source_graph)
     logger.info('Adding temp-syn nodes in mode %s for %d clusters', mode, len(syn_groups))
     result = source_graph.copy()
     for component in syn_groups:
@@ -955,6 +953,13 @@ def add_syn_nodes(source_graph: nx.MultiDiGraph, mode: Optional[str] = None) -> 
                     result.add_edge(after, farthest_after[1], **farthest_after[-1])
 
     return result
+
+
+def temp_syn_groups(source_graph: nx.MultiDiGraph):
+    syn_only = source_graph.edge_subgraph((u, v, k) for (u, v, k, kind) in source_graph.edges(keys=True, data='kind')
+                                          if kind == 'temp-syn')
+    syn_groups = [comp for comp in nx.weakly_connected_components(syn_only) if len(comp) > 1]
+    return syn_groups
 
 
 class _ConflictInfo:

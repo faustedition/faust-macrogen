@@ -25,7 +25,7 @@ from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, Scen
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
-from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node
+from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, temp_syn_groups
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .splitgraph import Side, SplitReference, side_node
@@ -113,6 +113,9 @@ class HtmlTable:
         self.rows.append(row)
         self.row_attrs.append(row_attrs)
         return self
+
+    def __len__(self):
+        return len(self.rows)
 
     @staticmethod
     def _build_attrs(attrdict: Dict):
@@ -421,20 +424,23 @@ class RefTable(HtmlTable):
             else:
                 start_node, wit, end_node = ref, ref, ref
             assertions = list(
-                chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
+                    chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            self.row((f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit,'rank'],
-                      wit, wit, details.max_before_date[wit], details.min_after_date[wit],
-                      getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
-                     id=f'idx{index}', class_=type(wit).__name__)
+            self.row(
+                    (f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit, 'rank'],
+                     wit, wit, details.max_before_date[wit], details.min_after_date[wit],
+                     getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
+                    id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
                 self._last_ref_subpage(ref)
         else:
             wit = ref.reference if isinstance(ref, SplitReference) else ref
-            self.row((f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit,'rank'],
-                      wit, wit, details.max_before_date[wit], details.min_after_date[wit],
-                      getattr(wit, 'min_verse', ''), 0, 0), #(index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
-                     class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
+            self.row(
+                    (f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit, 'rank'],
+                     wit, wit, details.max_before_date[wit], details.min_after_date[wit],
+                     getattr(wit, 'min_verse', ''), 0, 0),
+                    # (index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
+                    class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     def _last_ref_subpage(self, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
@@ -923,6 +929,7 @@ def report_index(graphs):
               'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion',
               '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
+             ('syn', 'Zeitliche Nähe', 'Zeugengruppen, für die Aussagen über ungefähre Gleichzeitigkeit vorliegen'),
              ('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
              ('stats', 'Statistik', 'Der Graph in Zahlen'),
@@ -1094,6 +1101,32 @@ def report_scenes(graphs: MacrogenesisInfo):
                    head=scene.title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
 
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
+
+
+def report_syngroups(graphs: MacrogenesisInfo):
+    clusters = temp_syn_groups(graphs.base)
+    target: Path = config.path.report_dir
+    table = (HtmlTable(data_sortable="true")
+             .column('Referenzen', data_sortable_type='sigil')
+             .column('Anzahl', data_sortable_type='numericplus')
+             .column('Aussagen', data_sortable_type='numericplus'))
+    for cluster in clusters:
+        representant = min(cluster, key=lambda item: item.filename)
+        file_stem = f"syn-{representant.filename.stem}"
+        subgraph = graphs.subgraph(*cluster)
+        write_dot(subgraph, target / (file_stem + "-graph.dot"), highlight=list(cluster))
+        assertions = AssertionTable()
+        for u, v, attr in graphs.base.subgraph(cluster).edges(data=True):
+            if attr.get('kind', None) == 'temp-syn':
+                assertions.edge(u, v, attr)
+        write_html(target / (file_stem + '.php'),
+                   f"""<object id="refgraph" type="image/svg+xml" data="{file_stem}-graph.svg"></object>\n""" +
+                   _subgraph_link(*cluster) +
+                   assertions.format_table(),
+                   graph_id='refgraph', head=f'Zeitgleich mit {representant.label}',
+                   breadcrumbs=[dict(caption='ca. gleichzeitig', link='syn')])
+        table.row((f'<a href="{file_stem}">{", ".join(map(str, cluster))}</a>', len(cluster), len(assertions)))
+    write_html(target / 'syn.php', table.format_table(), head='ca. gleichzeitig')
 
 
 def report_unused(graphs: MacrogenesisInfo):
