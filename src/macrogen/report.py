@@ -1194,6 +1194,7 @@ def report_stats(graphs: MacrogenesisInfo):
     Returns:
 
     """
+    report = dict()
     refs = graphs.order_refs()
     extra_refs_count = len(refs) - len(set(refs))
     logger.warning('Extra ref count: %s', extra_refs_count)
@@ -1247,9 +1248,33 @@ def report_stats(graphs: MacrogenesisInfo):
     edge_df['delete'] = edge_df['delete'].fillna(False) if 'delete' in edge_df.columns else False
     edge_df.ignore = edge_df.ignore.fillna(False)
 
+    report['edges'] = len(edge_df)
+    report['assertions'] = (edge_df.kind != 'timeline').sum()
+    report.update(edge_df.kind.value_counts())
+    report['ignored'] = edge_df.ignore.sum()
+    report['deleted'] = edge_df.delete.sum()
+    report['deleted_unique'] = len(edge_df[edge_df.delete].groupby(['start', 'end']))
+    report['spearman'] = graphs.spearman_rank_correlation()
+
+    report['not_before.direct'] = (stat.pred_dates > 0).sum()
+    report['not_before.inferred'] = (~stat.auto_pre.isna() & ~(stat.pred_dates > 0)).sum()
+    report['not_before.adjusted'] = (~stat.auto_pre.isna() & ~stat.pre.isna() & (stat.auto_pre != stat.pre)).sum()
+    report['not_before.missing'] = (stat.auto_pre.isna()).sum()
+
+    report['not_after.direct'] = (stat.succ_dates > 0).sum()
+    report['not_after.inferred'] = (~stat.auto_post.isna() & ~(stat.succ_dates > 0)).sum()
+    report['not_after.adjusted'] = (~stat.auto_post.isna() & ~stat.post.isna() & (stat.auto_post != stat.post)).sum()
+    report['not_after.missing'] = (stat.auto_post.isna()).sum()
+
+    with (config.path.report_dir / 'statistics.csv').open('wt', encoding='utf-8') as csv_file:
+        csv_writer = csv.DictWriter(csv_file, report.keys())
+        csv_writer.writeheader()
+        csv_writer.writerow(report)
+
     html = f"""
+    <a class="pure-pull-right" href="statistics.csv"><i class="fa fa-download"></i> CSV</a>
     <h2>Kanten (Aussagen)</h2>
-    <p>{len(edge_df)} Kanten, {(edge_df.kind != 'timeline').sum()} Datierungsaussagen:</p>
+    <p>{report['edges']} Kanten, {report['assertions']} Datierungsaussagen:</p>
     <pre>{edge_df.kind.value_counts()}</pre>
     <p>{edge_df.ignore.sum()} Aussagen (manuell) ignoriert,
     {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen
@@ -1257,7 +1282,7 @@ def report_stats(graphs: MacrogenesisInfo):
     </p>
     
     <h2>Sortierung</h2>
-    <p>Korrelation um <strong><var>ρ</var> = {graphs.spearman_rank_correlation():+.5f}</strong> ∈ [-1, +1] 
+    <p>Korrelation um <strong><var>ρ</var> = {report['spearman']:+.5f}</strong> ∈ [-1, +1] 
        mit einer Sortierung ohne Makrogeneseinformationen.</p>
 
     <h2>Absolute Datierungen</h2>
