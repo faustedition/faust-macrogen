@@ -32,7 +32,6 @@ setup(
                 'logging-tree',
                 'colorlog',
                 'tqdm',
-                'dataclasses',
                 'cvxpy',
                 'cvxopt'   # just used to pull in GLPK
         ],

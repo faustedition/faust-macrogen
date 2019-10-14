@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence
+from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional
 
 import networkx as nx
 
@@ -37,9 +37,11 @@ def pathlink(*nodes) -> Path:
             node_names.append(node.filename.stem)
         elif isinstance(node, date):
             node_names.append(node.isoformat())
+        elif isinstance(node, str):
+            node_names.append(node)
         else:
             logger.warning('Unknown node type: %s (%s)', type(node), node)
-            node_names.append(str(hash(node)))
+            node_names.append(base_n(hash(node), 62))
     return Path("--".join(node_names) + '.php')
 
 
@@ -241,3 +243,37 @@ def simplify_timeline(graph: nx.MultiDiGraph):
     #         if prev is not None:
     #             graph.add_edge(prev, node, kind='timeline')
     #         prev = node
+
+
+def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
+    """
+    Calculates a base-n string representation of the given number.
+    Args:
+        number: The number to convert
+        base: 2-36
+
+    Returns:
+        string representing number_base
+    """
+    if not(isinstance(number, int)):
+        raise TypeError(f"Number must be an integer, not a {type(number)}")
+    if neg is None and int < 0:
+        raise ValueError("number must not be negative if no neg character is given")
+    if base < 2 or base > 64:
+        raise ValueError("Base must be between 2 and 62")
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if neg in alphabet:
+        raise ValueError(f"neg char, '{neg}', must not be from alphabet '{alphabet}")
+
+    digits = []
+    if number == 0:
+        return alphabet[0]
+    rest = abs(number)
+    while rest > 0:
+        digits.append(alphabet[rest % base])
+        rest = rest // base
+
+    if number < 0:
+        digits.append(neg)
+
+    return "".join(reversed(digits))

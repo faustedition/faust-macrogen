@@ -10,12 +10,13 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable
+from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, FrozenSet
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
 import pandas as pd
+from dataclasses import dataclass
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
@@ -219,13 +220,14 @@ class MacrogenesisInfo:
         add_edge_weights(base)
         resolve_ambiguities(base)
         base = collapse_edges_by_source(base)
+        if config.temp_syn and config.temp_syn != 'ignore':
+            base = add_syn_nodes(base)
         self.base = base
         add_iweight(base)
         working = cleanup_graph(base).copy()
         self.working = working
         self.add_missing_wits(working)
         sccs = scc_subgraphs(working)
-
 
         logger.info('Calculating minimum feedback arc set for %d strongly connected components', len(sccs))
 
@@ -598,7 +600,8 @@ class MacrogenesisInfo:
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
-                 paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False) \
+                 paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False,
+                 temp_syn_context: bool = False) \
             -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
@@ -643,6 +646,10 @@ class MacrogenesisInfo:
         if context:
             for node in central_nodes:
                 relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node])
+        if temp_syn_context:
+            for node in set(relevant_nodes):
+                if isinstance(node, SynAnchor):
+                    relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node]).union(node.syn_group)
 
         subgraph: nx.MultiDiGraph = nx.subgraph(self.base, relevant_nodes).copy()
         sources = set(path_from).union(paths)
@@ -847,7 +854,6 @@ def add_inscription_links(base: nx.MultiDiGraph):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
 
 
-
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     logger.info('Removing edges to ignore')
 
@@ -865,6 +871,90 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
+
+
+@dataclass(frozen=True, order=True)
+class SynAnchor:
+    syn_group: frozenset
+    side: Side
+
+    def __str__(self):
+        return f"{self.side.label}({', '.join(ref.label for ref in self.syn_group)})"
+
+
+def add_syn_nodes(source_graph: nx.MultiDiGraph, mode: Optional[str] = None) -> nx.MultiDiGraph:
+    """
+    Creates a copy of the graph with appropriate handling of temp-syn edges.
+
+    An edge u –temp-syn→ v models that u and v have been written approximately at the same time. Semantically,
+    these are symmetric (or undirected) edges, so all nodes connected via (only) temp-syn edges form a cluster
+    (more formally, these are the non-trivial weakly connected components of the subgraph induced by the temp-syn
+    edges).
+
+    This function places two artificial nodes of class `SynAnchor` before and after each cluster, connecting the
+    SynAnchor nodes to the `Reference`s in the cluster using regular ``temp-pre`` edges, and connects the SynAnchor
+    nodes using the given modes:
+
+    - ``ignore``: No SynAnchors, just ignore the nodes completely
+    - ``copy``: Copy all in-edges that come from nodes not in the cluster to the anchor before, and all out-edges that
+       connect to nodes outside the cluster to the ancher after the cluster.
+    - ``closest``: Connect the anchors to the closest date nodes of any of the witnesses in the group
+    - ``farthest``: Connect the anchors to the farthest date nodes of any of the witnesses in the group
+
+    Args:
+        source_graph: The graph to work on. Is not modified
+        mode: ignore, copy, closest or farthest; if None, take the value from the config option ``temp_syn``
+
+    Returns:
+        a modified copy of the input graph
+
+    """
+    if mode is None:
+        mode = config.temp_syn
+    if not mode or mode == 'ignore':
+        logger.warning('No temp-syn handling (mode==%s)', mode)
+        return source_graph
+
+    syn_only = source_graph.edge_subgraph((u, v, k) for (u, v, k, kind) in source_graph.edges(keys=True, data='kind')
+                                          if kind == 'temp-syn')
+    syn_groups = [comp for comp in nx.weakly_connected_components(syn_only) if len(comp) > 1]
+    logger.info('Adding temp-syn nodes in mode %s for %d clusters', mode, len(syn_groups))
+    result = source_graph.copy()
+    for component in syn_groups:
+        syn_group: Set[Reference] = frozenset(component)
+        in_edge_view = source_graph.in_edges(nbunch=syn_group, keys=True, data=True)
+        out_edge_view = source_graph.out_edges(nbunch=syn_group, keys=True, data=True)
+        in_edges = [(u, v, k, attr) for u, v, k, attr in in_edge_view if u not in syn_group]
+        out_edges = [(u, v, k, attr) for u, v, k, attr in out_edge_view if v not in syn_group]
+        before = SynAnchor(syn_group, Side.START)
+        after = SynAnchor(syn_group, Side.END)
+        for ref in syn_group:
+            result.add_edge(before, ref, kind='temp-pre', source=BiblSource('faust://temp-syn'))  # TODO add orig source
+            result.add_edge(ref, after, kind='temp-pre', source=BiblSource('faust://temp-syn'))
+
+            if mode == 'copy':
+                result.add_edges_from([(u, before, k, attr) for u, v, k, attr in in_edges])
+                result.add_edges_from([(after, v, k, attr) for u, v, k, attr in out_edges])
+            elif mode == 'closest':
+                closest_before = max([edge for edge in in_edges if isinstance(edge[0], date)],
+                                     key=itemgetter(0), default=None)
+                closest_after = min([edge for edge in out_edges if isinstance(edge[0], date)],
+                                    key=itemgetter(0), default=None)
+                if closest_before:
+                    result.add_edge(closest_before[0], before, **closest_before[-1])
+                if closest_after:
+                    result.add_edge(after, closest_after[1], **closest_after[-1])
+            elif mode == 'farthest':
+                farthest_before = min([edge for edge in in_edges if isinstance(edge[0], date)],
+                                      key=itemgetter(0), default=None)
+                farthest_after = max([edge for edge in out_edges if isinstance(edge[0], date)],
+                                     key=itemgetter(0), default=None)
+                if farthest_before:
+                    result.add_edge(farthest_before[0], before, **farthest_before[-1])
+                if farthest_after:
+                    result.add_edge(after, farthest_after[1], **farthest_after[-1])
+
+    return result
 
 
 class _ConflictInfo:

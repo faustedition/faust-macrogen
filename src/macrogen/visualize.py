@@ -16,7 +16,7 @@ from tqdm import tqdm
 from .config import config
 from .datings import add_timeline_edges
 from .bibliography import BiblSource
-from .graphutils import pathlink
+from .graphutils import pathlink, base_n
 from .uris import Reference
 from .graph import Node
 from .splitgraph import SplitReference
@@ -45,6 +45,10 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
                 attrs['kind'] = node.side.value
             else:
                 attrs['kind'] = node.__class__.__name__
+        else:
+            attrs['kind'] = type(node).__name__
+            attrs['label'] = str(node)
+            translation[node] = base_n(hash(node), 62)  # use a stable, short representation
         _simplify_attrs(attrs)
 
     nx.relabel_nodes(graph, translation, copy=False)

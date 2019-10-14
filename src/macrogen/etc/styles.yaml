@@ -2,6 +2,8 @@
 node:
   date:
     shape: none
+  SynAnchor:
+    shape: point
   start:
     shape: rarrow
   end:

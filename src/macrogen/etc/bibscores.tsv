@@ -8,6 +8,7 @@ faust://bibliography/gsa-datenbank	75
 faust://bibliography/inventare_2_2	50
 faust://self	10000
 faust://progress	20000
+faust://temp-syn	1000
 faust://model/inscription/inline	5000
 faust://bibliography/hertz1931	0
 faust://bibliography/pniower1924	1
