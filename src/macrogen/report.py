@@ -1483,6 +1483,30 @@ def report_config(info: MacrogenesisInfo):
     <dl><dt><code>{config.half_interval_mode}</code></dt><dd>{half_interval_mode[config.half_interval_mode]}</dd></dl>
     """
 
+    content += """
+    <h3 id="temp-syn">Umgang mit Gleichzeitigkeit (<code>temp_syn</code>)</h3>
+    """
+    if not config.temp_syn or config.temp_syn == 'ignore':
+        content += """
+            <p>Aussagen, dass bestimmte Zeugen in zeitlicher Nähe verfasst wurden, werden <a href='syn'>dargestellt</a>,
+            aber nicht weiter ausgewertet.</p>"""
+    else:
+        temp_syn = {
+            'copy': 'Alle eingehenden Kanten aller Gruppenknoten werden auf den Vorher-Knoten kopiert, alle ausgehenden '
+                    'Kanten auf den Nachher-Knoten',
+            'closest': 'Die späteste absolute vorher-Datierung eines der Gruppenknoten und die früheste absolute '
+                       'nachher-Datierun wird übertragen',
+            'farthest': 'Die früheste absolute vorher-Datierung eines der Gruppenknoten und die späteste absolute '
+                       'nachher-Datierun wird übertragen',
+        }
+        content += f"""
+        <p>Einzelne Aussagen besagen, dass bestimmte Zeugen in zeitlicher Nähe zueinander verfasst worden sind. Die
+        <a href="syn">durch solche Aussagen verbundenen Zeugen (Äquivalenzklassen)</a> werden so behandelt, dass jeweils vor
+        und nach den entsprechenden Zeugengruppen ein »Dummyknoten« • eingefügt wird, der zu jedem der Knoten verbunden wird.
+        Dann werden Datierungsaussagen zu den Zeugengruppen ausgewählt und auf die Dummyknoten übertragen:</p>
+        {temp_syn[config.temp_syn]} (<code>{config.temp_syn}</code>)
+        """
+
     content += """<h2 id="bibscores">Gewichte für bibliographische Quellen</h2>
     <table class="pure-table" data-sortable="true">
     <thead><tr><th data-sortable-type="alpha">Quelle</th><th data-sortable-type="numeric">Gewicht</th></tr></thead>
