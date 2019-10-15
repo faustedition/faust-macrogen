@@ -298,7 +298,7 @@ class MacrogenesisInfo:
                              if isinstance(ref, SplitReference) and ref.side == Side.END]
         else:
             unsorted_refs = [node for node in self.dag.nodes if isinstance(node, Reference)]
-        refs = sorted(unsorted_refs, key=self._secondary_key)
+        refs = sorted(unsorted_refs, key=lambda ref: ref.sort_tuple()[1:])
         return pd.Series(index=refs, data=range(1, len(refs) + 1))
 
     def spearman_rank_correlation(self) -> float:
@@ -331,7 +331,7 @@ class MacrogenesisInfo:
         all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
         if any(isinstance(ref, SplitReference) for ref in working.nodes):
             known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
-            mentioned_refs = {ref.reference for ref in self.base.nodes if isinstance(ref.reference, Reference)}
+            mentioned_refs = {ref.reference for ref in self.base.nodes if isinstance(ref, SplitReference)}
             inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
             missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
             for wit in sorted(missing_wits, key=lambda ref: ref.sort_tuple()):

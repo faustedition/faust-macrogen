@@ -1172,7 +1172,7 @@ def write_order_xml(graphs: MacrogenesisInfo):
     root.getroottree().write(str(order_xml), pretty_print=True)
 
     stats = graphs.year_stats()
-    data = dict(max=max(stats.values()), counts=stats)
+    data = dict(max=max(stats.values(), default=None), counts=stats)
     config.path.report_dir.mkdir(exist_ok=True, parents=True)
     with (config.path.report_dir / 'witness-stats.json').open('wt', encoding='utf-8') as out:
         json.dump(data, out)
