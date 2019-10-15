@@ -1198,41 +1198,6 @@ def report_stats(graphs: MacrogenesisInfo):
     refs = graphs.order_refs()
     extra_refs_count = len(refs) - len(set(refs))
     logger.warning('Extra ref count: %s', extra_refs_count)
-    wits = [ref for ref in refs if isinstance(ref, Witness)]
-    stat: DataFrame = pd.DataFrame(index=refs, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
-                                                        'succ_dates', 'auto_pre', 'auto_post', 'auto_len'])
-
-    # now collect some info per witness:
-    for ref in refs:
-        try:
-            preds = list(graphs.base.pred[ref]) if ref in graphs.base else []
-            succs = list(graphs.base.succ[ref]) if ref in graphs.base else []
-
-            pred_dates = [p for p in preds if isinstance(p, date)]
-            succ_dates = [s for s in succs if isinstance(s, date)]
-
-            if ref in graphs.closure:
-                auto_pre = max((d for d in graphs.closure.pred[ref] if isinstance(d, date)), default=None)
-                auto_post = min((d for d in graphs.closure.succ[ref] if isinstance(d, date)), default=None)
-            else:
-                auto_pre = auto_post = None
-            row = dict(
-                    kind=ref.__class__.__name__,
-                    pred=len(preds),
-                    pred_dates=len(pred_dates),
-                    pre=max((d for d in pred_dates), default=None),
-                    post=min((d for d in succ_dates), default=None),
-                    succ=len(succs),
-                    succ_dates=len(succ_dates),
-                    in_closure=ref in graphs.closure,
-
-                    auto_pre=auto_pre,
-                    auto_post=auto_post,
-                    auto_len=auto_post - auto_pre if auto_pre and auto_post else None
-            )
-            stat.loc[ref, :] = row
-        except Exception as e:
-            logger.error("Could not record %s in stats", ref, exc_info=True)
 
     def _dating_table():
         for dating in get_datings():
@@ -1240,8 +1205,6 @@ def report_stats(graphs: MacrogenesisInfo):
                 for item in dating.items:
                     for source in dating.sources:
                         yield item, item.__class__.__name__, dating.start, dating.end, source
-
-    dating_stat = pd.DataFrame(list(_dating_table()), columns='item kind start end source'.split())
 
     edge_df = pd.DataFrame([dict(start=u, end=v, key=k, **attr)
                             for u, v, k, attr in graphs.base.edges(keys=True, data=True)])
@@ -1256,15 +1219,16 @@ def report_stats(graphs: MacrogenesisInfo):
     report['deleted_unique'] = len(edge_df[edge_df.delete].groupby(['start', 'end']))
     report['spearman'] = graphs.spearman_rank_correlation()
 
-    report['not_before.direct'] = (stat.pred_dates > 0).sum()
-    report['not_before.inferred'] = (~stat.auto_pre.isna() & ~(stat.pred_dates > 0)).sum()
-    report['not_before.adjusted'] = (~stat.auto_pre.isna() & ~stat.pre.isna() & (stat.auto_pre != stat.pre)).sum()
-    report['not_before.missing'] = (stat.auto_pre.isna()).sum()
+    details = graphs.details
+    report['not_before.direct'] = (~details.max_abs_before_date.isna()).sum()
+    report['not_before.inferred'] = (details.max_abs_before_date.isna() & ~details.max_before_date.isna()).sum()
+    report['not_before.adjusted'] = (~details.max_abs_before_date.isna() & (details.max_abs_before_date != details.max_before_date)).sum()
+    report['not_before.missing'] = (details.max_before_date.isna()).sum()
 
-    report['not_after.direct'] = (stat.succ_dates > 0).sum()
-    report['not_after.inferred'] = (~stat.auto_post.isna() & ~(stat.succ_dates > 0)).sum()
-    report['not_after.adjusted'] = (~stat.auto_post.isna() & ~stat.post.isna() & (stat.auto_post != stat.post)).sum()
-    report['not_after.missing'] = (stat.auto_post.isna()).sum()
+    report['not_after.direct'] = (~details.min_abs_after_date.isna()).sum()
+    report['not_after.inferred'] = (details.min_abs_after_date.isna() & ~details.min_after_date.isna()).sum()
+    report['not_after.adjusted'] = (~details.min_abs_after_date.isna() & (details.min_abs_after_date != details.min_after_date)).sum()
+    report['not_after.missing'] = (details.min_after_date.isna()).sum()
 
     with (config.path.report_dir / 'statistics.csv').open('wt', encoding='utf-8') as csv_file:
         csv_writer = csv.DictWriter(csv_file, report.keys())
@@ -1291,23 +1255,22 @@ def report_stats(graphs: MacrogenesisInfo):
         <thead><tr><td/><th>direkt</th><th>erschlossen</th><th>angepasst</th><th>fehlend</th></tr></thead>
         <tbody>
         <tr><th>Datumsuntergrenze</th>
-            <td>{(stat.pred_dates > 0).sum()}</td>
-            <td>{(~stat.auto_pre.isna() & ~(stat.pred_dates > 0)).sum()}</td>
-            <td>{(~stat.auto_pre.isna() & ~stat.pre.isna() & (stat.auto_pre != stat.pre)).sum()}</td>
-            <td>{(stat.auto_pre.isna()).sum()}</td>
+            <td>{report['not_before.direct']}</td>
+            <td>{report['not_before.inferred']}</td>
+            <td>{report['not_before.adjusted']}</td>
+            <td>{report['not_before.missing']}</td>
         </tr>
         <tr><th>Datumsobergrenze</th>
-            <td>{(stat.succ_dates > 0).sum()}</td>
-            <td>{(~stat.auto_post.isna() & ~(stat.succ_dates > 0)).sum()}</td>
-            <td>{(~stat.auto_post.isna() & ~stat.post.isna() & (stat.auto_post != stat.post)).sum()}</td>
-            <td>{(stat.auto_post.isna()).sum()}</td>
+            <td>{report['not_after.direct']}</td>
+            <td>{report['not_after.inferred']}</td>
+            <td>{report['not_after.adjusted']}</td>
+            <td>{report['not_after.missing']}</td>
         </tr>
         </tbody>
     </table>
     """
     write_html(config.path.report_dir / "stats.php", html, "Statistik")
 
-    return stat, dating_stat, edge_df
 
 
 def report_timeline(graphs: MacrogenesisInfo):
