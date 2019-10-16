@@ -10,13 +10,15 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, FrozenSet
+from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
 import pandas as pd
 from dataclasses import dataclass
+
+from macrogen.graphutils import is_orphan
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
@@ -87,6 +89,8 @@ def handle_inscriptions(base):
         inscriptions_inline(base)
     if 'copy' in methods:
         datings_from_inscriptions(base)
+    if 'copy-orphans' in methods:
+        datings_from_inscriptions(base, orphans_only=True)
     if 'orphans' in methods:
         adopt_orphans(base)
 
@@ -797,7 +801,7 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
         graph.remove_node(ambiguity)
 
 
-def datings_from_inscriptions(base: nx.MultiDiGraph):
+def datings_from_inscriptions(base: nx.MultiDiGraph, orphans_only=False):
     """
     Copy datings from inscriptions to witnesses.
 
@@ -817,10 +821,10 @@ def datings_from_inscriptions(base: nx.MultiDiGraph):
         before = [edge for edge in iin if isinstance(edge[0], date)]
         iout = [edge for i in inscriptions for edge in base.out_edges(i, data=True, keys=True)]
         after = [edge for edge in iout if isinstance(edge[1], date)]
-        if before and not any(isinstance(pred, date) for pred in base.predecessors(witness)):
+        if before and not any(isinstance(pred, date) for pred in base.predecessors(witness)) and not (orphans_only and not is_orphan(witness, base)):
             for d, i, k, attr in before:
                 base.add_edge(d, witness, copy=(d, i, k), **attr)
-        if after and not any(isinstance(succ, date) for succ in base.successors(witness)):
+        if after and not any(isinstance(succ, date) for succ in base.successors(witness)) and not (orphans_only and not is_orphan(witness, base)):
             for i, d, k, attr in after:
                 base.add_edge(witness, d, copy=(d, i, k), **attr)
 

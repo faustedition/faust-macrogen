@@ -277,3 +277,7 @@ def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
         digits.append(neg)
 
     return "".join(reversed(digits))
+
+
+def is_orphan(node, graph: nx.DiGraph):
+    return node not in graph.nodes or graph.in_degree[node] == 0 and graph.out_degree[node] == 0

@@ -1434,6 +1434,8 @@ def report_config(info: MacrogenesisInfo):
                   'Inskription <var>w<sub>i</sub></var> von <var>w</var>, so wird für jede Inskription von <var>w</var>'
                   'eine Kante <var>w<sub>i</sub> → w</var> eingezogen.',
         'copy': 'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert.',
+        'copy-orphans': 'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert, wenn'
+                        'für die Zeugen keine eigenen Aussagen vorliegen.',
         'inline': 'Eine Inskription <var>w<sub>i</sub></var> eines Zeugen <var>w</var> wird so eingebunden, dass '
                   'sie nach dem Beginn von <var>w</var> beginnt und vor dem Ende von <var>w</var> endet.',
     }
