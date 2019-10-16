@@ -1,0 +1,11 @@
+single-none	--model=single --inscriptions='' --temp-syn=ignore
+single-copy	--model=single --inscriptions='copy' --temp-syn=ignore
+single-orphan	--model=single --inscriptions='copy-orphan' --temp-syn=ignore
+single-copy-copy	--model=single --inscriptions='copy' --temp-syn=copy
+single-copy-farthest	--model=single --inscriptions='copy' --temp-syn=farthest
+single-copy-nearest	--model=single --inscriptions='copy' --temp-syn=nearest
+split-none	--model=split --inscriptions='' --temp-syn=ignore
+split-inline	--model=split --inscriptions='inline' --temp-syn=ignore
+split-inline-low	--model=split --inscriptions='inline' --temp-syn=ignore --override-bibscore faust://model/inscription/inline=10
+reverse	--model=split-reverse --inscriptions='' --temp-syn=ignore
+reverse-inline	--model=split-reverse --inscriptions='inline' --temp-syn=ignore
