@@ -62,6 +62,7 @@ task installMacrogen(type: Exec) {
 	workingDir projectDir
 	args "install", "-U", "-e", "."
 
+    inputs.file "setup.py"
 	outputs.file "$venv/bin/macrogen"
 }
 
@@ -99,14 +100,20 @@ task runMacrogenAnalysis {
 task runMacrogenReporting {
 	description 'Runs the macrogenesis reporting phase'
 	group 'macrogen'
-	dependsOn runMacrogenAnalysis
+	dependsOn installMacrogen
 	dependsOn prepareMacrogenOptions
+	dependsOn runMacrogenAnalysis
 	inputs.files(project.macrogenInputs)
 	doLast {
 		project.exec {
 			args "-i", "$buildDir/macrogen-graphs.zip"
             args macrogenArgs
 			executable macrogenExecutable
+		}
+		project.copy {
+			into "$buildDir/www/data"
+			from "$macrogen_reports"
+			include "witness-stats.json"
 		}
 	}
 	inputs.file("$buildDir/macrogen-graphs.zip")
