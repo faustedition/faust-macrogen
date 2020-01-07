@@ -1,0 +1,1 @@
+include src/macrogen/etc *.yaml *.csv *.tsv *.xml
