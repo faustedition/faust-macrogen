@@ -265,21 +265,21 @@ description = "Python package for creating and manipulating graphs and networks"
 name = "networkx"
 optional = false
 python-versions = ">=3.5"
-version = "2.3"
+version = "2.4"
 
 [package.dependencies]
 decorator = ">=4.3.0"
 
 [package.extras]
-all = ["numpy", "scipy", "pandas", "matplotlib", "pygraphviz", "pydot", "pyyaml", "gdal", "lxml", "nose"]
+all = ["numpy", "scipy", "pandas", "matplotlib", "pygraphviz", "pydot", "pyyaml", "gdal", "lxml", "pytest"]
 gdal = ["gdal"]
 lxml = ["lxml"]
 matplotlib = ["matplotlib"]
-nose = ["nose"]
 numpy = ["numpy"]
 pandas = ["pandas"]
 pydot = ["pydot"]
 pygraphviz = ["pygraphviz"]
+pytest = ["pytest"]
 pyyaml = ["pyyaml"]
 scipy = ["scipy"]
 
@@ -600,7 +600,7 @@ testing = ["jaraco.itertools"]
 graphviewer = ["flask"]
 
 [metadata]
-content-hash = "a901e5c4181fe0ee193935fe9ef48c77d52842a153e27b2e440b81d7eda9bf5f"
+content-hash = "b21cc7abe4e1dfa595bef556e55d949c3b3e769b1f3863feff64995a7e06719e"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -796,7 +796,8 @@ multiprocess = [
     {file = "multiprocess-0.70.9.tar.gz", hash = "sha256:9fd5bd990132da77e73dec6e9613408602a4612e1d73caf2e2b813d2b61508e5"},
 ]
 networkx = [
-    {file = "networkx-2.3.zip", hash = "sha256:8311ddef63cf5c5c5e7c1d0212dd141d9a1fe3f474915281b73597ed5f1d4e3d"},
+    {file = "networkx-2.4-py3-none-any.whl", hash = "sha256:cdfbf698749a5014bf2ed9db4a07a5295df1d3a53bf80bf3cbd61edf9df05fa1"},
+    {file = "networkx-2.4.tar.gz", hash = "sha256:f8f4ff0b6f96e4f9b16af6b84622597b5334bf9cae8cf9b2e42e7985d5c95c64"},
 ]
 numpy = [
     {file = "numpy-1.18.1-cp35-cp35m-macosx_10_6_intel.whl", hash = "sha256:20b26aaa5b3da029942cdcce719b363dbe58696ad182aff0e5dcb1687ec946dc"},

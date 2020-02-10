@@ -145,7 +145,7 @@ class Eades:
                 self.to_start(u)
         ordering = self.start + self.end
         pos = dict(zip(ordering, itertools.count()))
-        feedback_edges = list(self.original_graph.selfloop_edges())
+        feedback_edges = list(nx.selfloop_edges(self.original_graph))
         for u, v in self.original_graph.edges():
             if pos[u] > pos[v]:
                 feedback_edges.append((u, v))

@@ -17,7 +17,7 @@ setup(
         install_requires=[
                 'numpy',
                 'more-itertools',
-                'networkx>=2.1,<2.4',
+                'networkx>=2.1',
                 'python-igraph',
                 'pygraphviz',
                 'ruamel.yaml',

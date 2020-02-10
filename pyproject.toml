@@ -17,7 +17,7 @@ macrogen = 'macrogen.main:main'
 python = "^3.7"
 numpy = "^1.18.1"
 more-itertools = "^8.0.2"
-networkx = ">=2.1,<2.4"
+networkx = ">=2.1"
 python-igraph = "^0.7.1"
 pygraphviz = "^1.5"
 "ruamel.yaml" = "^0.16.5"

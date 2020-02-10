@@ -114,13 +114,6 @@ class HtmlTable:
         self.row_attrs.append(row_attrs)
         return self
 
-    @staticmethod
-    def _build_attrs(attrdict: Dict):
-        """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
-        return ''.join(
-                ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
-                attrdict.items())
-
     def _format_column(self, index, data) -> str:
         """
         Returns the HTML for the given cell.
@@ -136,7 +129,7 @@ class HtmlTable:
             String containing HTML `<td>` element
         """
         try:
-            attributes = self._build_attrs(self.attrs[index])
+            attributes = _build_attrs(self.attrs[index])
             content = self.formatters[index](data)
             return f'<td{attributes}>{content}</td>'
         except Exception as e:
@@ -152,7 +145,7 @@ class HtmlTable:
         Returns: a string containing an HTML `<tr>` element
 
         """
-        attributes = self._build_attrs(rowattrs)
+        attributes = _build_attrs(rowattrs)
         try:
             return f'<tr{attributes}>' + ''.join(
                     self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
@@ -169,10 +162,10 @@ class HtmlTable:
         """
         Formats the table header.
         """
-        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
+        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, _build_attrs(attrs))
                                   for title, attrs in zip(self.titles, self.header_attrs)])
         return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers,
-                                                                               self._build_attrs(self.table_attrs))
+                                                                               _build_attrs(self.table_attrs))
 
     def _format_footer(self):
         return '</tbody></table>'
@@ -206,6 +199,13 @@ class HtmlTable:
         formatted_rows = [self._format_row(rows[i], **row_attrs[i]) for i in order]
 
         return self._format_header() + '\n' + '\n'.join(formatted_rows) + '\n' + self._format_footer()
+
+
+def _build_attrs(attrdict: Dict):
+    """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
+    return ''.join(
+            ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
+            attrdict.items())
 
 
 def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
@@ -765,8 +765,8 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(counter_graph, v, u, weight='iweight'))):
         for k, attr in counter_graph.get_edge_data(v1, v2).items():
             attr['highlight'] = True
-    counter_graph.node[u]['highlight'] = True
-    counter_graph.node[v]['highlight'] = True
+    counter_graph.nodes[u]['highlight'] = True
+    counter_graph.nodes[v]['highlight'] = True
 
     counter_graph = collapse_timeline(counter_graph)
     cycle_graph = counter_graph.copy()
@@ -1074,12 +1074,12 @@ def report_scenes(graphs: MacrogenesisInfo):
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
 
 def report_unused(graphs: MacrogenesisInfo):
-    unused_nodes = set(node for node in graphs.base.node if isinstance(node, Reference)) - set(graphs.dag.node)
+    unused_nodes = set(node for node in graphs.base.nodes if isinstance(node, Reference)) - set(graphs.dag.nodes)
     not_in_dag_table = RefTable(graphs)
     for node in unused_nodes:
         not_in_dag_table.reference(node)
 
-    unindexed = [node for node in graphs.base.node if isinstance(node, Reference) and not node in graphs.index]
+    unindexed = [node for node in graphs.base.nodes if isinstance(node, Reference) and not node in graphs.index]
     unindexed_table = RefTable(graphs)
     for node in unindexed:
         unindexed_table.reference(node)
