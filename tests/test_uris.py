@@ -37,7 +37,7 @@ def test_build_db(fake_db):
     assert isinstance(h, Witness)
 
 
-def test_build_db(fake_db):
+def test_ambiguous_wit(fake_db):
     h = fake_db.get('faust://document/wa/2_H')
     assert isinstance(h, AmbiguousRef)
     assert h.first().sigil == '2 H'
