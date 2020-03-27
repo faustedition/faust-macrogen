@@ -44,7 +44,7 @@ def test_eades_ff():
     result = Eades(g).solve()
     assert set(result) == {(2, 3)}
 
-    solver = Eades(g, [(4,5), (2, 3)])
+    solver = Eades(g, [(4, 5), (2, 3)])
     result = set(solver.solve())
     assert set(result) == {(3, 2)}
 
