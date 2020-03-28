@@ -206,6 +206,7 @@ class Witness(Reference):
     paralipomena = None
 
     def __init__(self, doc_record):
+        self.sigil_t = None
         if isinstance(doc_record, dict):
             super().__init__(doc_record.get('uri', '?'))
             self.__dict__.update(doc_record)

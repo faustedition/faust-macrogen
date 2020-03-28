@@ -2,28 +2,24 @@ import csv
 import json
 import os
 import urllib
-import re
 from collections import defaultdict, Counter
 from datetime import date, datetime
 from html import escape
-from itertools import chain, repeat, groupby
-from operator import itemgetter, attrgetter
+from itertools import chain, groupby
+from operator import itemgetter
 from os import fspath
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Callable, Any
 from urllib.parse import urlencode
 
 import networkx as nx
 import pandas as pd
 import pkg_resources
-import requests
-from lxml import etree
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
 from pandas import DataFrame
 
-from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
@@ -31,6 +27,7 @@ from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .visualize import write_dot, simplify_graph
+from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 
 logger = config.getLogger(__name__)
 
@@ -67,7 +64,8 @@ class HtmlTable:
         self.rows = []
         self.row_attrs = []
 
-    def column(self, title='', format_spec=None, attrs={}, **header_attrs) -> 'HtmlTable':
+    def column(self, title: str = '', format_spec: Optional[Union[str, Callable[[Any], str]]] = None,
+               attrs: Dict[str, Any] = None, **header_attrs) -> 'HtmlTable':
         """
         Adds a column to this table.
 
@@ -80,6 +78,8 @@ class HtmlTable:
 
         Returns: self
         """
+        if attrs is None:
+            attrs = {}
         self.titles.append(title)
 
         if format_spec is None:
@@ -99,7 +99,8 @@ class HtmlTable:
 
     def row(self, row, **row_attrs):
         """
-        Adds a row to this table's stored data. This data will be used by the zero-argument version of :meth:`format_table`
+        Adds a row to this table's stored data. This data will be used by the zero-argument version of
+        :meth:`format_table`
 
         The rows are exposed as a list via the property `rows`
 
@@ -210,9 +211,9 @@ def _build_attrs(attrdict: Dict):
             attrdict.items())
 
 
-def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
                graph_id: str = None,
-               graph_options: Dict[str, object] = dict(controlIconsEnabled=True)) -> None:
+               graph_options=None) -> None:
     """
     Writes a html page.
     Args:
@@ -223,13 +224,16 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
         graph_id: if present, initialize javascript for graph with the given id
         graph_options: if present, options for the svg viewer js
     """
+    if graph_options is None:
+        graph_options = dict(controlIconsEnabled=True)
+    if breadcrumbs is None:
+        breadcrumbs = []
     if head is not None:
-        breadcrumbs = breadcrumbs + [dict(caption=head)]
+        breadcrumbs += [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
     prefix = f"""<?php include "../includes/header.php"?>
     <!-- Generiert: {datetime.now().isoformat()} -->
      <section>"""
-    require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
     if graph_id is not None:
         init = f"""
         graph = document.getElementById('{graph_id}');
@@ -282,7 +286,9 @@ def report_components(graphs: MacrogenesisInfo):
     write_html(target / 'components.php', report, head="Komponenten")
 
 
-def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern='%d'):
+def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=None, head_pattern='%d'):
+    if breadcrumbs is None:
+        breadcrumbs = []
     table = HtmlTable().column('Nummer', format_spec='<a href="' + pattern + '">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
@@ -401,12 +407,12 @@ class RefTable(HtmlTable):
                       getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
                      id=f'idx{index}', class_=type(ref).__name__)
             if write_subpage:
-                self._last_ref_subpage(DAY, ref)
+                self._last_ref_subpage(ref)
         else:
             self.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
                      class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
-    def _last_ref_subpage(self, DAY, ref):
+    def _last_ref_subpage(self, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
         target = config.path.report_dir
         basename = target / ref.filename
@@ -483,8 +489,8 @@ class AssertionTable(HtmlTable):
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else \
-                'ignoriert' if attr.get('ignore', False) else 'ja',
+            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
+            'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
             v,
@@ -739,7 +745,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     cyclegraphfile = reportfile.with_name(graphfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
-    counter_path = []
+    involved_cycles = set()
     try:
         counter_path = nx.shortest_path(graphs.dag, v, u, weight='iweight')
         involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
@@ -771,7 +777,8 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     counter_graph.nodes[v]['highlight'] = True
 
     counter_graph = collapse_timeline(counter_graph)
-    cycle_graph = counter_graph.copy()
+    # noinspection PyTypeChecker
+    cycle_graph: type(counter_graph) = counter_graph.copy()
 
     for cycle in involved_cycles:
         cycle_graph.add_edges_from(expand_edges(graphs.base, pairwise(cycle)))
@@ -810,7 +817,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
                      'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
-        reportfile = _report_conflict(graphs, u, v)
+        _report_conflict(graphs, u, v)
         table.edge(u, v, attr)
     write_html(target / 'conflicts.php', table.format_table(), head=f'{len(removed_edges)} entfernte Kanten')
 
@@ -969,8 +976,8 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     g7.add_edge(date(1808, 9, 30), hp47, source='Bohnenkamp 1994')
     g7.add_edge(hp47, date(1809, 3, 31), source=BiblSource('faust://heuristic', 'Bohnenkamp 1994'))
 
-
-    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6, heuristic=g7)
+    help_graphs = dict(pre=g1, conflict=g1a, syn=g2, dating=g3, interval=g4, when=g5, orphan=g_orphan, copy=g6,
+                       heuristic=g7)
     for name, graph in help_graphs.items():
         write_dot(graph, str(target / f'help-{name}.dot'))
 
@@ -1075,13 +1082,14 @@ def report_scenes(graphs: MacrogenesisInfo):
 
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
 
+
 def report_unused(graphs: MacrogenesisInfo):
     unused_nodes = set(node for node in graphs.base.nodes if isinstance(node, Reference)) - set(graphs.dag.nodes)
     not_in_dag_table = RefTable(graphs)
     for node in unused_nodes:
         not_in_dag_table.reference(node)
 
-    unindexed = [node for node in graphs.base.nodes if isinstance(node, Reference) and not node in graphs.index]
+    unindexed = [node for node in graphs.base.nodes if isinstance(node, Reference) and node not in graphs.index]
     unindexed_table = RefTable(graphs)
     for node in unindexed:
         unindexed_table.reference(node)
@@ -1093,7 +1101,6 @@ def report_unused(graphs: MacrogenesisInfo):
                {unindexed_table.format_table()}
                """,
                "Nicht eingeordnete Zeugen")
-
 
 
 def write_order_xml(graphs):
@@ -1139,7 +1146,6 @@ def report_stats(graphs: MacrogenesisInfo):
     refs = graphs.order_refs()
     extra_refs_count = len(refs) - len(set(refs))
     logger.warning('Extra ref count: %s', extra_refs_count)
-    wits = [ref for ref in refs if isinstance(ref, Witness)]
     stat: DataFrame = pd.DataFrame(index=refs, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
                                                         'succ_dates', 'auto_pre', 'auto_post', 'auto_len'])
 
@@ -1227,8 +1233,8 @@ def report_timeline(graphs: MacrogenesisInfo):
     witinfo = WitInscrInfo.get()
 
     def ref_info(ref) -> dict:
-        result = dict(start=ref.earliest.isoformat(), end=(ref.latest+DAY).isoformat(),
-                 content=_fmt_node(ref), id=ref.filename.stem, index=graphs.index[ref])
+        result = dict(start=ref.earliest.isoformat(), end=(ref.latest + DAY).isoformat(),
+                      content=_fmt_node(ref), id=ref.filename.stem, index=graphs.index[ref])
         info = witinfo.get().by_uri.get(ref.uri, None)
         if info:
             result['scenes'] = sorted([scene.n for scene in info.max_scenes])
@@ -1241,7 +1247,7 @@ def report_timeline(graphs: MacrogenesisInfo):
         return result
 
     refs = graphs.order_refs()
-    data = list()    # FIXME list comprehension after #25 is resolved
+    data = list()  # FIXME list comprehension after #25 is resolved
     known = set()
     for ref in refs:
         if ref.earliest > EARLIEST and ref.latest < LATEST:
@@ -1264,7 +1270,7 @@ def report_inscriptions(info: MacrogenesisInfo):
 
     # all documents that have inscriptions in the graph
     inscriptions_from_graph = [ref for ref in info.base if isinstance(ref, Inscription)]
-    graph_inscriptions: Dict[str, Set[str]] = defaultdict(set)
+    graph_inscriptions = defaultdict(set)
     for inscr in inscriptions_from_graph:
         graph_inscriptions[inscr.witness.uri].add(inscr)
 
