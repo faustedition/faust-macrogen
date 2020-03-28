@@ -8,6 +8,7 @@ from datetime import date, datetime
 from html import escape
 from itertools import chain, repeat, groupby
 from operator import itemgetter, attrgetter
+from os import fspath
 from pathlib import Path
 from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
 from urllib.parse import urlencode
@@ -66,7 +67,7 @@ class HtmlTable:
         self.rows = []
         self.row_attrs = []
 
-    def column(self, title='', format_spec=None, attrs={}, **header_attrs):
+    def column(self, title='', format_spec=None, attrs={}, **header_attrs) -> 'HtmlTable':
         """
         Adds a column to this table.
 
@@ -91,6 +92,7 @@ class HtmlTable:
             formatter = lambda data: format(data, format_spec)
 
         self.formatters.append(formatter)
+        assert isinstance(attrs, Mapping)
         self.attrs.append(attrs)
         self.header_attrs.append(header_attrs)
         return self
@@ -251,7 +253,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
         }});
     </script>
     <?php include "../includes/footer.php"?>"""
-    with open(filename, 'wt', encoding='utf-8') as f:
+    with open(fspath(filename), 'wt', encoding='utf-8') as f:
         f.write(prefix)
         f.write(content)
         f.write(suffix)
