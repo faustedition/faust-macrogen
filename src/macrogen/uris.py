@@ -249,7 +249,7 @@ class Witness(Reference):
         if cls.paralipomena is None:
             para_text = requests.get(url).text
             json_str = '[' + ''.join(para_text.split('\n')[1:])
-            orig_para = json.loads(json_str, encoding='utf-8')
+            orig_para = json.loads(json_str)
             cls.paralipomena = {p['n'].strip(): p for p in orig_para}
 
         return cls.paralipomena
