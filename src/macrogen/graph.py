@@ -339,7 +339,7 @@ class MacrogenesisInfo:
         check_acyclic(self.dag,
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.order_refs()
-        self.closure = nx.transitive_closure(self.dag)
+        self.closure = nx.transitive_closure_dag(self.dag, self.order)
         self._augment_details()
 
     def node(self, spec: Union[Reference, date, str], default=KeyError):
