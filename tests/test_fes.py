@@ -12,7 +12,7 @@ def graph1():
 
     """
     G = nx.DiGraph()
-    G.add_path([1, 2, 3, 4, 5])
+    nx.add_path(G, [1, 2, 3, 4, 5])
     G.add_edge(3, 2)
     return G
 
@@ -38,20 +38,20 @@ def test_baharev(graph1):
 
 def test_eades_ff():
     g = nx.DiGraph()
-    g.add_path([1, 2, 3, 4, 5], weight=1)
+    nx.add_path(g, [1, 2, 3, 4, 5], weight=1)
     g.add_edge(3, 2, weight=2)
 
     result = Eades(g).solve()
     assert set(result) == {(2, 3)}
 
-    solver = Eades(g, [(4,5), (2, 3)])
+    solver = Eades(g, [(4, 5), (2, 3)])
     result = set(solver.solve())
     assert set(result) == {(3, 2)}
 
 
 def test_baharev_ff():
     g = nx.DiGraph()
-    g.add_path([1, 2, 3, 4, 5], weight=1)
+    nx.add_path(g, [1, 2, 3, 4, 5], weight=1)
     g.add_edge(3, 2, weight=2)
 
     # This would normally remove (2,3) since its more lightweight than (3,2):

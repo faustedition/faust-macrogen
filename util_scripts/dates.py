@@ -17,7 +17,7 @@ from lxml import etree
 
 import faust
 from attic.graph import AbsoluteDating
-from .uris import Witness
+from macrogen.uris import Witness
 
 
 class TimeSpan(object):

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from macrogen import witnesses, config
 from macrogen.witnesses import SceneInfo, WitInscrInfo
 
@@ -9,6 +10,8 @@ def test_document():
     assert doc.sigil == '2 H'
     assert doc.uri == 'faust://document/faustedition/2_H'
 
+
+@pytest.mark.slow
 def test_all_documents():
     docs = witnesses.all_documents()
     assert docs
@@ -19,5 +22,7 @@ def test_scenes():
     assert si.toplevel[0].n == '1.0.1'
     assert si.scenes[-1].n == '2.5.5'
 
+
+@pytest.mark.slow
 def test_witinfo():
     wi = WitInscrInfo.get()

@@ -5,8 +5,8 @@ import pytest
 
 pytestmark = pytest.mark.skip()
 
-from macrogen.dates import collect_wiki_dates, TimeSpan
-from macrogen import dates
+from util_scripts.dates import collect_wiki_dates, TimeSpan
+from util_scripts import dates
 
 
 @pytest.mark.parametrize("string, parsed", [

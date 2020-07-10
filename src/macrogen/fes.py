@@ -59,6 +59,7 @@ class Eades:
         """
         sink_method = self.graph.out_degree if sink else self.graph.in_degree
         while True:
+            # noinspection PyCallingNonCallable
             sinks = [u for (u, d) in sink_method() if d == 0]
             if sinks:
                 yield from sinks
@@ -140,12 +141,13 @@ class Eades:
             for v in self._exhaust_sources():
                 self.to_start(v)
             if self.graph:
+                # noinspection PyCallingNonCallable
                 u = max(self.graph.nodes, key=lambda v: self.graph.out_degree(v, weight='weight')
                                                         - self.graph.in_degree(v, weight='weight'))
                 self.to_start(u)
         ordering = self.start + self.end
         pos = dict(zip(ordering, itertools.count()))
-        feedback_edges = list(self.original_graph.selfloop_edges())
+        feedback_edges = list(nx.selfloop_edges(self.original_graph))
         for u, v in self.original_graph.edges():
             if pos[u] > pos[v]:
                 feedback_edges.append((u, v))

@@ -9,8 +9,9 @@ from html import escape
 from io import StringIO
 from itertools import chain, groupby, zip_longest
 from operator import itemgetter
+from os import fspath
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Set
+from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Callable, Any
 from urllib.parse import urlencode
 
 import networkx as nx
@@ -21,7 +22,6 @@ from lxml.etree import Comment
 from more_itertools import pairwise
 from pandas import DataFrame
 
-from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
@@ -30,6 +30,7 @@ from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remo
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .splitgraph import Side, SplitReference, side_node
 from .visualize import write_dot, simplify_graph
+from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 
 logger = config.getLogger(__name__)
 
@@ -66,7 +67,8 @@ class HtmlTable:
         self.rows = []
         self.row_attrs = []
 
-    def column(self, title='', format_spec=None, attrs={}, **header_attrs):
+    def column(self, title: str = '', format_spec: Optional[Union[str, Callable[[Any], str]]] = None,
+               attrs: Dict[str, Any] = None, **header_attrs) -> 'HtmlTable':
         """
         Adds a column to this table.
 
@@ -79,6 +81,8 @@ class HtmlTable:
 
         Returns: self
         """
+        if attrs is None:
+            attrs = {}
         self.titles.append(title)
 
         if format_spec is None:
@@ -91,13 +95,15 @@ class HtmlTable:
             formatter = lambda data: format(data, format_spec)
 
         self.formatters.append(formatter)
+        assert isinstance(attrs, Mapping)
         self.attrs.append(attrs)
         self.header_attrs.append(header_attrs)
         return self
 
     def row(self, row, **row_attrs):
         """
-        Adds a row to this table's stored data. This data will be used by the zero-argument version of :meth:`format_table`
+        Adds a row to this table's stored data. This data will be used by the zero-argument version of
+        :meth:`format_table`
 
         The rows are exposed as a list via the property `rows`
 
@@ -139,7 +145,7 @@ class HtmlTable:
             String containing HTML `<td>` element
         """
         try:
-            attributes = self._build_attrs(self.attrs[index])
+            attributes = _build_attrs(self.attrs[index])
             content = self.formatters[index](data)
             return f'<td{attributes}>{content}</td>'
         except Exception as e:
@@ -155,7 +161,7 @@ class HtmlTable:
         Returns: a string containing an HTML `<tr>` element
 
         """
-        attributes = self._build_attrs(rowattrs)
+        attributes = _build_attrs(rowattrs)
         try:
             return f'<tr{attributes}>' + ''.join(
                     self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
@@ -173,10 +179,10 @@ class HtmlTable:
         """
         Formats the table header.
         """
-        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, self._build_attrs(attrs))
+        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, _build_attrs(attrs))
                                   for title, attrs in zip(self.titles, self.header_attrs)])
         return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers,
-                                                                               self._build_attrs(self.table_attrs))
+                                                                               _build_attrs(self.table_attrs))
 
     def _format_footer(self):
         return '</tbody></table>'
@@ -212,9 +218,16 @@ class HtmlTable:
         return self._format_header() + '\n' + '\n'.join(formatted_rows) + '\n' + self._format_footer()
 
 
-def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List[Dict[str, str]] = [],
+def _build_attrs(attrdict: Dict):
+    """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
+    return ''.join(
+            ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
+            attrdict.items())
+
+
+def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
                graph_id: str = None,
-               graph_options: Dict[str, object] = dict(controlIconsEnabled=True)) -> None:
+               graph_options=None) -> None:
     """
     Writes a html page.
     Args:
@@ -225,13 +238,16 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
         graph_id: if present, initialize javascript for graph with the given id
         graph_options: if present, options for the svg viewer js
     """
+    if graph_options is None:
+        graph_options = dict(controlIconsEnabled=True)
+    if breadcrumbs is None:
+        breadcrumbs = []
     if head is not None:
-        breadcrumbs = breadcrumbs + [dict(caption=head)]
+        breadcrumbs += [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
     prefix = f"""<?php include "../includes/header.php"?>
     <!-- Generiert: {datetime.now().isoformat()} -->
      <section>"""
-    require = "requirejs(['faust_common', 'svg-pan-zoom'], function(Faust, svgPanZoom)"
     if graph_id is not None:
         init = f"""
         graph = document.getElementById('{graph_id}');
@@ -255,7 +271,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs: List
         }});
     </script>
     <?php include "../includes/footer.php"?>"""
-    with open(filename, 'wt', encoding='utf-8') as f:
+    with open(fspath(filename), 'wt', encoding='utf-8') as f:
         f.write(prefix)
         f.write(content)
         f.write(suffix)
@@ -284,7 +300,9 @@ def report_components(graphs: MacrogenesisInfo):
     write_html(target / 'components.php', report, head="Komponenten")
 
 
-def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=[], head_pattern='%d'):
+def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=None, head_pattern='%d'):
+    if breadcrumbs is None:
+        breadcrumbs = []
     table = HtmlTable().column('Nummer', format_spec='<a href="' + pattern + '">{0}</a>') \
         .column('Dokumente') \
         .column('Relationen') \
@@ -522,8 +540,8 @@ class AssertionTable(HtmlTable):
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else \
-                'ignoriert' if attr.get('ignore', False) else 'ja',
+            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
+            'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
             v,
@@ -779,7 +797,7 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     cyclegraphfile = reportfile.with_name(graphfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
                      | {v} | set(graphs.base.predecessors(v)) | set(graphs.base.successors(v))
-    counter_path = []
+    involved_cycles = set()
     try:
         counter_path = nx.shortest_path(graphs.dag, v, u, weight='iweight')
         involved_cycles = {cycle for cycle in graphs.simple_cycles if in_path((u, v), cycle, True)}
@@ -807,11 +825,12 @@ def _report_conflict(graphs: MacrogenesisInfo, u, v):
     for v1, v2 in [(u, v)] + list(pairwise(nx.shortest_path(counter_graph, v, u, weight='iweight'))):
         for k, attr in counter_graph.get_edge_data(v1, v2).items():
             attr['highlight'] = True
-    counter_graph.node[u]['highlight'] = True
-    counter_graph.node[v]['highlight'] = True
+    counter_graph.nodes[u]['highlight'] = True
+    counter_graph.nodes[v]['highlight'] = True
 
     counter_graph = collapse_timeline(counter_graph)
-    cycle_graph = counter_graph.copy()
+    # noinspection PyTypeChecker
+    cycle_graph: type(counter_graph) = counter_graph.copy()
 
     for cycle in involved_cycles:
         cycle_graph.add_edges_from(expand_edges(graphs.base, pairwise(cycle)))
@@ -850,7 +869,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
     removed_edges = [(u, v, k, attr) for (u, v, k, attr) in graphs.base.edges(keys=True, data=True) if
                      'delete' in attr and attr['delete']]
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
-        reportfile = _report_conflict(graphs, u, v)
+        _report_conflict(graphs, u, v)
         table.edge(u, v, attr)
     write_html(target / 'conflicts.php', table.format_table(), head=f'{len(removed_edges)} entfernte Kanten')
 
@@ -1130,12 +1149,12 @@ def report_syngroups(graphs: MacrogenesisInfo):
 
 
 def report_unused(graphs: MacrogenesisInfo):
-    unused_nodes = set(node for node in graphs.base.node if isinstance(node, Reference)) - set(graphs.dag.node)
+    unused_nodes = set(node for node in graphs.base.nodes if isinstance(node, Reference)) - set(graphs.dag.nodes)
     not_in_dag_table = RefTable(graphs)
     for node in unused_nodes:
         not_in_dag_table.reference(node)
 
-    unindexed = [node for node in graphs.base.node if isinstance(node, Reference) and not node in graphs.index]
+    unindexed = [node for node in graphs.base.nodes if isinstance(node, Reference) and node not in graphs.index]
     unindexed_table = RefTable(graphs)
     for node in unindexed:
         unindexed_table.reference(node)
@@ -1198,6 +1217,40 @@ def report_stats(graphs: MacrogenesisInfo):
     refs = graphs.order_refs()
     extra_refs_count = len(refs) - len(set(refs))
     logger.warning('Extra ref count: %s', extra_refs_count)
+    stat: DataFrame = pd.DataFrame(index=refs, columns=['kind', 'pred', 'pred_dates', 'pre', 'post', 'succ',
+                                                        'succ_dates', 'auto_pre', 'auto_post', 'auto_len'])
+
+    # now collect some info per witness:
+    for ref in refs:
+        try:
+            preds = list(graphs.base.pred[ref]) if ref in graphs.base else []
+            succs = list(graphs.base.succ[ref]) if ref in graphs.base else []
+
+            pred_dates = [p for p in preds if isinstance(p, date)]
+            succ_dates = [s for s in succs if isinstance(s, date)]
+
+            if ref in graphs.closure:
+                auto_pre = max((d for d in graphs.closure.pred[ref] if isinstance(d, date)), default=None)
+                auto_post = min((d for d in graphs.closure.succ[ref] if isinstance(d, date)), default=None)
+            else:
+                auto_pre = auto_post = None
+            row = dict(
+                    kind=ref.__class__.__name__,
+                    pred=len(preds),
+                    pred_dates=len(pred_dates),
+                    pre=max((d for d in pred_dates), default=None),
+                    post=min((d for d in succ_dates), default=None),
+                    succ=len(succs),
+                    succ_dates=len(succ_dates),
+                    in_closure=ref in graphs.closure,
+
+                    auto_pre=auto_pre,
+                    auto_post=auto_post,
+                    auto_len=auto_post - auto_pre if auto_pre and auto_post else None
+            )
+            stat.loc[ref, :] = row
+        except Exception as e:
+            logger.error("Could not record %s in stats", ref, exc_info=True)
 
     def _dating_table():
         for dating in get_datings():
@@ -1318,7 +1371,7 @@ def report_inscriptions(info: MacrogenesisInfo):
 
     # all documents that have inscriptions in the graph
     inscriptions_from_graph = [ref for ref in info.base if isinstance(ref, Inscription)]
-    graph_inscriptions: Dict[str, Set[str]] = defaultdict(set)
+    graph_inscriptions = defaultdict(set)
     for inscr in inscriptions_from_graph:
         graph_inscriptions[inscr.witness.uri].add(inscr)
 

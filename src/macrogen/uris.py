@@ -2,9 +2,6 @@
 """
 Handle URIs and the objects they point to
 """
-from pathlib import Path
-
-import codecs
 import csv
 import json
 import re
@@ -13,6 +10,7 @@ from collections import defaultdict, Counter
 from functools import wraps, total_ordering
 from operator import itemgetter
 from os.path import commonprefix
+from pathlib import Path
 from typing import Tuple
 
 import pandas as pd
@@ -212,6 +210,7 @@ class Witness(Reference):
     paralipomena = None
 
     def __init__(self, doc_record):
+        self.sigil_t = None
         if isinstance(doc_record, dict):
             super().__init__(doc_record.get('uri', '?'))
             self.__dict__.update(doc_record)
@@ -256,7 +255,7 @@ class Witness(Reference):
         if cls.paralipomena is None:
             para_text = requests.get(url).text
             json_str = '[' + ''.join(para_text.split('\n')[1:])
-            orig_para = json.loads(json_str, encoding='utf-8')
+            orig_para = json.loads(json_str)
             cls.paralipomena = {p['n'].strip(): p for p in orig_para}
 
         return cls.paralipomena
@@ -388,7 +387,7 @@ class Witness(Reference):
         match = re.match(r'^([12]?\s*[IV]{0,3}\s*[^0-9]+)(\d*)(.*)$', self.sigil)
         if match is None:
             logger.warning("Failed to split sigil %s", self.sigil)
-            return [self.sigil, 99999, ""];
+            return (self.sigil, 99999, "")
         split = list(match.groups())
 
         if split[0] == "H P":  # Paraliponemon

@@ -19,7 +19,7 @@ from .config import config
 logger = config.getLogger(__name__)
 
 
-def parse_datestr(datestr: str) -> date:
+def parse_datestr(datestr: str) -> Optional[date]:
     """
     Parses a date str like 1799-01-01 to a date.
 
@@ -81,7 +81,7 @@ class _AbstractDating(metaclass=ABCMeta):
         ...
 
 
-def _firstattr(object, *args: Tuple[str]) -> Optional[Tuple[str, Any]]:
+def _firstattr(object: Any, *args: str) -> Tuple[Optional[str], Optional[Any]]:
     """
     Returns the first of the given attributes together with its value. E.g., when an object o has the attributes bar=1
     and baz=2 and none else and you call ``_firstattr(o, 'foo', 'bar', 'baz')`` it will return ``'bar', 1``
@@ -216,7 +216,7 @@ class RelativeDating(_AbstractDating):
                              ignore=self.ignore)
 
 
-def _parse_file(filename: str) -> Generator[_AbstractDating, None, None]:
+def _parse_file(filename: Union[Path, str]) -> Generator[_AbstractDating, None, None]:
     """
     Parses the given macrogenesis XML file and returns the datings from there.
     Args:

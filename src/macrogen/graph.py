@@ -272,7 +272,7 @@ class MacrogenesisInfo:
         logger.info('Removed %d of the original %d edges', len(all_feedback_edges), len(working.edges))
         self.conflicts = all_feedback_edges
 
-        self.closure = nx.transitive_closure(result_graph)
+        self.closure = nx.transitive_closure(nx.DiGraph(result_graph))
         add_inscription_links(base)
         self._infer_details()
 
@@ -358,8 +358,8 @@ class MacrogenesisInfo:
         self.order = refs
         self._build_index()
         for ref, index in self.index.items():
-            if ref in self.base.node:
-                self.base.node[ref]['index'] = index
+            if ref in self.base.nodes:
+                self.base.nodes[ref]['index'] = index
             ref.index = index
         return refs
 
@@ -490,9 +490,8 @@ class MacrogenesisInfo:
         check_acyclic(self.dag,
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.order_refs()
-        self.closure = nx.transitive_closure(self.dag)
+        self.closure = nx.transitive_closure_dag(self.dag, self.order)
         self._infer_details()
-        # self._augment_details()
 
     def node(self, spec: Union[Reference, date, str], default=KeyError):
         """
@@ -762,7 +761,7 @@ def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tup
     for u, v, k, attr in graph.edges(keys=True, data=True):
         if attr['kind'] == 'timeline':
             result.append((u, v))
-            if weight is 'auto':
+            if weight == 'auto':
                 attr['weight'] = (v - u).days / 365.25
             else:
                 attr['weight'] = weight
