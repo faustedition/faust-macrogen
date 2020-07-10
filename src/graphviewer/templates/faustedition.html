@@ -4,6 +4,11 @@
     <meta charset='utf-8'>
     <title>Faustedition{% block title %}{% endblock %}</title>
 
+
+    <script type="application/javascript" src="/js/wasm/index.min.js"></script>
+    <script type="application/javascript" src="/js/d3.min.js"></script>
+    <script type="application/javascript" src="/js/d3-graphviz.min.js"></script>
+
     <script type="text/javascript" src="/js/require.js"></script>
     <script type="text/javascript" src="/js/faust_config.js"></script>
 
@@ -190,6 +195,8 @@
     </script>
 
 
+    {% block d3script %}
+    {% endblock %}
 
 <script>
 requirejs(['jquery', 'jquery.chocolat', 'jquery.overlays', 'jquery.clipboard', 'faust_common', 'js.cookie'],

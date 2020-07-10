@@ -27,22 +27,22 @@ class NoNodes(ValueError):
 
 
 def prepare_agraph():
-    node_str = request.args.get('nodes')
+    node_str = request.values.get('nodes')
     nodes, errors = info.nodes(node_str, report_errors=True)
     if errors:
         flash('Die folgenden zentralen Knoten wurden nicht gefunden: ' + ', '.join(errors), 'warning')
-    context = request.args.get('context', False)
-    abs_dates = request.args.get('abs_dates', False)
-    extra, errors = info.nodes(request.args.get('extra', ''), report_errors=True)
+    context = request.values.get('context', False)
+    abs_dates = request.values.get('abs_dates', False)
+    extra, errors = info.nodes(request.values.get('extra', ''), report_errors=True)
     if errors:
         flash('Die folgenden Pfadziele wurden nicht gefunden: ' + ', '.join(errors), 'warning')
-    induced_edges = request.args.get('induced_edges', False)
-    ignored_edges = request.args.get('ignored_edges', False)
-    direct_assertions = request.args.get('assertions', False)
-    paths_wo_timeline = request.args.get('paths_wo_timeline', False)
-    no_edge_labels = request.args.get('no_edge_labels', False)
-    tred = request.args.get('tred', False)
-    nohl = request.args.get('nohl', False)
+    induced_edges = request.values.get('induced_edges', False)
+    ignored_edges = request.values.get('ignored_edges', False)
+    direct_assertions = request.values.get('assertions', False)
+    paths_wo_timeline = request.values.get('paths_wo_timeline', False)
+    no_edge_labels = request.values.get('no_edge_labels', False)
+    tred = request.values.get('tred', False)
+    nohl = request.values.get('nohl', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
@@ -76,14 +76,14 @@ def _normalize_args(args):
 
 @app.route('/macrogenesis/subgraph')
 def render_form():
-    try:
-        agraph = prepare_agraph()
-        output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
-        svg = Markup(codecs.decode(output))
-    except NoNodes:
-        flash(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), 'danger')
-        svg = ''
-    return render_template('form.html', svg=svg, query=codecs.decode(request.query_string), **_normalize_args(request.args))
+    # try:
+    #     agraph = prepare_agraph()
+    #     output = subprocess.check_output(['dot', '-T', 'svg'], input=codecs.encode(agraph.to_string()), timeout=30)
+    #     svg = Markup(codecs.decode(output))
+    # except NoNodes:
+    #     flash(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), 'danger')
+    #     svg = ''
+    return render_template('form.html', query=codecs.decode(request.query_string), **_normalize_args(request.args))
 
 
 @app.route('/macrogenesis/subgraph/pdf')
@@ -96,12 +96,15 @@ def render_pdf():
     return response
 
 
-@app.route('/macrogenesis/subgraph/dot')
+@app.route('/macrogenesis/subgraph/dot', methods=['GET', 'POST'])
 def render_dot():
-    agraph = prepare_agraph()
-    response = Response(agraph.to_string(), mimetype='text/vnd.graphviz')
-    response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.dot"'
-    return response
+    try:
+        agraph = prepare_agraph()
+        response = Response(agraph.to_string(), mimetype='text/vnd.graphviz')
+        response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.dot"'
+        return response
+    except NoNodes as e:
+        return Response(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), status=404)
 
 @app.route('/macrogenesis/subgraph/svg')
 def render_svg():
