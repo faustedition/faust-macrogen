@@ -44,6 +44,26 @@ RELATION_LABELS = {'not_before': 'nicht vor',
                    None: '???'
                    }
 
+class SingleItem:
+    """A special representation for a single item."""
+    def __init__(self, item):
+        self.item = item
+    def __len__(self):
+        return 1
+    def __getitem__(self, item):
+        s = item if isinstance(item, slice) else slice(item)
+        s = s.indices(1)
+        if s[0] != 0 or s[1] != 1:
+            raise IndexError(f"SingleItem only has a single item, so you cannot index it with {item}")
+        else:
+            return item
+    def __iter__(self):
+        yield self.item
+    def __str__(self):
+        return str(self.item)
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.item!r})"
+
 
 class HtmlTable:
     """
@@ -163,8 +183,11 @@ class HtmlTable:
         """
         attributes = _build_attrs(rowattrs)
         try:
-            return f'<tr{attributes}>' + ''.join(
-                    self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+            if isinstance(row, SingleItem):
+                return f'<tr{attributes}><td colspan="{len(self.titles)}">{row.item}</td></tr>'
+            else:
+                return f'<tr{attributes}>' + ''.join(
+                        self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
         except:
             row_str = ", ".join(f"{title!s}: {value!r}" for title, value in zip_longest(self.titles, row))
             logger.exception('Error formatting row (%s)', row_str)
