@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 from itertools import zip_longest, combinations
 from typing import Union, Tuple, List, Mapping, Any
@@ -43,22 +44,26 @@ class DiffSide:
         return order
 
 
-def visdiff(this: Any, other: Any) -> str:
-    if this != other:
-        return f'<strong>{this}</strong> ({other})'
+def visdiff(left: Any, right: Any) -> str:
+    if left != right:
+        try:
+            dir = '<span style="color:green;">⊕</span>' if left < right else '<span style="color:red">⊖</span>'
+        except:
+            dir = ' '
+        return f'{left}⏵<strong>{right}</strong> {dir}'
     else:
-        return f'<span class="ignore">{this}</span>'
+        return f'<span class="ignore">{left}</span>'
 
 
-def attrdiff(name: str, this: Mapping, other: Mapping) -> str:
-    if this is None or other is None:
+def attrdiff(name: str, left: Mapping, right: Mapping) -> str:
+    if left is None or right is None:
         return ""
     else:
-        this_name = this[name]
-        if pd.isna(this_name): this_name = "—"
-        other_name = other[name]
-        if pd.isna(other_name): other_name = "—"
-        return visdiff(this_name, other_name)
+        left_name = left[name]
+        if pd.isna(left_name): left_name = "—"
+        right_name = right[name]
+        if pd.isna(right_name): right_name = "—"
+        return visdiff(left_name, right_name)
 
 
 class MacrogenDiff:
@@ -66,27 +71,29 @@ class MacrogenDiff:
     def __init__(self, a: Union[Path, str], b: Union[Path, str]):
         self.a = DiffSide(a)
         self.b = DiffSide(b)
+        self.matcher = SequenceMatcher(a=self.a.order, b=self.b.order)
+        self.title = f"{self.a.title} : {self.b.title}"
+        self.filename = f"order-{self.a.title}.{self.b.title}"
 
-    def refinfo(self, ref: Reference, this_side: DiffSide, other_side: DiffSide):
+    def refinfo(self, ref: Reference, left_side: DiffSide, right_side: DiffSide):
         try:
-            this, other = this_side.info.details.loc[ref], other_side.info.details.loc[ref]
-            return [attrdiff(attr, this, other) for attr in ('max_before_date', 'min_after_date', 'rank')]
+            left, right = left_side.info.details.loc[ref], right_side.info.details.loc[ref]
+            return [attrdiff(attr, left, right) for attr in ('max_before_date', 'min_after_date', 'rank')]
         except KeyError as e:
             return ['', '', ''] # ['KeyError', e]
 
     def diff_order_table(self) -> HtmlTable:
         table = (HtmlTable()
-                 .column('nicht vor')
-                 .column('nicht nach')
-                 .column('Rang')
-                 .column(self.a.title, _fmt_node, attrs={'class': 'pull-right'})
+                 .column('nicht vor', attrs={'class': 'right'})
+                 .column('nicht nach', attrs={'class': 'right'})
+                 .column('Rang', attrs={'class': 'right'})
+                 .column(self.a.title, _fmt_node, attrs={'class': 'right border-right'})
                  .column(self.b.title, _fmt_node)
                  .column('nicht vor')
                  .column('nicht nach')
                  .column('Rang')
                  )
-        diff = SequenceMatcher(a=self.a.order, b=self.b.order)
-        for op, i1, i2, j1, j2 in diff.get_opcodes():
+        for op, i1, i2, j1, j2 in self.matcher.get_opcodes():
             if op == "replace":
                 for ref_a, ref_b in zip_longest(self.a.order[i1:i2], self.b.order[j1:j2]):
                     table.row(self.refinfo(ref_a, self.a, self.b) + [ref_a or '', ref_b or ''] + self.refinfo(ref_b, self.a, self.b), class_='replace')
@@ -118,14 +125,32 @@ def main():
     pairs = list(combinations([options.base] + options.compare, 2)) if options.pairwise \
         else [(options.base, compare) for compare in options.compare]
     options.output_dir.mkdir(parents=True, exist_ok=True)
-    for a, b in pairs:
-        logger.info('Comparing %s to %s ...', a, b)
-        diff = MacrogenDiff(a, b)
-        table = diff.diff_order_table()
-        output: Path = options.output_dir / f"order-{diff.a.title}.{diff.b.title}.php"
-        logger.info("Saving %s ...", output.absolute())
-        write_html(output, table.format_table(),
-                   f"{diff.a.title} : {diff.b.title}")
+    summary = (HtmlTable()
+               .column("Vergleich", lambda diff: f'<a href="{diff.filename}">{diff.title}</a>')
+               .column("Ratio")
+               .column("+")
+               .column("–")
+               .column("↔")
+               .column("=")
+               .column("Rangänderungen"))
+    for a, b in config.progress(pairs, unit=" Vergleiche"):
+        try:
+            logger.info('Comparing %s to %s ...', a, b)
+            diff = MacrogenDiff(a, b)
+            table = diff.diff_order_table()
+            output: Path = options.output_dir / (diff.filename + ".php")
+            logger.info("Saving %s ...", output.absolute())
+            write_html(output, table.format_table(),
+                       diff.title)
+            opcounts = defaultdict(int)
+            for op, i1, i2, j1, j2 in diff.matcher.get_opcodes():
+                opcounts[op] +=  max(i2-i1, j2-j1)
+            rank_changed = sum((diff.a.info.details['rank'] - diff.b.info.details['rank']).dropna() != 0)
+            summary.row((diff, diff.matcher.ratio(), opcounts['insert'], opcounts['remove'], opcounts['replace'],
+                         opcounts['equal'], rank_changed))
+        except FileNotFoundError as e:
+            logger.error(e)
+    write_html(options.output_dir / "order-diff.php", summary.format_table(), head="Vergleiche")
 
 
 if __name__ == '__main__':
