@@ -402,7 +402,21 @@ class MacrogenesisInfo:
         if is_split:
             table['start_pos'] = pd.Series(start_positions)
             table['end_pos'] = pd.Series(end_positions)
-        table['rank'] = [self.closure.in_degree(ref) for ref in refs_from_graphs]
+
+            def unsplit_rank(node) -> int:
+                preds = self.closure.predecessors(node)
+                pred_cleaned = {pred.reference if isinstance(pred, SplitReference) else pred
+                                for pred in preds}
+                if isinstance(node, SplitReference):
+                    pred_cleaned -= {node.reference}
+                else:
+                    pred_cleaned -= {node}
+                return len(pred_cleaned)
+
+            table['rank'] = [unsplit_rank(ref) for ref in refs_from_graphs]
+
+        else:
+            table['rank'] = [self.closure.in_degree(ref) for ref in refs_from_graphs]
         for ref in refs_from_data:
             max_before = max(
                     (d for d, _ in self.closure.in_edges(SplitReference(ref, Side.START) if is_split else ref)

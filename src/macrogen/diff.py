@@ -70,18 +70,20 @@ class MacrogenDiff:
     def refinfo(self, ref: Reference, this_side: DiffSide, other_side: DiffSide):
         try:
             this, other = this_side.info.details.loc[ref], other_side.info.details.loc[ref]
-            return [attrdiff(attr, this, other) for attr in ('max_before_date', 'min_after_date')]
+            return [attrdiff(attr, this, other) for attr in ('max_before_date', 'min_after_date', 'rank')]
         except KeyError as e:
-            return ['', ''] # ['KeyError', e]
+            return ['', '', ''] # ['KeyError', e]
 
     def diff_order_table(self) -> HtmlTable:
         table = (HtmlTable()
                  .column('nicht vor')
                  .column('nicht nach')
+                 .column('Rang')
                  .column(self.a.title, _fmt_node, attrs={'class': 'pull-right'})
                  .column(self.b.title, _fmt_node)
                  .column('nicht vor')
                  .column('nicht nach')
+                 .column('Rang')
                  )
         diff = SequenceMatcher(a=self.a.order, b=self.b.order)
         for op, i1, i2, j1, j2 in diff.get_opcodes():
@@ -90,10 +92,10 @@ class MacrogenDiff:
                     table.row(self.refinfo(ref_a, self.a, self.b) + [ref_a or '', ref_b or ''] + self.refinfo(ref_b, self.a, self.b), class_='replace')
             elif op == "delete":
                 for ref_a in self.a.order[i1:i2]:
-                    table.row(self.refinfo(ref_a, self.a, self.b) + [ref_a, '', '', ''], class_='delete')
+                    table.row(self.refinfo(ref_a, self.a, self.b) + [ref_a, '', '', '', ''], class_='delete')
             elif op == "insert":
                 for ref_b in self.b.order[j1:j2]:
-                    table.row(['', '', '', ref_b] + self.refinfo(ref_b, self.a, self.b), class_='insert')
+                    table.row(['', '', '', '', ref_b] + self.refinfo(ref_b, self.a, self.b), class_='insert')
             elif op == "equal":
                 table.row(SingleItem(
                         f'{i2 - i1} gleiche Referenzen ({_fmt_node(self.a.order[i1])} … {_fmt_node(self.a.order[i2 - 1])})'),
