@@ -39,8 +39,8 @@ light_timeline: true  # use exclusion instead of high weight for timeline edges
 
 model: single          # single: Individual wits, split: model start and end separately
 inscriptions:         # zero or more of: orphan, copy, inline (the latter only for split models)
-  - copy
-temp_syn: farthest        # what to do with temp-syn nodes: ignore, copy, nearest, farthest
+  - orphan
+temp_syn: ignore        # what to do with temp-syn nodes: ignore, copy, nearest, farthest
 
 progressbar: true    # allow to show a progress bar in some situations
 

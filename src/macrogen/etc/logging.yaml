@@ -13,8 +13,8 @@ filters:
     default: WARNING
     levels:
       macrogen.graph: INFO
-      macrogen.fes: INFO
       macrogen.witnesses: DEBUG
+      '__main__': INFO
   file:
     (): macrogen.logging.LevelFilter
     default: INFO
