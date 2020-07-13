@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 from itertools import zip_longest, combinations
+from operator import sub
 from typing import Union, Tuple, List, Mapping, Any
 
 from macrogen import Reference, config
@@ -9,7 +10,7 @@ from macrogen.splitgraph import SplitReference, Side
 
 from .graph import MacrogenesisInfo
 from pathlib import Path
-from .report import HtmlTable, _fmt_node, SingleItem, write_html
+from .report import HtmlTable, _fmt_node, SingleItem, write_html, AssertionTable, nodeformatter
 import pandas as pd
 
 logger = config.getLogger(__name__)
@@ -87,8 +88,8 @@ class MacrogenDiff:
                  .column('nicht vor', attrs={'class': 'right'})
                  .column('nicht nach', attrs={'class': 'right'})
                  .column('Rang', attrs={'class': 'right'})
-                 .column(self.a.title, _fmt_node, attrs={'class': 'right border-right'})
-                 .column(self.b.title, _fmt_node)
+                 .column(self.a.title, nodeformatter(self.a.title + '/'), attrs={'class': 'right border-right'})
+                 .column(self.b.title, nodeformatter(self.b.title + '/'))
                  .column('nicht vor')
                  .column('nicht nach')
                  .column('Rang')
@@ -108,6 +109,29 @@ class MacrogenDiff:
                         f'{i2 - i1} gleiche Referenzen ({_fmt_node(self.a.order[i1])} … {_fmt_node(self.a.order[i2 - 1])})'),
                         class_='equal pure-center ignore')
         return table
+
+    def conflict_diffs(self):
+        def unsplit(node):
+            if isinstance(node, SplitReference):
+                return node.reference
+            else:
+                return node
+        c_a = {(unsplit(u), unsplit(v)) for u, v, k, attr in self.a.info.conflicts}
+        c_b = {(unsplit(u), unsplit(v)) for u, v, k, attr in self.b.info.conflicts}
+        only_a = c_a - c_b
+        only_b = c_b - c_a
+        return only_a, only_b
+
+    def conflict_diffs_html(self):
+        result = ""
+        for side, conflicts in zip([self.a, self.b], self.conflict_diffs()):
+            result += f'<h2>{len(conflicts)} Konflikte nur in {side.title}</h2>'
+            table = AssertionTable(prefix=side.title + '/')
+            for u, v in conflicts:
+                for w, x, k, attr in side.info.find_conflicts(u, v):
+                    table.edge(w, x, attr)
+            result += table.format_table()
+        return result
 
 
 def get_argparser() -> ArgumentParser:
@@ -132,7 +156,8 @@ def main():
                .column("–")
                .column("↔")
                .column("=")
-               .column("Rangänderungen"))
+               .column("Rangänderungen")
+               .column("Konflikte"))
     for a, b in config.progress(pairs, unit=" Vergleiche"):
         try:
             logger.info('Comparing %s to %s ...', a, b)
@@ -140,18 +165,17 @@ def main():
             table = diff.diff_order_table()
             output: Path = options.output_dir / (diff.filename + ".php")
             logger.info("Saving %s ...", output.absolute())
-            write_html(output, table.format_table(),
+            write_html(output, table.format_table() + diff.conflict_diffs_html(),
                        diff.title)
             opcounts = defaultdict(int)
             for op, i1, i2, j1, j2 in diff.matcher.get_opcodes():
                 opcounts[op] +=  max(i2-i1, j2-j1)
             rank_changed = sum((diff.a.info.details['rank'] - diff.b.info.details['rank']).dropna() != 0)
             summary.row((diff, diff.matcher.ratio(), opcounts['insert'], opcounts['remove'], opcounts['replace'],
-                         opcounts['equal'], rank_changed))
+                         opcounts['equal'], rank_changed, len(diff.b.info.conflicts) - len(diff.a.info.conflicts)))
         except FileNotFoundError as e:
             logger.error(e)
     write_html(options.output_dir / "order-diff.php", summary.format_table(), head="Vergleiche")
-
 
 if __name__ == '__main__':
     main()

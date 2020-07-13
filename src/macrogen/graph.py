@@ -382,6 +382,7 @@ class MacrogenesisInfo:
         logger.info('Preparing details on references')
         ordered_ref_nodes = self.order_refs()
         is_split = any(isinstance(node, SplitReference) for node in ordered_ref_nodes)
+        self.is_split = is_split
         if is_split:
             refs_from_graphs = [ref for ref in ordered_ref_nodes if ref.side == Side.END]  # FIXME Configurable?
             refs_from_data = [ref.reference for ref in refs_from_graphs]
@@ -437,6 +438,24 @@ class MacrogenesisInfo:
             table.loc[ref, 'yearlabel'] = yearlabel(max_before, min_after)
         table['baseline_position'] = self.baseline_order()
         self.details = table
+
+    def find_conflicts(self, from_: Node, to_: Node) -> List[Tuple[Node, Node, int, dict]]:
+        """
+        Finds conflict edges from a from_ node to a to_ node
+
+        Args:
+            from_: source node, never a `SplitReference`
+            to_: end node, never a `SplitReference`
+
+        Returns:
+            All info on the actual conflicting edges
+        """
+        if self.is_split:
+            return [(u, v, k, attr) for (u, v, k, attr) in self.conflicts
+                    if (u == from_ or isinstance(u, SplitReference) and u.reference == from_)
+                    and (v == to_ or isinstance(v, SplitReference) and v.reference == to_)]
+        else:
+            return [(u, v, k, attr) for (u, v, k, attr) in self.conflicts if u == from_ and v == to_]
 
     def year_stats(self):
         stats: pd.Series = self.details.avg_year.value_counts()

@@ -362,12 +362,17 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
 
-def _fmt_node(node: Union[Reference, object]):
+def _fmt_node(node: Union[Reference, date], prefix: str = None) -> str:
     """Formats a node by creating a link of possible"""
+    prefix = prefix or ''
     if isinstance(node, Reference):
-        return f'<a href="{node.filename.stem}">{node}</a>'
+        return f'<a href="{prefix}{node.filename.stem}">{node}</a>'
     else:
         return format(node)
+
+
+def nodeformatter(prefix: str) -> Callable[[Union[Reference, date]], str]:
+    return partial(_fmt_node, prefix=prefix)
 
 
 def _edition_link(ref: Reference):
@@ -548,12 +553,17 @@ class RefTable(HtmlTable):
 
 class AssertionTable(HtmlTable):
 
-    def __init__(self, **table_attrs):
+    def __init__(self, prefix=None, **table_attrs):
         super().__init__(data_sortable='true', **table_attrs)
+        self.prefix = prefix or ''
+        if prefix:
+            nodeformat = nodeformatter(self.prefix)
+        else:
+            nodeformat = _fmt_node
         (self.column('berücksichtigt?', data_sortable_type="alpha")
-         .column('Subjekt', _fmt_node, data_sortable_type="sigil")
+         .column('Subjekt', nodeformat, data_sortable_type="sigil")
          .column('Relation', RELATION_LABELS.get, data_sortable_type="alpha")
-         .column('Objekt', _fmt_node, data_sortable_type="sigil")
+         .column('Objekt', nodeformat, data_sortable_type="sigil")
          .column('Quelle', _fmt_source, data_sortable_type="bibliography")
          .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
          .column('XML', _fmt_xml, data_sortable_type="alpha"))
@@ -563,7 +573,7 @@ class AssertionTable(HtmlTable):
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
+            f'<a href="{self.prefix}{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
             'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
