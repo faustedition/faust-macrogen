@@ -43,14 +43,17 @@ def prepare_agraph():
     no_edge_labels = request.values.get('no_edge_labels', False)
     tred = request.values.get('tred', False)
     nohl = request.values.get('nohl', False)
+    syn = request.values.get('syn', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
-                          direct_assertions=direct_assertions)
+                          direct_assertions=direct_assertions, include_syn_clusters=syn)
         if induced_edges:
             g = info.base.subgraph(g.nodes).copy()
         if not ignored_edges or tred:
-            g = remove_edges(g, lambda u, v, attr: attr.get('ignore', False))
+            g = remove_edges(g, lambda u, v, attr: attr.get('ignore', False) and not attr.get('kind', '') == 'temp-syn')
+        if not syn:
+            g = remove_edges(g, lambda u, v, attr: attr.get('kind', None) == "temp-syn")
         if tred:
             g = remove_edges(g, lambda u, v, attr: attr.get('delete', False))
         if tred:

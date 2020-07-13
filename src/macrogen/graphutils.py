@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional
+from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional, Set
 
 import networkx as nx
 
@@ -281,3 +281,34 @@ def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
 
 def is_orphan(node, graph: nx.DiGraph):
     return node not in graph.nodes or graph.in_degree[node] == 0 and graph.out_degree[node] == 0
+
+
+def find_reachable_by_edge(graph: nx.MultiDiGraph, source: T, key, value, symmetric=True) -> Set[T]:
+    """
+    Finds all nodes that are reachable via edges with a certain attribute/value combination.
+
+    Args:
+        graph: the graph we're searching in
+        source: the source node
+        key: attribute key we're looking for
+        value: attribute vaue we're looking for
+
+    Returns:
+        a set of nodes, includes at least source
+    """
+    result = set()
+    todo = [source]
+    while todo:
+        logger.warn('looking for %s=%s, todo: %s, result: %s', key, value, todo, result)
+        node = todo.pop()
+        if node in result:
+            continue
+        result.add(node)
+        items = list(graph[node].items())
+        if symmetric:
+            items.extend(graph.pred[node].items())
+        for neighbor, edges in items:
+            for k, attr in edges.items():
+                if key in attr and attr[key] == value:
+                    todo.insert(0, neighbor)
+    return result

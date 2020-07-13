@@ -18,7 +18,7 @@ import networkx as nx
 import pandas as pd
 from dataclasses import dataclass
 
-from macrogen.graphutils import is_orphan
+from macrogen.graphutils import is_orphan, find_reachable_by_edge
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
@@ -637,7 +637,7 @@ class MacrogenesisInfo:
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
                  paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False,
-                 temp_syn_context: bool = False) \
+                 temp_syn_context: bool = False, include_syn_clusters: bool = False) \
             -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
@@ -682,6 +682,13 @@ class MacrogenesisInfo:
         if context:
             for node in central_nodes:
                 relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node])
+
+        if include_syn_clusters:
+            for node in central_nodes:
+                cluster = find_reachable_by_edge(self.base, node, 'kind', 'temp-syn')
+                logger.info("syn-cluster: including %s", cluster)
+                relevant_nodes |= cluster
+
         if temp_syn_context:
             for node in set(relevant_nodes):
                 if isinstance(node, SynAnchor):
