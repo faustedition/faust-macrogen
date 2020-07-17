@@ -7,6 +7,7 @@ from typing import Union, Tuple, List, Mapping, Any
 
 from macrogen import Reference, config
 from macrogen.splitgraph import SplitReference, Side
+from scipy.stats import spearmanr
 
 from .graph import MacrogenesisInfo
 from pathlib import Path
@@ -75,6 +76,10 @@ class MacrogenDiff:
         self.matcher = SequenceMatcher(a=self.a.order, b=self.b.order)
         self.title = f"{self.a.title} : {self.b.title}"
         self.filename = f"order-{self.a.title}.{self.b.title}"
+
+    def spearman(self):
+        df = pd.DataFrame(dict(a=self.a.info.details.position, b=self.b.info.details.position)).dropna()
+        return spearmanr(df)
 
     def refinfo(self, ref: Reference, left_side: DiffSide, right_side: DiffSide):
         try:
@@ -151,6 +156,7 @@ def main():
     options.output_dir.mkdir(parents=True, exist_ok=True)
     summary = (HtmlTable()
                .column("Vergleich", lambda diff: f'<a href="{diff.filename}">{diff.title}</a>')
+               .column("Spearman-Korrelation", lambda r: "𝜌 = {:0.5f}; p = {:0.5f}".format(*r))
                .column("Ratio")
                .column("+")
                .column("–")
@@ -171,7 +177,7 @@ def main():
             for op, i1, i2, j1, j2 in diff.matcher.get_opcodes():
                 opcounts[op] +=  max(i2-i1, j2-j1)
             rank_changed = sum((diff.a.info.details['rank'] - diff.b.info.details['rank']).dropna() != 0)
-            summary.row((diff, diff.matcher.ratio(), opcounts['insert'], opcounts['remove'], opcounts['replace'],
+            summary.row((diff, diff.spearman(), diff.matcher.ratio(), opcounts['insert'], opcounts['remove'], opcounts['replace'],
                          opcounts['equal'], rank_changed, len(diff.b.info.conflicts) - len(diff.a.info.conflicts)))
         except FileNotFoundError as e:
             logger.error(e)
