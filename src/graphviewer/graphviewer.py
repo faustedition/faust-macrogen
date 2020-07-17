@@ -1,5 +1,6 @@
 import codecs
 import subprocess
+from pathlib import Path
 
 import networkx as nx
 from flask import Flask, render_template, request, Response, flash
@@ -19,7 +20,12 @@ except ImportError:
     app.secret_key = b'not-really-a-secret-key'
 
 
-info = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')  # FIXME evil
+default_model = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')  # FIXME evil
+
+modelFiles = Path('target/macrogenesis').glob('*-*/macrogen-info.zip')
+models = {p.parent.stem: MacrogenesisInfo(p) for p in modelFiles}
+models['default'] = default_model
+
 
 
 class NoNodes(ValueError):
@@ -28,6 +34,8 @@ class NoNodes(ValueError):
 
 def prepare_agraph():
     node_str = request.values.get('nodes')
+    model = request.values.get('model', 'default')
+    info = models.get(model, default_model)
     nodes, errors = info.nodes(node_str, report_errors=True)
     if errors:
         flash('Die folgenden zentralen Knoten wurden nicht gefunden: ' + ', '.join(errors), 'warning')
@@ -74,7 +82,7 @@ def _normalize_args(args):
     result = dict(args)
     for field in ['nodes', 'extra']:
         if field in result:
-            result[field] = ", ".join(str(node) for node in info.nodes(result[field]))
+            result[field] = ", ".join(str(node) for node in default_model.nodes(result[field]))
     return result
 
 @app.route('/macrogenesis/subgraph')
@@ -86,7 +94,7 @@ def render_form():
     # except NoNodes:
     #     flash(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), 'danger')
     #     svg = ''
-    return render_template('form.html', query=codecs.decode(request.query_string), **_normalize_args(request.args))
+    return render_template('form.html', query=codecs.decode(request.query_string), **_normalize_args(request.args), models=models)
 
 
 @app.route('/macrogenesis/subgraph/pdf')

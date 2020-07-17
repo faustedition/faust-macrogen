@@ -20,6 +20,7 @@
             }).catch(reason => console.error(reason));
         }
         d3.selectAll('#subgraph-form input[type=checkbox]').on("click", updateGraph);
+        d3.selectAll('#subgraph-form select').on("input", updateGraph);
         d3.selectAll('#subgraph-form input[type=text]').on("blur", updateGraph)
         updateGraph();
 
@@ -52,6 +53,12 @@
     <p><input type="submit" class="pure-button pure-button-primary" value="Teilgraph zeichnen"></p></section>
     </section>
     <section class="pure-u-1-3">
+    <h3>Modell:</h3>
+        <select name="model" value="{{ model }}">
+            {% for model_name in models %}
+                <option value="{{ model_name }}">{{ model_name }}</option>
+            {% endfor %}
+        </select>
     <h3>Zusätzliche Pfade</h3>
     <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
     <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
