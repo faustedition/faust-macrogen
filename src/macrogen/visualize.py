@@ -55,7 +55,11 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
 
     for u, v, attrs in graph.edges(data=True):
         if 'source' in attrs and not 'label' in attrs:
-            attrs['label'] = str(attrs['source'])
+            source_ = attrs['source']
+            if isinstance(source_, Sequence) and not isinstance(source_, str):
+                attrs['label'] = '\n'.join(f"{s.citation}: {s.detail}" if s.detail else s.citation for s in source_)
+            else:
+                attrs['label'] = str(source_)
         _simplify_attrs(attrs)
 
     return graph

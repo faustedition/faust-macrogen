@@ -52,6 +52,7 @@ def prepare_agraph():
     nohl = request.values.get('nohl', False)
     syn = request.values.get('syn', False)
     order = request.values.get('order', False)
+    collapse = request.values.get('collapse', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
@@ -71,6 +72,8 @@ def prepare_agraph():
             else:
                 flash('Cannot produce DAG – subgraph is not acyclic!?', 'error')
         g = simplify_timeline(g)
+        if collapse:
+            g = collapse_edges(g)
         g.add_nodes_from(nodes)
         if order:
             g = info.order_graph(g)

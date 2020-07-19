@@ -94,8 +94,26 @@ def collapse_edges(graph: nx.MultiDiGraph):
             result.add_edge(u, v,
                             kind='collapsed',
                             weight=total_weight,
-                            sources=tuple(attr['source'] for w, r, k, attr in edges))
+                            source=tuple(attr['source'] for w, r, k, attr in edges))
 
+    return result
+
+
+def collapse_parallel_edges(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    """
+    Returns a graph with all _parallel_ edges collapsed.
+    """
+    result = nx.MultiDiGraph()
+    result.add_nodes_from(graph.nodes)
+    for u, v in set(graph.edges):
+        parallel_edges = list(graph[u][v].values())
+        attrs = dict(parallel_edges[0])
+        if len(parallel_edges) > 1:
+            attrs['source'] = [e['source'] for e in parallel_edges]
+            attrs['comment'] = '\n'.join(e['comment'] for e in parallel_edges)
+            attrs['weight'] = sum(e['weight'] for e in parallel_edges)
+            attrs['iweight'] = 1/attrs['weight']
+        result.add_edge(u, v, *attrs)
     return result
 
 
