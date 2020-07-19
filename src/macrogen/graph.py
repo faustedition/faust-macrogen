@@ -752,9 +752,10 @@ class MacrogenesisInfo:
 
         for u, v in windowed(ref_order, 2):
             if result.has_edge(u, v, 0):
-                result[u][v][0]['weight'] = 1
+                result[u][v][0]['weight'] = 100
             else:
-                result.add_edge(u, v, penwidth=0, dir='none', weight=1)
+                result.add_edge(u, v, penwidth=0, dir='none', weight=100)
+            result[u][v][0]['topo'] = True
         return result
 
 

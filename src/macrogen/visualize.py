@@ -161,6 +161,8 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
             for styled_attr in attr.keys() & style['edge']:
                 if attr[styled_attr]:
                     simplified.edges[u, v, k].update(style['edge'][styled_attr])
+            if 'topo' in attr and 'constraint' in attr:
+                del attr['constraint']
 
     if 'node' in style:
         for node, attr in simplified.nodes(data=True):
