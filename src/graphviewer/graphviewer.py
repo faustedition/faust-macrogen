@@ -31,7 +31,6 @@ models['default'] = default_model
 class NoNodes(ValueError):
     pass
 
-
 def prepare_agraph():
     node_str = request.values.get('nodes')
     model = request.values.get('model', 'default')
@@ -52,6 +51,7 @@ def prepare_agraph():
     tred = request.values.get('tred', False)
     nohl = request.values.get('nohl', False)
     syn = request.values.get('syn', False)
+    order = request.values.get('order', False)
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
@@ -72,8 +72,12 @@ def prepare_agraph():
                 flash('Cannot produce DAG – subgraph is not acyclic!?', 'error')
         g = simplify_timeline(g)
         g.add_nodes_from(nodes)
+        if order:
+            g = info.order_graph(g)
         agraph = write_dot(g, target=None, highlight=None if nohl else nodes, edge_labels=not no_edge_labels)
         agraph.graph_attr['basename'] = ",".join([str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
+        if order:
+            agraph.graph_attr['ranksep'] = '0.2'
         return agraph
     else:
         raise NoNodes('No nodes in graph')

@@ -19,6 +19,7 @@ import pandas as pd
 from dataclasses import dataclass
 
 from macrogen.graphutils import is_orphan, find_reachable_by_edge
+from more_itertools import windowed
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
@@ -738,6 +739,29 @@ class MacrogenesisInfo:
         return subgraph
 
 
+    def order_graph(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+        """
+        This returns a version of the given graph that will be ordered left to right by sort order when layed out
+        using dot.
+        """
+        # noinspection PyTypeChecker  -- graph.copy() will return the correct type
+        result: nx.MultiDiGraph = graph.copy()
+        ref_order = [ref for ref in self.order_refs() if ref in result.nodes]
+        for u, v, k, attr in result.edges(keys=True, data=True):
+            attr['weight'] = 0
+
+        for u, v in windowed(ref_order, 2):
+            if result.has_edge(u, v, 0):
+                result[u][v][0]['weight'] = 1
+            else:
+                result.add_edge(u, v, penwidth=0, dir='none', weight=1)
+        return result
+
+
+
+
+
+
 def macrogenesis_graphs() -> MacrogenesisInfo:
     warn("macrogenesis_graphs() is deprecated, instantiate MacrogenesisInfo directly instead", DeprecationWarning)
     return MacrogenesisInfo()
@@ -1030,3 +1054,4 @@ class _ConflictInfo:
                 involved_cycles=len(self.involved_cycles),
                 removed_source_count=len(self.removed_sources)
         )
+
