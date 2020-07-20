@@ -542,11 +542,11 @@ class MacrogenesisInfo:
 
         try:
             if isinstance(spec, Reference) or isinstance(spec, date):
-                return first(node for node in self.base.nodes
-                             if node == spec or isinstance(node, SplitReference) and node.reference == spec)
+                return first((node for node in self.base.nodes
+                             if node == spec or isinstance(node, SplitReference) and node.reference == spec), checked=True)
             try:
                 d = parse_datestr(spec)
-                return first(node for node in self.base.nodes if node == d)
+                return first((node for node in self.base.nodes if node == d), checked=True)
             except ValueError:
                 pass
             except KeyError:
@@ -556,15 +556,15 @@ class MacrogenesisInfo:
 
             if spec.startswith('faust://'):
                 ref = Witness.get(spec)
-                return first(node for node in self.base.nodes
-                             if node == ref or isinstance(node, SplitReference) and node.reference == ref)
+                return first((node for node in self.base.nodes
+                             if node == ref or isinstance(node, SplitReference) and node.reference == ref), checked=True)
             else:
                 norm_spec = _normalize_sigil(spec)
-                return first(ref for ref in self.base.nodes if isinstance(ref, Reference)
+                return first((ref for ref in self.base.nodes if isinstance(ref, Reference)
                              and (ref.uri == 'faust://document/faustedition/' + spec
-                                  or _normalize_sigil(ref.label) == norm_spec))
+                                  or _normalize_sigil(ref.label) == norm_spec)), checked=True)
 
-        except StopIteration:
+        except IndexError:
             if default is KeyError:
                 raise KeyError("No node matching {!r} in the base graph.".format(spec))
             else:

@@ -111,7 +111,7 @@ def collapse_parallel_edges(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
         if len(parallel_edges) > 1:
             attrs['source'] = [e['source'] for e in parallel_edges]
             attrs['comment'] = '\n'.join(e.get('comment', '') for e in parallel_edges)
-            attrs['weight'] = sum(e['weight'] for e in parallel_edges)
+            attrs['weight'] = sum(e.get('weight', 0) for e in parallel_edges)
             attrs['iweight'] = 1/attrs['weight']
         result.add_edge(u, v, **attrs)
     return result
@@ -143,11 +143,25 @@ def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return result
 
 
-def first(sequence: Iterable[T], default: S = None) -> Union[T, S]:
+def first(sequence: Iterable[T], default: S = None, checked: bool = False) -> Union[T, S]:
+    """
+    Returns the first item in the given iterable.
+
+    Args:
+        sequence: The iterable
+        default: if the iterable, return this value.
+        checked: if True and the sequence is empty, do not return a default but instead raise an IndexError.
+
+    Raises:
+        IndexError if checked == True and the iterable is empty
+    """
     try:
         return next(iter(sequence))
     except StopIteration:
-        return default
+        if checked:
+            raise IndexError("No item available")
+        else:
+            return default
 
 
 def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
