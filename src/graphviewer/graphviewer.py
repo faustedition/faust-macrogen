@@ -8,7 +8,7 @@ from markupsafe import Markup
 from networkx import DiGraph
 
 from macrogen import MacrogenesisInfo, write_dot
-from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_edges
+from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_edges, collapse_parallel_edges
 
 app = Flask(__name__)
 
@@ -73,7 +73,7 @@ def prepare_agraph():
                 flash('Cannot produce DAG – subgraph is not acyclic!?', 'error')
         g = simplify_timeline(g)
         if collapse:
-            g = collapse_edges(g)
+            g = collapse_parallel_edges(g)
         g.add_nodes_from(nodes)
         if order:
             g = info.order_graph(g)
