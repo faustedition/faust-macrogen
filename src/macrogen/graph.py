@@ -634,6 +634,8 @@ class MacrogenesisInfo:
         except nx.NetworkXException as e:
             if must_exist:
                 raise e
+            else:
+                logger.debug('No path from %s to %s', source, target)
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
@@ -723,8 +725,8 @@ class MacrogenesisInfo:
             if paths_between_nodes:
                 for other in central_nodes:
                     if other != node:
-                        self.add_path(subgraph, node, other, edges_from=path_base)
-                        self.add_path(subgraph, other, node, edges_from=path_base)
+                        self.add_path(subgraph, node, other, edges_from=self.base)
+                        self.add_path(subgraph, other, node, edges_from=self.base)
 
             if direct_assertions:
                 subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))
