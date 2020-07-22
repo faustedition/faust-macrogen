@@ -140,3 +140,16 @@ def render_svg():
 @app.route('/macrogenesis/subgraph/help')
 def render_help():
     return render_template('help.html')
+
+
+@app.route('/macrogenesis/subgraph/check-nodes')
+def check_nodes():
+    node_str = request.values.get('nodes')
+    model = request.values.get('model', 'default')
+    info = models.get(model, default_model)
+    nodes, errors = info.nodes(node_str, report_errors=True)
+    return jsonify(dict(
+            normalized=', '.join(map(str, nodes)),
+            not_found=errors,
+            error_msg="Unbekannte Knoten ignoriert: " + ', '.join(errors) if errors else ''
+    ))
