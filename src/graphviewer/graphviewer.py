@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 import networkx as nx
-from flask import Flask, render_template, request, Response, flash
+from flask import Flask, render_template, request, Response, flash, jsonify
 from markupsafe import Markup
 from networkx import DiGraph
 
@@ -53,6 +53,9 @@ def prepare_agraph():
     syn = request.values.get('syn', False)
     order = request.values.get('order', False)
     collapse = request.values.get('collapse', False)
+    direction = request.values.get('dir', 'LR').upper()
+    if direction not in {'LR', 'RL', 'TB', 'BT'}:
+        direction = 'LR'
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_without_timeline=paths_wo_timeline,
@@ -79,6 +82,8 @@ def prepare_agraph():
             g = info.order_graph(g)
         agraph = write_dot(g, target=None, highlight=None if nohl else nodes, edge_labels=not no_edge_labels)
         agraph.graph_attr['basename'] = ",".join([str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
+        agraph.graph_attr['bgcolor'] = 'transparent'
+        agraph.graph_attr['rankdir'] = direction
         if order:
             agraph.graph_attr['ranksep'] = '0.2'
         return agraph

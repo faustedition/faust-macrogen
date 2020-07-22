@@ -77,7 +77,13 @@
             {% endfor %}
         </select>
     </p>
-    </section>
+    <p><label for="dir">Richtung: </label>
+        <select id="dir" name="dir" value="{{ direction }}">
+        <option value="LR">→</option>
+        <option value="TB">↓</option>
+        <option value="RL">←</option>
+        <option value="BT">↑</option>
+    </select></p>
     </section>
     <section class="pure-u-1-3">
     <h3>Zusätzliche Pfade</h3>
