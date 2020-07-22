@@ -21,6 +21,9 @@
             flex-wrap: wrap;
             justify-content: space-between;
         }
+        .vertical > .flex-form {
+            flex-direction: column;
+        }
         .flex-form fieldset, .flex-form section {
             padding: 0 1em;
             flex-grow: 1;
@@ -82,10 +85,12 @@
             }
         }
 
-        async function getDotStr() {
-            const form = document.getElementById('subgraph-form'),
-                  formdata = new FormData(form);
-            updateURLs(formdata);
+        function getFormData() {
+            const form = document.getElementById('subgraph-form');
+            return new FormData(form);
+        }
+
+        async function getDotStr(formdata) {
             const response = await fetch('subgraph/dot', {method: "POST", body: formdata});
             if (response.status === 200)
                 return await response.text();
@@ -106,8 +111,10 @@
 
         const transitionFactory = () => d3.transition().duration(750);
         const updateGraph = function updateGraph() {
+            const formdata = getFormData(),
+                  main = document.getElementsByTagName('main')[0];
             message("Lade aktualisierten Graphen …")
-            getDotStr().then(dot => {message("Berechne neues Layout …"); return dot;})
+            getDotStr(formdata).then(dot => {message("Berechne neues Layout …"); return dot;})
             .then(dot => {
                 graphviz.transition(transitionFactory).renderDot(dot);
             })
@@ -115,7 +122,13 @@
             .catch(reason => {
                 message(reason, "danger", true)
                 console.error(reason)
-            })
+            });
+            updateURLs(formdata);
+            if (formdata.get('dir').includes('B')) { // vertical layout
+                main.classList.add('vertical');
+            } else {
+                main.classList.remove('vertical');
+            }
         }
         d3.selectAll('#subgraph-form input[type=checkbox], #subgraph-form input[type=radio]').on("click", updateGraph);
         d3.selectAll('#subgraph-form select').on("input", updateGraph);
