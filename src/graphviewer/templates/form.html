@@ -57,10 +57,14 @@
                 history.replaceState(null, '', location)
 
                 try {
-                    const downloadArea = document.getElementById('download-graph');
-                    for (const a of downloadArea.getElementsByTagName("a")) {
+                    const downloadTemplateEl = document.getElementById('download');
+                    const parseContainer = document.createElement('div');
+                    parseContainer.innerHTML = downloadTemplateEl.innerHTML;
+                    const graphDownloadArea = parseContainer.querySelector('#download-graph');
+                    for (const a of graphDownloadArea.getElementsByTagName("a")) {
                         a.search = searchString;
                     }
+                    downloadTemplateEl.innerHTML = parseContainer.innerHTML;
                 } catch (e) {
                     console.warn(e);
                 }
