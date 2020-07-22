@@ -18,7 +18,6 @@
         .flex-form {
             display: flex;
             flex-direction: row;
-            flex-wrap: wrap;
             justify-content: space-between;
         }
         .vertical > .flex-form {
@@ -190,7 +189,7 @@
     <legend>Zusätzliche Pfade</legend>
     <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
     <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
-        <input type="text" name="extra" id="extra" value="{{ extra }}" placeholder="A, 2 H" style="width: 100%"><br />
+        <input type="text" name="extra" id="extra" value="{{ extra }}" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
         <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" {% if paths_wo_timeline %}checked{% endif %}> <label for="paths_wo_timeline">ohne Timeline</label>
     </p>
     </fieldset>
@@ -215,6 +214,11 @@
     </p>
     </fieldset>
 </form>
+
+    <datalist id="interesting-nodes">
+        <option value="A, 2 H"></option>
+        <option value="1 H.5, J.1, S, 2 III H.1, H P1, A, H P63, 2 V H.2, C.1 4, C.1 12, 2 H"></option>
+    </datalist>
 
 {% endblock %}
 
