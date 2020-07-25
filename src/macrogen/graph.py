@@ -2,29 +2,37 @@
 Functions to build the graphs and perform their analyses.
 """
 import json
+import logging
 import pickle
 import re
 from collections import defaultdict, Counter
 from datetime import date, timedelta
 from io import TextIOWrapper
+from operator import itemgetter
 from pathlib import Path
 from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
+import pandas as pd
+from dataclasses import dataclass
 
-from .graphutils import mark_edges_to_delete, remove_edges, in_path
+from macrogen.graphutils import is_orphan, find_reachable_by_edge, path2str
+from more_itertools import windowed
+
+from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
 from .bibliography import BiblSource
 from .config import config
 from .datings import build_datings_graph, parse_datestr
-from macrogen.graphutils import simplify_timeline
+from .graphutils import simplify_timeline
 from .fes import eades, FES_Baharev, V
 from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
 from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
+from .splitgraph import references, SplitReference, Side
 
-logger = config.getLogger(__name__)
+logger: logging.Logger = config.getLogger(__name__)
 
 EARLIEST = date(1749, 8, 28)
 LATEST = date.today()
@@ -60,9 +68,61 @@ def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
     else:
         return True
 
+
 _SIGIL_NORM = re.compile('[. ]+')
+
+
 def _normalize_sigil(sigil: str) -> str:
     return _SIGIL_NORM.sub('', sigil).lower()
+
+
+def handle_inscriptions(base):
+    methods = config.inscriptions
+    if not methods:
+        return
+    if isinstance(methods, str):
+        if "," in methods:
+            methods = re.split(r',\s*', methods)
+        else:
+            methods = [methods]
+
+    if 'inline' in methods:
+        inscriptions_inline(base)
+    if 'copy' in methods:
+        datings_from_inscriptions(base)
+    if 'copy-orphans' in methods:
+        datings_from_inscriptions(base, orphans_only=True)
+    if 'orphans' in methods:
+        adopt_orphans(base)
+
+
+def inscriptions_inline(base):
+    if any(isinstance(ref, SplitReference) for ref in base.nodes):
+        split_refs = (node for node in base.nodes if isinstance(node, SplitReference))
+        split_inscrs = [ref for ref in split_refs if isinstance(ref.reference, Inscription)]
+        # add potentially missing nodes
+        for inscr in split_inscrs:
+            base.add_nodes_from(SplitReference.both(inscr.reference.witness).values())
+
+        for split_inscr in split_inscrs:
+            wit_half = SplitReference(split_inscr.reference.witness, split_inscr.side)
+            if split_inscr.side == Side.START:
+                base.add_edge(wit_half, split_inscr, kind='temp-pre',
+                              source=BiblSource('faust://model/inscription/inline'))
+            else:
+                base.add_edge(split_inscr, wit_half, kind='temp-pre',
+                              source=BiblSource('faust://model/inscription/inline'))
+    else:
+        logger.error(
+                f"Ignoring inscription method 'inline' for global model '{config.model}', it is only supported for split models")
+
+
+def yearlabel(max_date_before: date, min_date_after: date) -> str:
+    earliest_year = max_date_before and (max_date_before + DAY).year
+    latest_year = min_date_after and (min_date_after - DAY).year
+    if earliest_year == latest_year:
+        return earliest_year and str(earliest_year) or ""
+    return " … ".join(str(year) for year in [earliest_year, latest_year] if year is not None)
 
 
 class MacrogenesisInfo:
@@ -79,6 +139,7 @@ class MacrogenesisInfo:
         self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
         self.order: List[Reference] = None
         self.index: Dict[Reference, int] = None
+        self.details: pd.DataFrame = None
 
         if load_from:
             self._load_from(load_from)
@@ -160,18 +221,18 @@ class MacrogenesisInfo:
         if base.number_of_edges() == 0:
             raise ValueError("Loading macrogenesis data resulted in an empty graph. Is there data at {}?".format(
                     config.path.data.absolute()))
-        datings_from_inscriptions(base)
+        handle_inscriptions(base)
         add_edge_weights(base)
         resolve_ambiguities(base)
-        adopt_orphans(base)
         base = collapse_edges_by_source(base)
+        if config.temp_syn and config.temp_syn != 'ignore':
+            base = add_syn_nodes(base)
+        self.base = base
         add_iweight(base)
         working = cleanup_graph(base).copy()
-        add_missing_wits(working)
-        sccs = scc_subgraphs(working)
-
-        self.base = base
         self.working = working
+        self.add_missing_wits(working)
+        sccs = scc_subgraphs(working)
 
         logger.info('Calculating minimum feedback arc set for %d strongly connected components', len(sccs))
 
@@ -214,23 +275,86 @@ class MacrogenesisInfo:
 
         self.closure = nx.transitive_closure(nx.DiGraph(result_graph))
         add_inscription_links(base)
-        self._augment_details()
+        self._infer_details()
 
-    def order_refs(self):
+    @staticmethod
+    def _secondary_key(node):
+        """Returns a tuple suitable as secondary sort key for a topological sort."""
+        if isinstance(node, Reference):
+            return node.sort_tuple()
+        elif isinstance(node, date):
+            return node.year, format(node.month, '02d'), node.day, ''
+        else:
+            return 99999, "zzzzzz", 99999, "zzzzzz"
+
+    def baseline_order(self) -> pd.Series:
+        """
+        Sorts the references in the base graph using _only_ the immanent sort key,
+        ignoring the graph topology.
+
+        Returns:
+            a series mapping References to unique integers as rank numbers
+
+        See Also:
+            spearman_rank_correlation
+        """
+        if any(isinstance(node, SplitReference) for node in self.dag.nodes):
+            unsorted_refs = [ref.reference for ref in self.dag.nodes
+                             if isinstance(ref, SplitReference) and ref.side == Side.END]
+        else:
+            unsorted_refs = [node for node in self.dag.nodes if isinstance(node, Reference)]
+        refs = sorted(unsorted_refs, key=lambda ref: ref.sort_tuple()[1:])
+        return pd.Series(index=refs, data=range(1, len(refs) + 1))
+
+    def spearman_rank_correlation(self) -> float:
+        """
+        Calculates Spearman’s Rank Correlation Coefficient between a baseline ordering (that ignores
+        graph topology) and the topological ordering evoked by the model using its current settings.
+
+        Returns:
+            a float between -1 and +1. +1 would mean the ordering hasn’t changed at all by
+            the model, -1 means a complete permutation.
+        """
+        model_order: pd.Series = self.details.position
+        baseline_order = self.baseline_order()
+        n = model_order.index.size
+        if n != baseline_order.index.size:
+            delta = model_order.index.symmetric_difference(baseline_order.index)
+            logger.error("Warning: Baseline order has %d elements while model order has %d: Δ = %s.",
+                         baseline_order.size, n, delta)
+        Q = ((model_order - baseline_order) ** 2).sum()
+        r_s = 1 - (6 * Q) / (n * (n - 1) * (n + 1))
+        return r_s
+
+    def add_missing_wits(self, working: nx.MultiDiGraph):
+        """
+        Add known witnesses that are not in the graph yet.
+
+        The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
+        but it makes these nodes appear in the topological order.
+        """
+        all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
+        if any(isinstance(ref, SplitReference) for ref in working.nodes):
+            known_wits = {ref for ref in references(working) if isinstance(ref, Witness)}
+            mentioned_refs = {ref.reference for ref in self.base.nodes if isinstance(ref, SplitReference)}
+            inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
+            missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
+            for wit in sorted(missing_wits, key=lambda ref: ref.sort_tuple()):
+                working.add_nodes_from(SplitReference.both(wit).values())
+        else:
+            known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
+            mentioned_refs = {ref for ref in self.base.nodes if isinstance(ref, Reference)}
+            inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
+            missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
+            working.add_nodes_from(sorted(missing_wits, key=lambda ref: ref.sort_tuple()))
+        logger.info('Adding %d otherwise unmentioned references to the working graph', len(missing_wits))
+
+    def order_refs(self) -> List[Reference]:
         if self.order:
             return self.order
 
         logger.info('Creating sort order from DAG')
-
-        def secondary_key(node):
-            if isinstance(node, Reference):
-                return node.sort_tuple()
-            elif isinstance(node, date):
-                return node.year, format(node.month, '02d'), node.day, ''
-            else:
-                return 99999, "zzzzzz", 99999, "zzzzzz"
-
-        nodes = nx.lexicographical_topological_sort(self.dag, key=secondary_key)
+        nodes = nx.lexicographical_topological_sort(self.dag, key=self._secondary_key)
         refs = [node for node in nodes if isinstance(node, Reference)]
         self.order = refs
         self._build_index()
@@ -238,6 +362,12 @@ class MacrogenesisInfo:
             if ref in self.base.nodes:
                 self.base.nodes[ref]['index'] = index
             ref.index = index
+        return refs
+
+    def order_refs_post_model(self) -> List[Reference]:
+        refs = self.order_refs()
+        if config.model in ['split', 'split-reverse']:
+            refs = [ref for ref in refs if ref.side == Side.END]
         return refs
 
     def _build_index(self):
@@ -248,41 +378,90 @@ class MacrogenesisInfo:
             logger.error('Some refs appear more than once in the order: %s', msg)
         self.index = {ref: i for (i, ref) in enumerate(self.order, start=1)}
 
-    def _augment_details(self):
-        logger.info('Augmenting refs with data from graphs')
-        for index, ref in enumerate(self.order_refs(), start=1):
-            if ref not in self.dag:
-                ref.earliest = EARLIEST
-                ref.latest = LATEST
-                continue
-            ref.index = index
-            ref.rank = self.closure.in_degree(ref)
-            max_before_date = max((d for d, _ in self.closure.in_edges(ref) if isinstance(d, date)),
-                                  default=EARLIEST - DAY)
-            max_abs_before_date = max((d for d, _ in self.dag.in_edges(ref) if isinstance(d, date)),
-                                      default=None)
-            ref.earliest = max_before_date + DAY
-            ref.earliest_abs = max_abs_before_date + DAY if max_abs_before_date is not None else None
-            min_after_date = min((d for _, d in self.closure.out_edges(ref) if isinstance(d, date)),
-                                 default=LATEST + DAY)
-            min_abs_after_date = min((d for _, d in self.dag.out_edges(ref) if isinstance(d, date)),
-                                     default=None)
-            ref.latest = min_after_date - DAY
-            ref.latest_abs = min_abs_after_date - DAY if min_abs_after_date is not None else None
+    def _infer_details(self):
+        """Prepares a table with details on witnesses"""
+        logger.info('Preparing details on references')
+        ordered_ref_nodes = self.order_refs()
+        is_split = any(isinstance(node, SplitReference) for node in ordered_ref_nodes)
+        self.is_split = is_split
+        if is_split:
+            refs_from_graphs = [ref for ref in ordered_ref_nodes if ref.side == Side.END]  # FIXME Configurable?
+            refs_from_data = [ref.reference for ref in refs_from_graphs]
+            total_positions = {ref: pos for pos, ref in enumerate(ordered_ref_nodes, start=1)}
+            start_positions = {ref.reference: pos for ref, pos in total_positions.items() if ref.side == Side.START}
+            end_positions = {ref.reference: pos for ref, pos in total_positions.items() if ref.side == Side.END}
+        else:
+            refs_from_graphs = ordered_ref_nodes
+            refs_from_data = ordered_ref_nodes
 
-            if ref.earliest != EARLIEST and ref.latest != LATEST:
-                avg_date = ref.earliest + (ref.latest - ref.earliest) / 2
-                ref.avg_year = avg_date.year
-            elif ref.latest != LATEST:
-                ref.avg_year = ref.latest.year
-            elif ref.earliest != EARLIEST:
-                ref.avg_year = ref.earliest.year
-            else:
-                ref.avg_year = None
+        table = pd.DataFrame(data=dict(uri=[ref.uri for ref in refs_from_data],
+                                       label=[ref.label for ref in refs_from_data],
+                                       kind=[type(ref).__name__ for ref in refs_from_data],
+                                       inscription_of=[ref.witness if isinstance(ref, Inscription) else None
+                                                       for ref in refs_from_data],
+                                       position=list(range(1, len(refs_from_data) + 1))),
+                             index=refs_from_data)
+        if is_split:
+            table['start_pos'] = pd.Series(start_positions)
+            table['end_pos'] = pd.Series(end_positions)
+
+            def unsplit_rank(node) -> int:
+                preds = self.closure.predecessors(node)
+                pred_cleaned = {pred.reference if isinstance(pred, SplitReference) else pred
+                                for pred in preds}
+                if isinstance(node, SplitReference):
+                    pred_cleaned -= {node.reference}
+                else:
+                    pred_cleaned -= {node}
+                return len(pred_cleaned)
+
+            table['rank'] = [unsplit_rank(ref) for ref in refs_from_graphs]
+
+        else:
+            table['rank'] = [self.closure.in_degree(ref) for ref in refs_from_graphs]
+        for ref in refs_from_data:
+            max_before = max(
+                    (d for d, _ in self.closure.in_edges(SplitReference(ref, Side.START) if is_split else ref)
+                     if isinstance(d, date)), default=None)
+            max_abs_before = max((d for d, _ in self.dag.in_edges(SplitReference(ref, Side.START) if is_split else ref)
+                                  if isinstance(d, date)), default=None)
+            min_after = min((d for _, d in self.closure.out_edges(SplitReference(ref, Side.END) if is_split else ref)
+                             if isinstance(d, date)), default=None)
+            min_abs_after = min((d for _, d in self.dag.out_edges(SplitReference(ref, Side.END) if is_split else ref)
+                                 if isinstance(d, date)), default=None)
+            avg = max_before + (min_after - max_before) / 2 if max_before and min_after else max_before or min_after
+            table.loc[ref, 'max_before_date'] = max_before
+            table.loc[ref, 'max_abs_before_date'] = max_abs_before
+            table.loc[ref, 'min_after_date'] = min_after
+            table.loc[ref, 'min_abs_after_date'] = min_abs_after
+            table.loc[ref, 'avg'] = avg
+            table.loc[ref, 'avg_year'] = avg and avg.year
+            table.loc[ref, 'yearlabel'] = yearlabel(max_before, min_after)
+        table['baseline_position'] = self.baseline_order()
+        self.details = table
+
+    def find_conflicts(self, from_: Node, to_: Node) -> List[Tuple[Node, Node, int, dict]]:
+        """
+        Finds conflict edges from a from_ node to a to_ node
+
+        Args:
+            from_: source node, never a `SplitReference`
+            to_: end node, never a `SplitReference`
+
+        Returns:
+            All info on the actual conflicting edges
+        """
+        if self.is_split:
+            return [(u, v, k, attr) for (u, v, k, attr) in self.conflicts
+                    if (u == from_ or isinstance(u, SplitReference) and u.reference == from_)
+                    and (v == to_ or isinstance(v, SplitReference) and v.reference == to_)]
+        else:
+            return [(u, v, k, attr) for (u, v, k, attr) in self.conflicts if u == from_ and v == to_]
 
     def year_stats(self):
-        years = [node.avg_year for node in self.base.nodes if hasattr(node, 'avg_year') and node.avg_year is not None]
-        return Counter(years)
+        stats: pd.Series = self.details.avg_year.value_counts()
+        stats.index = pd.Int64Index(stats.index)
+        return Counter(stats.to_dict())
 
     def conflict_stats(self):
         return [_ConflictInfo(self, edge) for edge in self.conflicts]
@@ -294,6 +473,11 @@ class MacrogenesisInfo:
                 nx.write_gpickle(self.base, base_entry)
             with zip.open('simple_cycles.pickle', 'w') as sc_entry:
                 pickle.dump(self.simple_cycles, sc_entry)
+            with zip.open('ref_info.csv', 'w') as detail_entry:
+                text = TextIOWrapper(detail_entry, encoding='utf-8')
+                ref_info = self.details.set_index('uri')
+                ref_info.inscription_of.apply(lambda ref: ref and ref.uri)
+                ref_info.to_csv(text, date_format='iso')
             with zip.open('order.json', 'w') as order_entry:
                 text = TextIOWrapper(order_entry, encoding='utf-8')
                 json.dump([ref.uri for ref in self.order], text, indent=True)
@@ -321,6 +505,7 @@ class MacrogenesisInfo:
         # Now reconstruct the other data:
         self.working: nx.MultiDiGraph = self.base.copy()
         self.working = cleanup_graph(self.working).copy()
+        self.add_missing_wits(self.working)
         self.dag = self.working.copy()
 
         for u, v, k, attr in self.working.edges(keys=True, data=True):
@@ -340,7 +525,7 @@ class MacrogenesisInfo:
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.order_refs()
         self.closure = nx.transitive_closure_dag(self.dag, self.order)
-        self._augment_details()
+        self._infer_details()
 
     def node(self, spec: Union[Reference, date, str], default=KeyError):
         """
@@ -355,22 +540,13 @@ class MacrogenesisInfo:
             KeyError if no node can be found
         """
 
-        def first(iterable):
-            iterator = iter(iterable)
-            item = next(iterator)
-            try:
-                second = next(iterator)
-                logger.warning('There should be only %s in iterable, but there was more (first: %s)', item, second)
-            except StopIteration:
-                pass
-            return item
-
         try:
             if isinstance(spec, Reference) or isinstance(spec, date):
-                return first(node for node in self.base.nodes if node == spec)
+                return first((node for node in self.base.nodes
+                             if node == spec or isinstance(node, SplitReference) and node.reference == spec), checked=True)
             try:
                 d = parse_datestr(spec)
-                return first(node for node in self.base.nodes if node == d)
+                return first((node for node in self.base.nodes if node == d), checked=True)
             except ValueError:
                 pass
             except KeyError:
@@ -380,20 +556,22 @@ class MacrogenesisInfo:
 
             if spec.startswith('faust://'):
                 ref = Witness.get(spec)
-                return first(node for node in self.base.nodes if node == ref)
+                return first((node for node in self.base.nodes
+                             if node == ref or isinstance(node, SplitReference) and node.reference == ref), checked=True)
             else:
                 norm_spec = _normalize_sigil(spec)
-                return first(ref for ref in self.base.nodes if isinstance(ref, Reference)
+                return first((ref for ref in self.base.nodes if isinstance(ref, Reference)
                              and (ref.uri == 'faust://document/faustedition/' + spec
-                                  or _normalize_sigil(ref.label) == norm_spec))
+                                  or _normalize_sigil(ref.label) == norm_spec)), checked=True)
 
-        except StopIteration:
+        except IndexError:
             if default is KeyError:
                 raise KeyError("No node matching {!r} in the base graph.".format(spec))
             else:
                 return default
 
-    def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[List[Node], Tuple[List[Node], List[str]]]:
+    def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[
+        List[Node], Tuple[List[Node], List[str]]]:
         """
         Find nodes for a comma-separated list of node strings.
 
@@ -449,17 +627,21 @@ class MacrogenesisInfo:
             if edges_from is None:
                 edges_from = self.dag
             path = nx.shortest_path(edges_from, source, target, weight, method)
-            logger.debug('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
-            edges = expand_edges(edges_from, nx.utils.pairwise(path))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Shortest path from %s to %s: %s', source, target, path2str(path))
+            edges = list(expand_edges(edges_from, nx.utils.pairwise(path), filter=True))
             graph.add_edges_from(edges)
             return path
         except nx.NetworkXException as e:
             if must_exist:
                 raise e
+            else:
+                logger.debug('No path from %s to %s', source, target)
 
-    def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool=True,
+    def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
-                 paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False) \
+                 paths_between_nodes: Union[bool, str] = 'all', keep_timeline: bool = False, direct_assertions: bool = False,
+                 temp_syn_context: bool = False, include_syn_clusters: bool = False, include_inscription_clusters = False) \
             -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
@@ -472,7 +654,10 @@ class MacrogenesisInfo:
             path_from: Node from which the shortest path should be included, if any
             paths: Node(s) from / to which the spp should be included, if any
             paths_without_timeline: Paths should be built without considering the timeline
-
+            paths_between_nodes: If `'all'` or `True` (the default), include the shortest paths between the given nodes
+                                on the base graph. If `'dag'`, only allow assertions from the dag.
+            keep_timeline: if True, keep the timeline as is, otherwise remove useless date nodes
+            direct_assertions: if True, include all edges induced by the given node(s)
 
         Description:
             This method can be used to extract an 'interesting' subgraph around one or more nodes from the base
@@ -489,18 +674,41 @@ class MacrogenesisInfo:
         Returns:
             The constructed subgraph
         """
-        central_nodes = set(nodes)
+        if any(isinstance(node, SplitReference) for node in self.base.nodes):
+            central_nodes = set()
+            for graph_node in self.base:
+                if graph_node in nodes or isinstance(graph_node, SplitReference) and graph_node.reference in nodes:
+                    central_nodes.add(graph_node)
+                    if isinstance(graph_node, SplitReference):
+                        central_nodes.add(graph_node.other)
+        else:
+            central_nodes = set(nodes)
         relevant_nodes = set(central_nodes)
         if context:
             for node in central_nodes:
                 relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node])
 
+        if include_syn_clusters:
+            for node in central_nodes:
+                cluster = find_reachable_by_edge(self.base, node, 'kind', 'temp-syn')
+                logger.info("syn-cluster: including %s", cluster)
+                relevant_nodes |= cluster
+
+        if temp_syn_context:
+            for node in set(relevant_nodes):
+                if isinstance(node, SynAnchor):
+                    relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node]).union(node.syn_group)
+
+        if include_inscription_clusters:
+            for node in set(central_nodes):
+                relevant_nodes |= find_reachable_by_edge(self.base, node, 'kind', 'inscription', symmetric=True)
+
         subgraph: nx.MultiDiGraph = nx.subgraph(self.base, relevant_nodes).copy()
         sources = set(path_from).union(paths)
-        targets = set(path_from).union(paths)
+        targets = set(path_to).union(paths)
 
         if paths_without_timeline:
-            path_base = remove_edges(self.dag, lambda u,v,attr: attr.get('kind') == 'timeline')
+            path_base = remove_edges(self.dag, lambda u, v, attr: attr.get('kind') == 'timeline')
         else:
             path_base = self.dag
 
@@ -520,11 +728,12 @@ class MacrogenesisInfo:
                 self.add_path(subgraph, source, node, edges_from=path_base)
             for target in targets:
                 self.add_path(subgraph, node, target, edges_from=path_base)
-            if paths_between_nodes:
+            if paths_between_nodes in {True, 'dag', 'all'}:
+                inbetween_base = self.dag if paths_between_nodes == 'dag' else self.base
                 for other in central_nodes:
                     if other != node:
-                        self.add_path(subgraph, node, other, edges_from=path_base)
-                        self.add_path(subgraph, other, node, edges_from=path_base)
+                        self.add_path(subgraph, node, other, edges_from=inbetween_base)
+                        self.add_path(subgraph, other, node, edges_from=inbetween_base)
 
             if direct_assertions:
                 subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))
@@ -537,6 +746,29 @@ class MacrogenesisInfo:
             subgraph = simplify_timeline(subgraph)
 
         return subgraph
+
+
+    def order_graph(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+        """
+        This returns a version of the given graph that will be ordered left to right by sort order when layed out
+        using dot.
+        """
+        # noinspection PyTypeChecker  -- graph.copy() will return the correct type
+        result: nx.MultiDiGraph = graph.copy()
+        ref_order = [ref for ref in self.order_refs() if ref in result.nodes]
+        for u, v, k, attr in result.edges(keys=True, data=True):
+            attr['weight'] = 0
+
+        if len(ref_order) > 1:
+            for u, v in windowed(ref_order, 2):
+                if result.has_edge(u, v, 0):
+                    result[u][v][0]['weight'] = 100
+                    result[u][v][0]['topo'] = True
+                else:
+                    result.add_edge(u, v, penwidth=0, dir='none', weight=100, topo=True)
+        return result
+
+
 
 
 
@@ -643,7 +875,7 @@ def resolve_ambiguities(graph: nx.MultiDiGraph):
         graph.remove_node(ambiguity)
 
 
-def datings_from_inscriptions(base: nx.MultiDiGraph):
+def datings_from_inscriptions(base: nx.MultiDiGraph, orphans_only=False):
     """
     Copy datings from inscriptions to witnesses.
 
@@ -663,10 +895,10 @@ def datings_from_inscriptions(base: nx.MultiDiGraph):
         before = [edge for edge in iin if isinstance(edge[0], date)]
         iout = [edge for i in inscriptions for edge in base.out_edges(i, data=True, keys=True)]
         after = [edge for edge in iout if isinstance(edge[1], date)]
-        if before and not any(isinstance(pred, date) for pred in base.predecessors(witness)):
+        if before and not any(isinstance(pred, date) for pred in base.predecessors(witness)) and not (orphans_only and not is_orphan(witness, base)):
             for d, i, k, attr in before:
                 base.add_edge(d, witness, copy=(d, i, k), **attr)
-        if after and not any(isinstance(succ, date) for succ in base.successors(witness)):
+        if after and not any(isinstance(succ, date) for succ in base.successors(witness)) and not (orphans_only and not is_orphan(witness, base)):
             for i, d, k, attr in after:
                 base.add_edge(witness, d, copy=(d, i, k), **attr)
 
@@ -700,20 +932,6 @@ def add_inscription_links(base: nx.MultiDiGraph):
             base.add_edge(node, node.witness, kind='inscription', source=BiblSource('faust://model/inscription'))
 
 
-def add_missing_wits(working: nx.MultiDiGraph):
-    """
-    Add known witnesses that are not in the graph yet.
-
-    The respective witnesses will be single, unconnected nodes. This doesn't help with the graph,
-    but it makes these nodes appear in the topological order.
-    """
-    all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
-    known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
-    missing_wits = all_wits - known_wits
-    logger.debug('Adding %d otherwise unmentioned witnesses to the working graph', len(missing_wits))
-    working.add_nodes_from(sorted(missing_wits, key=Witness.sigil_sort_key))
-
-
 def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
     logger.info('Removing edges to ignore')
 
@@ -731,6 +949,95 @@ def cleanup_graph(A: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attr['ignore'] = True
 
     return remove_edges(A, is_ignored)
+
+
+@dataclass(frozen=True, order=True)
+class SynAnchor:
+    syn_group: frozenset
+    side: Side
+
+    def __str__(self):
+        return f"{self.side.label}({', '.join(ref.label for ref in self.syn_group)})"
+
+
+def add_syn_nodes(source_graph: nx.MultiDiGraph, mode: Optional[str] = None) -> nx.MultiDiGraph:
+    """
+    Creates a copy of the graph with appropriate handling of temp-syn edges.
+
+    An edge u –temp-syn→ v models that u and v have been written approximately at the same time. Semantically,
+    these are symmetric (or undirected) edges, so all nodes connected via (only) temp-syn edges form a cluster
+    (more formally, these are the non-trivial weakly connected components of the subgraph induced by the temp-syn
+    edges).
+
+    This function places two artificial nodes of class `SynAnchor` before and after each cluster, connecting the
+    SynAnchor nodes to the `Reference`s in the cluster using regular ``temp-pre`` edges, and connects the SynAnchor
+    nodes using the given modes:
+
+    - ``ignore``: No SynAnchors, just ignore the nodes completely
+    - ``copy``: Copy all in-edges that come from nodes not in the cluster to the anchor before, and all out-edges that
+       connect to nodes outside the cluster to the ancher after the cluster.
+    - ``closest``: Connect the anchors to the closest date nodes of any of the witnesses in the group
+    - ``farthest``: Connect the anchors to the farthest date nodes of any of the witnesses in the group
+
+    Args:
+        source_graph: The graph to work on. Is not modified
+        mode: ignore, copy, closest or farthest; if None, take the value from the config option ``temp_syn``
+
+    Returns:
+        a modified copy of the input graph
+
+    """
+    if mode is None:
+        mode = config.temp_syn
+    if not mode or mode == 'ignore':
+        logger.warning('No temp-syn handling (mode==%s)', mode)
+        return source_graph
+
+    syn_groups = temp_syn_groups(source_graph)
+    logger.info('Adding temp-syn nodes in mode %s for %d clusters', mode, len(syn_groups))
+    result = source_graph.copy()
+    for component in syn_groups:
+        syn_group: Set[Reference] = frozenset(component)
+        in_edge_view = source_graph.in_edges(nbunch=syn_group, keys=True, data=True)
+        out_edge_view = source_graph.out_edges(nbunch=syn_group, keys=True, data=True)
+        in_edges = [(u, v, k, attr) for u, v, k, attr in in_edge_view if u not in syn_group]
+        out_edges = [(u, v, k, attr) for u, v, k, attr in out_edge_view if v not in syn_group]
+        before = SynAnchor(syn_group, Side.START)
+        after = SynAnchor(syn_group, Side.END)
+        for ref in syn_group:
+            result.add_edge(before, ref, kind='temp-pre', source=BiblSource('faust://temp-syn'))  # TODO add orig source
+            result.add_edge(ref, after, kind='temp-pre', source=BiblSource('faust://temp-syn'))
+
+            if mode == 'copy':
+                result.add_edges_from([(u, before, k, attr) for u, v, k, attr in in_edges])
+                result.add_edges_from([(after, v, k, attr) for u, v, k, attr in out_edges])
+            elif mode == 'closest':
+                closest_before = max([edge for edge in in_edges if isinstance(edge[0], date)],
+                                     key=itemgetter(0), default=None)
+                closest_after = min([edge for edge in out_edges if isinstance(edge[0], date)],
+                                    key=itemgetter(0), default=None)
+                if closest_before:
+                    result.add_edge(closest_before[0], before, **closest_before[-1])
+                if closest_after:
+                    result.add_edge(after, closest_after[1], **closest_after[-1])
+            elif mode == 'farthest':
+                farthest_before = min([edge for edge in in_edges if isinstance(edge[0], date)],
+                                      key=itemgetter(0), default=None)
+                farthest_after = max([edge for edge in out_edges if isinstance(edge[0], date)],
+                                     key=itemgetter(0), default=None)
+                if farthest_before:
+                    result.add_edge(farthest_before[0], before, **farthest_before[-1])
+                if farthest_after:
+                    result.add_edge(after, farthest_after[1], **farthest_after[-1])
+
+    return result
+
+
+def temp_syn_groups(source_graph: nx.MultiDiGraph):
+    syn_only = source_graph.edge_subgraph((u, v, k) for (u, v, k, kind) in source_graph.edges(keys=True, data='kind')
+                                          if kind == 'temp-syn')
+    syn_groups = [comp for comp in nx.weakly_connected_components(syn_only) if len(comp) > 1]
+    return syn_groups
 
 
 class _ConflictInfo:
@@ -758,3 +1065,4 @@ class _ConflictInfo:
                 involved_cycles=len(self.involved_cycles),
                 removed_source_count=len(self.removed_sources)
         )
+

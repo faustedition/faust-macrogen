@@ -2,6 +2,12 @@
 node:
   date:
     shape: none
+  SynAnchor:
+    shape: point
+  start:
+    shape: rarrow
+  end:
+    shape: larrow
   # additional style for highlighted nodes
   highlight:
     fillcolor: '#F0F000'  # '#FABE00'
@@ -37,6 +43,9 @@ edge:
   copy:
     arrowhead: empty
     penwidth: 0.5
+  progress:
+    color: gray
+    label: ""
 
   # additional style for conflicting edges
   delete:

@@ -11,8 +11,9 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-macrogen = 'macrogen.main:main'
 witness-report = 'macrogen.uris:_witness_report'
+macrogen-diff = 'macrogen.diff:main'
+macrogen = 'macrogen.main:main'
 
 
 [tool.poetry.dependencies]

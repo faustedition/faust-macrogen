@@ -1,0 +1,731 @@
+,uri,label,kind,inscription_of,position,start_pos,end_pos,rank,max_before_date,max_abs_before_date,min_after_date,min_abs_after_date,avg,avg_year,yearlabel,baseline_position
+1 H.8,faust://document/faustedition/1_H.8,1 H.8,Witness,,1,17,16,0,,,,,,,,11
+wa: 182 i_r_o,faust://inscription/wa/182/i_r_o,wa: 182 i_r_o,Inscription,wa: 182,2,21,22,3,,,,,,,,3
+wa: 182,faust://document/wa/182,wa: 182,UnknownRef,,3,20,23,4,,,,,,,,2
+2 III H.12a,faust://document/faustedition/2_III_H.12a,2 III H.12a,Witness,,4,31,30,0,,,,,,,,339
+2 III H.23a*,faust://document/faustedition/2_III_H.23a_,2 III H.23a*,Witness,,5,43,44,4,,,,,,,,351
+2 III H.23b,faust://document/faustedition/2_III_H.23b,2 III H.23b,Witness,,6,45,46,4,,,,,,,,352
+2 III H.23c,faust://document/faustedition/2_III_H.23c,2 III H.23c,Witness,,7,47,48,4,,,,,,,,353
+2 III H.24a,faust://document/faustedition/2_III_H.24a,2 III H.24a,Witness,,8,51,52,4,,,,,,,,356
+2 III H.25,faust://document/faustedition/2_III_H.25,2 III H.25,Witness,,9,53,55,4,,,,,,,,357
+2 III H.2:1,faust://document/faustedition/2_III_H.2_1,2 III H.2:1,Witness,,10,60,61,2,,,,,,,,307
+2 III H.2:2,faust://document/faustedition/2_III_H.2_2,2 III H.2:2,Witness,,11,63,62,0,,,,,,,,308
+2 III H.33,faust://document/faustedition/2_III_H.33,2 III H.33,Witness,,12,73,74,7,,,,,,,,366
+2 III H.26,faust://document/faustedition/2_III_H.26,2 III H.26,Witness,,13,56,77,8,,,,,,,,359
+2 III H.32,faust://document/faustedition/2_III_H.32,2 III H.32,Witness,,14,72,78,9,,,,,,,,365
+2 III H.37a,faust://document/faustedition/2_III_H.37a,2 III H.37a,Witness,,15,82,83,4,,,,,,,,372
+2 III H.3a:1,faust://document/faustedition/2_III_H.3a_1,2 III H.3a:1,Witness,,16,87,86,0,,,,,,,,316
+2 III H.3a:2,faust://document/faustedition/2_III_H.3a_2,2 III H.3a:2,Witness,,17,89,88,0,,,,,,,,317
+2 III H.37,faust://document/faustedition/2_III_H.37,2 III H.37,Witness,,18,81,95,4,,,,,,,,371
+2 III H.42a,faust://document/faustedition/2_III_H.42a,2 III H.42a,Witness,,19,96,97,4,,,,,,,,378
+2 III H.45a,faust://document/faustedition/2_III_H.45a,2 III H.45a,Witness,,20,103,102,0,,,,,,,,383
+2 III H.45b,faust://document/faustedition/2_III_H.45b,2 III H.45b,Witness,,21,105,104,0,,,,,,,,384
+2 III H.46a,faust://document/faustedition/2_III_H.46a,2 III H.46a,Witness,,22,108,107,0,,,,,,,,386
+2 III H.48,faust://document/faustedition/2_III_H.48,2 III H.48,Witness,,23,111,112,2,,,,,,,,389
+2 III H.49b,faust://document/faustedition/2_III_H.49b,2 III H.49b,Witness,,24,116,117,4,,,,,,,,393
+2 III H.49c,faust://document/faustedition/2_III_H.49c,2 III H.49c,Witness,,25,118,119,4,,,,,,,,394
+2 III H.50,faust://document/faustedition/2_III_H.50,2 III H.50,Witness,,26,121,122,2,,,,,,,,395
+2 III H.50c,faust://document/faustedition/2_III_H.50c,2 III H.50c,Witness,,27,125,127,7,,,,,,,,398
+2 III H.52,faust://document/faustedition/2_III_H.52,2 III H.52,Witness,,28,129,131,10,,,,,,,,401
+2 III H.56a,faust://document/faustedition/2_III_H.56a,2 III H.56a,Witness,,29,135,136,4,,,,,,,,406
+2 III H.56b,faust://document/faustedition/2_III_H.56b,2 III H.56b,Witness,,30,137,138,4,,,,,,,,407
+2 III H.56c,faust://document/faustedition/2_III_H.56c,2 III H.56c,Witness,,31,139,140,4,,,,,,,,408
+2 III H.57a,faust://document/faustedition/2_III_H.57a,2 III H.57a,Witness,,32,142,143,5,,,,,,,,410
+2 III H.58a,faust://document/faustedition/2_III_H.58a,2 III H.58a,Witness,,33,145,146,4,,,,,,,,412
+2 III H.61,faust://document/faustedition/2_III_H.61,2 III H.61,Witness,,34,152,153,5,,,,,,,,418
+2 III H.63,faust://document/faustedition/2_III_H.63,2 III H.63,Witness,,35,155,157,6,,,,,,,,420
+2 III H.64a,faust://document/faustedition/2_III_H.64a,2 III H.64a,Witness,,36,158,160,4,,,,,,,,422
+2 III H.64b,faust://document/faustedition/2_III_H.64b,2 III H.64b,Witness,,37,159,161,7,,,,,,,,423
+2 III H.64c,faust://document/faustedition/2_III_H.64c,2 III H.64c,Witness,,38,162,163,4,,,,,,,,424
+2 III H.64d,faust://document/faustedition/2_III_H.64d,2 III H.64d,Witness,,39,164,165,4,,,,,,,,425
+2 III H.64e,faust://document/faustedition/2_III_H.64e,2 III H.64e,Witness,,40,167,166,0,,,,,,,,426
+2 III H.66,faust://document/faustedition/2_III_H.66,2 III H.66,Witness,,41,169,170,2,,,,,,,,428
+2 III H.66a,faust://document/faustedition/2_III_H.66a,2 III H.66a,Witness,,42,171,172,7,,,,,,,,429
+2 III H.68,faust://document/faustedition/2_III_H.68,2 III H.68,Witness,,43,174,175,2,,,,,,,,431
+2 III H.75a,faust://document/faustedition/2_III_H.75a,2 III H.75a,Witness,,44,186,187,4,,,,,,,,441
+2 III H.76,faust://document/faustedition/2_III_H.76,2 III H.76,Witness,,45,189,190,3,,,,,,,,443
+2 III H.81,faust://document/faustedition/2_III_H.81,2 III H.81,Witness,,46,202,203,5,,,,,,,,449
+2 III H.81a,faust://document/faustedition/2_III_H.81a,2 III H.81a,Witness,,47,204,205,7,,,,,,,,450
+2 III H.81b*,faust://document/faustedition/2_III_H.81b_,2 III H.81b*,Witness,,48,207,206,0,,,,,,,,451
+2 III H.7:2,faust://document/faustedition/2_III_H.7_2,2 III H.7:2,Witness,,49,196,210,4,,,,,,,,326
+2 II H.11a,faust://document/faustedition/2_II_H.11a,2 II H.11a,Witness,,50,218,217,0,,,,,,,,233
+2 II H.13a,faust://document/faustedition/2_II_H.13a,2 II H.13a,Witness,,51,222,221,0,,,,,,,,236
+2 II H.16,faust://document/faustedition/2_II_H.16,2 II H.16,Witness,,52,225,226,2,,,,,,,,239
+2 II H.21,faust://document/faustedition/2_II_H.21,2 II H.21,Witness,,53,232,233,2,,,,,,,,245
+2 II H.26,faust://document/faustedition/2_II_H.26,2 II H.26,Witness,,54,238,239,4,,,,,,,,250
+2 II H.27:1,faust://document/faustedition/2_II_H.27_1,2 II H.27:1,Witness,,55,241,240,0,,,,,,,,252
+2 II H.29,faust://document/faustedition/2_II_H.29,2 II H.29,Witness,,56,244,245,2,,,,,,,,255
+2 II H.2:2,faust://document/faustedition/2_II_H.2_2,2 II H.2:2,Witness,,57,248,247,0,,,,,,,,217
+2 II H.30,faust://document/faustedition/2_II_H.30,2 II H.30,Witness,,58,251,252,6,,,,,,,,256
+2 II H.31,faust://document/faustedition/2_II_H.31,2 II H.31,Witness,,59,253,254,5,,,,,,,,257
+2 II H.32,faust://document/faustedition/2_II_H.32,2 II H.32,Witness,,60,256,257,2,,,,,,,,259
+2 II H.36,faust://document/faustedition/2_II_H.36,2 II H.36,Witness,,61,261,262,6,,,,,,,,263
+2 II H.37,faust://document/faustedition/2_II_H.37,2 II H.37,Witness,,62,264,265,2,,,,,,,,265
+2 II H.40,faust://document/faustedition/2_II_H.40,2 II H.40,Witness,,63,269,270,2,,,,,,,,268
+2 II H.41,faust://document/faustedition/2_II_H.41,2 II H.41,Witness,,64,271,272,6,,,,,,,,269
+2 II H.39,faust://document/faustedition/2_II_H.39,2 II H.39,Witness,,65,267,274,8,,,,,,,,267
+2 II H.43,faust://document/faustedition/2_II_H.43,2 II H.43,Witness,,66,275,276,2,,,,,,,,271
+2 II H.44,faust://document/faustedition/2_II_H.44,2 II H.44,Witness,,67,277,278,5,,,,,,,,272
+2 II H.50,faust://document/faustedition/2_II_H.50,2 II H.50,Witness,,68,287,288,2,,,,,,,,279
+2 II H.51,faust://document/faustedition/2_II_H.51,2 II H.51,Witness,,69,289,290,6,,,,,,,,280
+2 II H.47,faust://document/faustedition/2_II_H.47,2 II H.47,Witness,,70,281,292,11,,,,,,,,275
+2 II H.53,faust://document/faustedition/2_II_H.53,2 II H.53,Witness,,71,293,294,4,,,,,,,,282
+2 II H.24,faust://document/faustedition/2_II_H.24,2 II H.24,Witness,,72,236,296,11,,,,,,,,248
+2 II H.54,faust://document/faustedition/2_II_H.54,2 II H.54,Witness,,73,295,297,6,,,,,,,,283
+2 II H.59,faust://document/faustedition/2_II_H.59,2 II H.59,Witness,,74,302,303,2,,,,,,,,288
+2 II H.5a,faust://document/faustedition/2_II_H.5a,2 II H.5a,Witness,,75,304,305,2,,,,,,,,223
+2 II H.6a,faust://document/faustedition/2_II_H.6a,2 II H.6a,Witness,,76,318,317,0,,,,,,,,225
+2 II H.6b,faust://document/faustedition/2_II_H.6b,2 II H.6b,Witness,,77,320,319,0,,,,,,,,226
+2 II H.73,faust://document/faustedition/2_II_H.73,2 II H.73,Witness,,78,325,326,7,,,,,,,,302
+2 II H.35,faust://document/faustedition/2_II_H.35,2 II H.35,Witness,,79,260,328,4,,,,,,,,262
+2 II H.36a,faust://document/faustedition/2_II_H.36a,2 II H.36a,Witness,,80,263,329,4,,,,,,,,264
+2 II H.47a,faust://document/faustedition/2_II_H.47a,2 II H.47a,Witness,,81,282,330,4,,,,,,,,276
+2 II H.18,faust://document/faustedition/2_II_H.18,2 II H.18,Witness,,82,229,333,8,,,,,,,,242
+2 II H.8:2,faust://document/faustedition/2_II_H.8_2,2 II H.8:2,Witness,,83,332,334,5,,,,,,,,229
+2 IV H.1,faust://document/faustedition/2_IV_H.1,2 IV H.1,Witness,,84,336,342,4,,,,,,,,452
+2 IV H.13b,faust://document/faustedition/2_IV_H.13b,2 IV H.13b,Witness,,85,344,343,0,,,,,,,,470
+2 IV H.14,faust://document/faustedition/2_IV_H.14,2 IV H.14,Witness,,86,345,346,4,,,,,,,,471
+2 IV H.17,faust://document/faustedition/2_IV_H.17,2 IV H.17,Witness,,87,349,350,2,,,,,,,,474
+2 IV H.13a,faust://document/faustedition/2_IV_H.13a,2 IV H.13a,Witness,,88,341,355,4,,,,,,,,469
+2 IV H.21,faust://document/faustedition/2_IV_H.21,2 IV H.21,Witness,,89,356,357,6,,,,,,,,478
+2 IV H.22a,faust://document/faustedition/2_IV_H.22a,2 IV H.22a,Witness,,90,360,361,2,,,,,,,,481
+2 IV H.22c,faust://document/faustedition/2_IV_H.22c,2 IV H.22c,Witness,,91,363,364,5,,,,,,,,483
+2 IV H.22e,faust://document/faustedition/2_IV_H.22e,2 IV H.22e,Witness,,92,367,366,0,,,,,,,,486
+2 IV H.22f,faust://document/faustedition/2_IV_H.22f,2 IV H.22f,Witness,,93,369,368,0,,,,,,,,487
+2 IV H.3,faust://document/faustedition/2_IV_H.3,2 IV H.3,Witness,,94,371,373,6,,,,,,,,454
+2 IV H.4,faust://document/faustedition/2_IV_H.4,2 IV H.4,Witness,,95,372,374,2,,,,,,,,455
+2 IV H.6:1,faust://document/faustedition/2_IV_H.6_1,2 IV H.6:1,Witness,,96,376,377,2,,,,,,,,458
+2 IV H.6:2,faust://document/faustedition/2_IV_H.6_2,2 IV H.6:2,Witness,,97,379,378,0,,,,,,,,459
+2 IV H.7,faust://document/faustedition/2_IV_H.7,2 IV H.7,Witness,,98,380,382,6,,,,,,,,460
+2 IV H.7a,faust://document/faustedition/2_IV_H.7a,2 IV H.7a,Witness,,99,381,383,4,,,,,,,,461
+2 IV H.7b,faust://document/faustedition/2_IV_H.7b,2 IV H.7b,Witness,,100,385,384,0,,,,,,,,462
+2 IV H.10,faust://document/faustedition/2_IV_H.10,2 IV H.10,Witness,,101,337,388,8,,,,,,,,465
+2 IV H.15,faust://document/faustedition/2_IV_H.15,2 IV H.15,Witness,,102,347,389,7,,,,,,,,472
+2 IV H.9,faust://document/faustedition/2_IV_H.9,2 IV H.9,Witness,,103,387,390,4,,,,,,,,464
+2 I H.0,faust://document/faustedition/2_I_H.0,2 I H.0,Witness,,104,392,391,0,,,,,,,,118
+2 I H.0a,faust://document/faustedition/2_I_H.0a,2 I H.0a,Witness,,105,394,393,0,,,,,,,,119
+2 I H.0b,faust://document/faustedition/2_I_H.0b,2 I H.0b,Witness,,106,396,395,0,,,,,,,,120
+2 I H.0c,faust://document/faustedition/2_I_H.0c,2 I H.0c,Witness,,107,398,397,0,,,,,,,,121
+2 I H.0d,faust://document/faustedition/2_I_H.0d,2 I H.0d,Witness,,108,400,399,0,,,,,,,,122
+2 I H.10,faust://document/faustedition/2_I_H.10,2 I H.10,Witness,,109,402,403,2,,,,,,,,149
+2 I H.12:1,faust://document/faustedition/2_I_H.12_1,2 I H.12:1,Witness,,110,405,406,2,,,,,,,,152
+2 I H.12:2,faust://document/faustedition/2_I_H.12_2,2 I H.12:2,Witness,,111,408,407,0,,,,,,,,153
+2 I H.12a,faust://document/faustedition/2_I_H.12a,2 I H.12a,Witness,,112,409,410,4,,,,,,,,154
+2 I H.14,faust://document/faustedition/2_I_H.14,2 I H.14,Witness,,113,412,413,2,,,,,,,,156
+2 I H.15a,faust://document/faustedition/2_I_H.15a,2 I H.15a,Witness,,114,415,416,5,,,,,,,,158
+2 I H.15b,faust://document/faustedition/2_I_H.15b,2 I H.15b,Witness,,115,417,418,2,,,,,,,,159
+2 I H.15c,faust://document/faustedition/2_I_H.15c,2 I H.15c,Witness,,116,420,419,0,,,,,,,,160
+2 I H.16,faust://document/faustedition/2_I_H.16,2 I H.16,Witness,,117,422,421,0,,,,,,,,161
+2 I H.18,faust://document/faustedition/2_I_H.18,2 I H.18,Witness,,118,424,425,4,,,,,,,,163
+2 I H.2,faust://document/faustedition/2_I_H.2,2 I H.2,Witness,,119,427,428,2,,,,,,,,124
+2 I H.23,faust://document/faustedition/2_I_H.23,2 I H.23,Witness,,120,432,433,2,,,,,,,,168
+2 I H.24a,faust://document/faustedition/2_I_H.24a,2 I H.24a,Witness,,121,436,435,0,,,,,,,,170
+2 I H.24c,faust://document/faustedition/2_I_H.24c,2 I H.24c,Witness,,122,438,439,6,,,,,,,,172
+2 I H.27,faust://document/faustedition/2_I_H.27,2 I H.27,Witness,,123,442,443,4,,,,,,,,175
+2 I H.28,faust://document/faustedition/2_I_H.28,2 I H.28,Witness,,124,444,446,4,,,,,,,,176
+2 I H.31,faust://document/faustedition/2_I_H.31,2 I H.31,Witness,,125,449,450,4,,,,,,,,179
+2 I H.30,faust://document/faustedition/2_I_H.30,2 I H.30,Witness,,126,448,454,4,,,,,,,,178
+2 I H.41a,faust://document/faustedition/2_I_H.41a,2 I H.41a,Witness,,127,464,465,6,,,,,,,,191
+2 I H.43a,faust://document/faustedition/2_I_H.43a,2 I H.43a,Witness,,128,468,469,5,,,,,,,,194
+2 I H.44,faust://document/faustedition/2_I_H.44,2 I H.44,Witness,,129,470,472,4,,,,,,,,195
+2 I H.49,faust://document/faustedition/2_I_H.49,2 I H.49,Witness,,130,476,479,4,,,,,,,,200
+2 I H.50,faust://document/faustedition/2_I_H.50,2 I H.50,Witness,,131,478,482,6,,,,,,,,201
+2 I H.51,faust://document/faustedition/2_I_H.51,2 I H.51,Witness,,132,483,484,2,,,,,,,,204
+2 I H.52,faust://document/faustedition/2_I_H.52,2 I H.52,Witness,,133,485,486,4,,,,,,,,205
+2 I H.53,faust://document/faustedition/2_I_H.53,2 I H.53,Witness,,134,487,488,5,,,,,,,,206
+2 I H.54,faust://document/faustedition/2_I_H.54,2 I H.54,Witness,,135,489,490,2,,,,,,,,207
+2 I H.55,faust://document/faustedition/2_I_H.55,2 I H.55,Witness,,136,491,492,5,,,,,,,,208
+2 II H.12,faust://document/faustedition/2_II_H.12,2 II H.12,Witness,,137,219,494,8,,,,,,,,234
+2 I H.6a,faust://document/faustedition/2_I_H.6a,2 I H.6a,Witness,,138,501,500,0,,,,,,,,129
+2 I H.9b,faust://document/faustedition/2_I_H.9b,2 I H.9b,Witness,,139,506,507,4,,,,,,,,135
+2 I H.9f,faust://document/faustedition/2_I_H.9f,2 I H.9f,Witness,,140,511,512,4,,,,,,,,139
+2 I H.9g,faust://document/faustedition/2_I_H.9g,2 I H.9g,Witness,,141,513,514,4,,,,,,,,140
+2 I H.9l*,faust://document/faustedition/2_I_H.9l_,2 I H.9l*,Witness,,142,518,519,4,,,,,,,,144
+2 V H.0d,faust://document/faustedition/2_V_H.0d,2 V H.0d,Witness,,143,528,527,0,,,,,,,,492
+2 V H.0e,faust://document/faustedition/2_V_H.0e,2 V H.0e,Witness,,144,530,529,0,,,,,,,,493
+2 V H.12:1,faust://document/faustedition/2_V_H.12_1,2 V H.12:1,Witness,,145,535,536,4,,,,,,,,508
+2 V H.12:2,faust://document/faustedition/2_V_H.12_2,2 V H.12:2,Witness,,146,537,538,2,,,,,,,,509
+2 V H.14a*,faust://document/faustedition/2_V_H.14a_,2 V H.14a*,Witness,,147,542,541,0,,,,,,,,512
+2 V H.1,faust://document/faustedition/2_V_H.1,2 V H.1,Witness,,148,532,552,6,,,,,,,,495
+2 V H.19,faust://document/faustedition/2_V_H.19,2 V H.19,Witness,,149,549,559,8,,,,,,,,519
+2 V H.35a*,faust://document/faustedition/2_V_H.35a_,2 V H.35a*,Witness,,150,575,574,0,,,,,,,,539
+2 V H.37d,faust://document/faustedition/2_V_H.37d,2 V H.37d,Witness,,151,582,581,0,,,,,,,,545
+2 V H.37e,faust://document/faustedition/2_V_H.37e,2 V H.37e,Witness,,152,583,584,2,,,,,,,,547
+2 V H.37f,faust://document/faustedition/2_V_H.37f,2 V H.37f,Witness,,153,585,586,6,,,,,,,,548
+2 III H.1 alpha,faust://inscription/faustedition/2_III_H.1/alpha,2 III H.1 alpha,Inscription,2 III H.1,154,596,597,5,,,,,,,,25
+2 III H.27 alpha,faust://inscription/faustedition/2_III_H.27/alpha,2 III H.27 alpha,Inscription,2 III H.27,155,598,599,3,,,,,,,,30
+2 III H.2a:1 ,faust://inscription/faustedition/2_III_H.2a_1/,2 III H.2a:1 ,Inscription,2 III H.2a:1,156,602,603,5,,,,,,,,21
+2 III H.30 alpha,faust://inscription/faustedition/2_III_H.30/alpha,2 III H.30 alpha,Inscription,2 III H.30,157,604,605,3,,,,,,,,31
+2 III H.59c,faust://document/faustedition/2_III_H.59c,2 III H.59c,Witness,,158,150,613,10,,,,,,,,416
+2 III H.70 alpha,faust://inscription/faustedition/2_III_H.70/alpha,2 III H.70 alpha,Inscription,2 III H.70,159,615,616,3,,,,,,,,33
+2 III H.71 alpha,faust://inscription/faustedition/2_III_H.71/alpha,2 III H.71 alpha,Inscription,2 III H.71,160,617,618,3,,,,,,,,32
+2 II H.72,faust://document/faustedition/2_II_H.72,2 II H.72,Witness,,161,324,625,8,,,,,,,,301
+2 II H.69 alpha,faust://inscription/faustedition/2_II_H.69/alpha,2 II H.69 alpha,Inscription,2 II H.69,162,624,626,5,,,,,,,,26
+2 II H.69,faust://document/faustedition/2_II_H.69,2 II H.69,Witness,,163,316,627,10,,,,,,,,298
+2 II H.71 alpha,faust://inscription/faustedition/2_II_H.71/alpha,2 II H.71 alpha,Inscription,2 II H.71,164,628,629,3,,,,,,,,29
+2 II H.7,faust://document/faustedition/2_II_H.7,2 II H.7,Witness,,165,321,633,7,,,,,,,,227
+2 II H.74 i_2,faust://inscription/faustedition/2_II_H.74/i_2,2 II H.74 i_2,Inscription,2 II H.74,166,630,634,6,,,,,,,,37
+2 II H.74 i_23_m,faust://inscription/faustedition/2_II_H.74/i_23_m,2 II H.74 i_23_m,Inscription,2 II H.74,167,631,635,6,,,,,,,,38
+2 IV H.11,faust://document/faustedition/2_IV_H.11,2 IV H.11,Witness,,168,338,638,9,,,,,,,,466
+2 IV H.12 i_v_o,faust://inscription/faustedition/2_IV_H.12/i_v_o,2 IV H.12 i_v_o,Inscription,2 IV H.12,169,637,639,3,,,,,,,,89
+2 IV H.20 i_uebrige,faust://inscription/faustedition/2_IV_H.20/i_uebrige,2 IV H.20 i_uebrige,Inscription,2 IV H.20,170,641,642,3,,,,,,,,63
+2 I H.20,faust://document/faustedition/2_I_H.20,2 I H.20,Witness,,171,429,648,7,,,,,,,,165
+2 I H.21 alpha,faust://inscription/faustedition/2_I_H.21/alpha,2 I H.21 alpha,Inscription,2 I H.21,172,647,649,3,,,,,,,,34
+2 I H.21,faust://document/faustedition/2_I_H.21,2 I H.21,Witness,,173,430,650,6,,,,,,,,166
+2 I H.32 alpha,faust://inscription/faustedition/2_I_H.32/alpha,2 I H.32 alpha,Inscription,2 I H.32,174,651,652,3,,,,,,,,35
+2 V H.18,faust://document/faustedition/2_V_H.18,2 V H.18,Witness,,175,548,662,5,,,,,,,,518
+2 V H.2 alpha,faust://inscription/faustedition/2_V_H.2/alpha,2 V H.2 alpha,Inscription,2 V H.2,176,663,664,7,,,,,,,,23
+2 V H.26 i_r,faust://inscription/faustedition/2_V_H.26/i_r,2 V H.26 i_r,Inscription,2 V H.26,177,667,668,8,,,,,,,,49
+2 V H.26 i_v,faust://inscription/faustedition/2_V_H.26/i_v,2 V H.26 i_v,Inscription,2 V H.26,178,669,670,10,,,,,,,,81
+2 V H.26,faust://document/faustedition/2_V_H.26,2 V H.26,Witness,,179,560,671,15,,,,,,,,526
+2 V H.28 alpha,faust://inscription/faustedition/2_V_H.28/alpha,2 V H.28 alpha,Inscription,2 V H.28,180,672,673,5,,,,,,,,24
+2 V H.29 i_r,faust://inscription/faustedition/2_V_H.29/i_r,2 V H.29 i_r,Inscription,2 V H.29,181,674,675,5,,,,,,,,46
+2 V H.29 i_v,faust://inscription/faustedition/2_V_H.29/i_v,2 V H.29 i_v,Inscription,2 V H.29,182,676,677,5,,,,,,,,84
+2 V H.3 alpha,faust://inscription/faustedition/2_V_H.3/alpha,2 V H.3 alpha,Inscription,2 V H.3,183,678,679,3,,,,,,,,28
+2 V H.31 i_r_o,faust://inscription/faustedition/2_V_H.31/i_r_o,2 V H.31 i_r_o,Inscription,2 V H.31,184,680,681,5,,,,,,,,57
+2 V H.32a alpha,faust://inscription/faustedition/2_V_H.32a/alpha,2 V H.32a alpha,Inscription,2 V H.32a,185,684,685,4,,,,,,,,27
+2 V H.36,faust://document/faustedition/2_V_H.36,2 V H.36,Witness,,186,576,689,5,,,,,,,,540
+2 V H.37c,faust://document/faustedition/2_V_H.37c,2 V H.37c,Witness,,187,580,694,17,,,,,,,,544
+2 V H.4 i_v,faust://inscription/faustedition/2_V_H.4/i_v,2 V H.4 i_v,Inscription,2 V H.4,188,696,697,7,,,,,,,,78
+2 V H.8 i_r,faust://inscription/faustedition/2_V_H.8/i_r,2 V H.8 i_r,Inscription,2 V H.8,189,698,699,5,,,,,,,,47
+fischer_lamberg: 2_III_H.15 ,faust://inscription/fischer_lamberg/2_III_H.15/,fischer_lamberg: 2_III_H.15 ,Inscription,fischer_lamberg: 2_III_H.15,190,710,711,8,,,,,,,,98
+fischer_lamberg: 2_III_H.15,faust://document/fischer_lamberg/2_III_H.15,fischer_lamberg: 2_III_H.15,UnknownRef,,191,702,712,6,,,,,,,,97
+landeck: 2_H,faust://document/landeck/2_H,landeck: 2_H,UnknownRef,,192,713,714,4,,,,,,,,104
+landeck: 2_V_H.33I,faust://document/landeck/2_V_H.33I,landeck: 2_V_H.33I,UnknownRef,,193,718,719,13,,,,,,,,103
+wa: 2_III_H.15II,faust://document/wa/2_III_H.15II,wa: 2_III_H.15II,UnknownRef,,194,722,723,6,,,,,,,,111
+2 III H.69,faust://document/faustedition/2_III_H.69,2 III H.69,Witness,,195,176,725,8,,,,,,,,432
+fischer_lamberg: 2_III_H.22_5,faust://document/fischer_lamberg/2_III_H.22_5,fischer_lamberg: 2_III_H.22_5,UnknownRef,,196,707,726,4,,,,,,,,96
+fischer_lamberg: 2_III_H.7__2-3,faust://document/fischer_lamberg/2_III_H.7__2-3,fischer_lamberg: 2_III_H.7__2-3,UnknownRef,,197,709,727,7,,,,,,,,92
+wa: 2_III_H.2_alpha,faust://document/wa/2_III_H.2_alpha,wa: 2_III_H.2_alpha,UnknownRef,,198,728,729,2,,,,,,,,114
+2 III H.22,faust://document/faustedition/2_III_H.22,2 III H.22,Witness,,199,41,731,12,,,,,,,,349
+wa: 2_III_H.2alpha,faust://document/wa/2_III_H.2alpha,wa: 2_III_H.2alpha,UnknownRef,,200,730,732,8,,,,,,,,108
+2 III H.24,faust://document/faustedition/2_III_H.24,2 III H.24,Witness,,201,50,734,4,,,,,,,,355
+2 III H.7: … (5),faust://document/wa/2_III_H.7,2 III H.7: … (5),AmbiguousRef,,202,735,736,8,,,,,,,,325
+2_III_H.8: i_r,faust://document/wa/2_III_H.8/i_r,2_III_H.8: i_r,UnknownRef,,203,737,738,5,,,,,,,,110
+2 III H.62,faust://document/faustedition/2_III_H.62,2 III H.62,Witness,,204,154,740,5,,,,,,,,419
+2 III H.75,faust://document/faustedition/2_III_H.75,2 III H.75,Witness,,205,185,741,10,,,,,,,,439
+wa: 2_III_H.IIIalpha,faust://document/wa/2_III_H.IIIalpha,wa: 2_III_H.IIIalpha,UnknownRef,,206,742,743,4,,,,,,,,109
+2 II H.2: … (3),faust://document/wa/2_II_H.2,2 II H.2: … (3),AmbiguousRef,,207,744,745,2,,,,,,,,216
+2 II H.28 alpha,faust://inscription/faustedition/2_II_H.28/alpha,2 II H.28 alpha,Inscription,2 II H.28,208,621,747,5,,,,,,,,22
+2 II H.28,faust://document/faustedition/2_II_H.28,2 II H.28,Witness,,209,243,748,12,,,,,,,,254
+wa: 2_II_H.31_alpha,faust://document/wa/2_II_H.31_alpha,wa: 2_II_H.31_alpha,UnknownRef,,210,749,750,2,,,,,,,,113
+wa: 2_II_H.alpha,faust://document/wa/2_II_H.alpha,wa: 2_II_H.alpha,UnknownRef,,211,751,752,8,,,,,,,,112
+2 IV H.20,faust://document/faustedition/2_IV_H.20,2 IV H.20,Witness,,212,354,754,9,,,,,,,,477
+wa: 2_I_H.alpha,faust://document/wa/2_I_H.alpha,wa: 2_I_H.alpha,UnknownRef,,213,758,759,6,,,,,,,,106
+wa: 2_V_H.alpha,faust://document/wa/2_V_H.alpha,wa: 2_V_H.alpha,UnknownRef,,214,761,762,4,,,,,,,,105
+2 V H.37g,faust://document/faustedition/2_V_H.37g,2 V H.37g,Witness,,215,587,764,12,,,,,,,,549
+wa: 2_H_P167 i_uebrige,faust://inscription/wa/2_H_P167/i_uebrige,wa: 2_H_P167 i_uebrige,Inscription,wa: 2_H_P167,216,765,766,3,,,,,,,,116
+wa: 2_H_P167,faust://document/wa/2_H_P167,wa: 2_H_P167,UnknownRef,,217,721,767,4,,,,,,,,115
+C.3  … (2),faust://document/wa/C,C.3  … (2),AmbiguousRef,,218,777,778,10,,,,,,,,662
+wa: C.1_4,faust://document/wa/C.1_4,wa: C.1_4,UnknownRef,,219,779,780,4,,,,,,,,656
+wa: C_12,faust://document/wa/C_12,wa: C_12,UnknownRef,,220,781,782,12,,,,,,,,658
+wa: C_4,faust://document/wa/C_4,wa: C_4,UnknownRef,,221,783,784,4,,,,,,,,657
+D.2,faust://document/faustedition/D.2,D.2,Witness,,222,789,790,4,,,,,,,,668
+D.4alpha,faust://document/faustedition/D.4alpha,D.4alpha,Witness,,223,792,791,0,,,,,,,,669
+"gsa_1: GSA_25_XIX,4","faust://document/gsa_1/GSA_25_XIX,4","gsa_1: GSA_25_XIX,4",UnknownRef,,224,796,797,2,,,,,,,,674
+gsa_2: GSA_25_W_1714,faust://document/gsa_2/GSA_25_W_1714,gsa_2: GSA_25_W_1714,UnknownRef,,225,800,801,4,,,,,,,,677
+bohnenkamp: H_P179.1,faust://document/bohnenkamp/H_P179.1,bohnenkamp: H_P179.1,UnknownRef,,226,804,805,2,,,,,,,,681
+bohnenkamp: H_P182,faust://document/bohnenkamp/H_P182,bohnenkamp: H_P182,UnknownRef,,227,806,807,2,,,,,,,,680
+H P123.3,faust://document/faustedition/H_P123.3,H P123.3,Witness,,228,825,824,0,,,,,,,,609
+H P123.4,faust://document/faustedition/H_P123.4,H P123.4,Witness,,229,827,826,0,,,,,,,,610
+H P123.6,faust://document/faustedition/H_P123.6,H P123.6,Witness,,230,830,829,0,,,,,,,,612
+H P123.7,faust://document/faustedition/H_P123.7,H P123.7,Witness,,231,832,831,0,,,,,,,,613
+H P123.8,faust://document/faustedition/H_P123.8,H P123.8,Witness,,232,834,833,0,,,,,,,,614
+H P123.9,faust://document/faustedition/H_P123.9,H P123.9,Witness,,233,836,835,0,,,,,,,,615
+H P148,faust://document/faustedition/H_P148,H P148,Witness,,234,845,844,0,,,,,,,,621
+H P156a*,faust://document/faustedition/H_P156a_,H P156a*,Witness,,235,849,848,0,,,,,,,,623
+H P161,faust://document/faustedition/H_P161,H P161,Witness,,236,853,854,4,,,,,,,,627
+2 III H.16,faust://document/faustedition/2_III_H.16,2 III H.16,Witness,,237,35,856,12,,,,,,,,343
+2 III H.20,faust://document/faustedition/2_III_H.20,2 III H.20,Witness,,238,39,857,7,,,,,,,,347
+2 III H.21,faust://document/faustedition/2_III_H.21,2 III H.21,Witness,,239,40,858,8,,,,,,,,348
+H P165,faust://document/faustedition/H_P165,H P165,Witness,,240,860,861,6,,,,,,,,630
+2 III H.49a,faust://document/faustedition/2_III_H.49a,2 III H.49a,Witness,,241,115,863,4,,,,,,,,392
+H P174,faust://document/faustedition/H_P174,H P174,Witness,,242,867,866,0,,,,,,,,634
+H P176,faust://document/faustedition/H_P176,H P176,Witness,,243,869,868,0,,,,,,,,635
+H P179,faust://document/faustedition/H_P179,H P179,Witness,,244,873,872,0,,,,,,,,638
+H P180,faust://document/faustedition/H_P180,H P180,Witness,,245,875,876,4,,,,,,,,640
+2 IV H.13,faust://document/faustedition/2_IV_H.13,2 IV H.13,Witness,,246,340,878,33,,,,,,,,468
+2 IV H.12 i_uebrige,faust://inscription/faustedition/2_IV_H.12/i_uebrige,2 IV H.12 i_uebrige,Inscription,2 IV H.12,247,636,879,11,,,,,,,,61
+2 IV H.12,faust://document/faustedition/2_IV_H.12,2 IV H.12,Witness,,248,339,880,13,,,,,,,,467
+H P190,faust://document/faustedition/H_P190,H P190,Witness,,249,883,884,2,,,,,,,,644
+H P190b,faust://document/faustedition/H_P190b,H P190b,Witness,,250,887,886,0,,,,,,,,646
+H P194,faust://document/faustedition/H_P194,H P194,Witness,,251,888,890,4,,,,,,,,647
+H P204,faust://document/faustedition/H_P204,H P204,Witness,,252,894,895,2,,,,,,,,651
+H P42,faust://document/faustedition/H_P42,H P42,Witness,,253,907,906,0,,,,,,,,574
+H P68 Var,faust://document/faustedition/H_P68_Var,H P68 Var,Witness,,254,917,918,2,,,,,,,,582
+H P82a,faust://document/faustedition/H_P82a,H P82a,Witness,,255,926,925,0,,,,,,,,588
+bohnenkamp: H_P9a,faust://document/bohnenkamp/H_P9a,bohnenkamp: H_P9a,UnknownRef,,256,808,929,4,,,,,,,,679
+H P9a,faust://document/faustedition/H_P9a,H P9a,Witness,,257,938,937,0,,,,,,,,559
+H P167 i_r_u,faust://inscription/faustedition/H_P167/i_r_u,H P167 i_r_u,Inscription,H P167,258,940,941,3,,,,,,,,687
+H P167 i_uebrige,faust://inscription/faustedition/H_P167/i_uebrige,H P167 i_uebrige,Inscription,H P167,259,942,943,10,,,,,,,,688
+H P22 i_2_o,faust://inscription/faustedition/H_P22/i_2_o,H P22 i_2_o,Inscription,H P22,260,947,948,6,,,,,,,,683
+H P22 i_2_u,faust://inscription/faustedition/H_P22/i_2_u,H P22 i_2_u,Inscription,H P22,261,949,950,6,,,,,,,,684
+H P65 i_uebrige,faust://inscription/faustedition/H_P65/i_uebrige,H P65 i_uebrige,Inscription,H P65,262,953,954,3,,,,,,,,690
+J.3-1,faust://document/faustedition/J.3-1,J.3-1,Witness,,263,958,957,0,,,,,,,,695
+J.3-2,faust://document/faustedition/J.3-2,J.3-2,Witness,,264,960,959,0,,,,,,,,696
+fischer_lamberg: P170a i_uebrige,faust://inscription/fischer_lamberg/P170a/i_uebrige,fischer_lamberg: P170a i_uebrige,Inscription,fischer_lamberg: P170a,265,965,966,7,,,,,,,,701
+wa: P179.1 i_1_r,faust://inscription/wa/P179.1/i_1_r,wa: P179.1 i_1_r,Inscription,wa: P179.1,266,971,972,5,,,,,,,,707
+wa: P179.1,faust://document/wa/P179.1,wa: P179.1,UnknownRef,,267,967,973,5,,,,,,,,704
+wa: P179.2 i_2_r,faust://inscription/wa/P179.2/i_2_r,wa: P179.2 i_2_r,Inscription,wa: P179.2,268,974,975,5,,,,,,,,709
+wa: P179.2,faust://document/wa/P179.2,wa: P179.2,UnknownRef,,269,968,976,5,,,,,,,,706
+wa: P179.3 i_1_v,faust://inscription/wa/P179.3/i_1_v,wa: P179.3 i_1_v,Inscription,wa: P179.3,270,977,978,5,,,,,,,,708
+wa: P179.3,faust://document/wa/P179.3,wa: P179.3,UnknownRef,,271,969,979,5,,,,,,,,705
+wa: P191Var i_v_u,faust://inscription/wa/P191Var/i_v_u,wa: P191Var i_v_u,Inscription,wa: P191Var,272,980,981,6,,,,,,,,710
+wa: P191Var,faust://document/wa/P191Var,wa: P191Var,UnknownRef,,273,970,982,6,,,,,,,,703
+wa: C_41,faust://document/wa/C_41,wa: C_41,UnknownRef,,274,785,985,38,,,,,,,,655
+R 2,faust://document/faustedition/R_2,R 2,Witness,,275,988,987,0,,,,,,,,713
+R 3,faust://document/faustedition/R_3,R 3,Witness,,276,990,989,0,,,,,,,,714
+T 0 H,faust://document/faustedition/T_0_H,T 0 H,Witness,,277,993,992,0,,,,,,,,716
+T 3 H.2,faust://document/faustedition/T_3_H.2,T 3 H.2,Witness,,278,999,998,0,,,,,,,,721
+T 3 H.3,faust://document/faustedition/T_3_H.3,T 3 H.3,Witness,,279,1001,1000,0,,,,,,,,722
+T 6 H.1,faust://document/faustedition/T_6_H.1,T 6 H.1,Witness,,280,1008,1007,0,,,,,,,,728
+T 6 H.2,faust://document/faustedition/T_6_H.2,T 6 H.2,Witness,,281,1010,1009,0,,,,,,,,729
+Testhandschrift,faust://document/faustedition/Testhandschrift,Testhandschrift,Witness,,282,1012,1011,0,,,,,,,,730
+H P6,faust://document/faustedition/H_P6,H P6,Witness,,283,911,1013,7,,,,,,,,556
+1 H.7,faust://document/faustedition/1_H.7,1 H.7,Witness,,284,15,1014,6,,,,,,,,10
+1 H.5,faust://document/faustedition/1_H.5,1 H.5,Witness,,285,13,1015,9,,,,,,,,8
+J.1,faust://document/faustedition/J.1,J.1,Witness,,286,955,1016,15,,,,,,,,693
+1 H.11,faust://document/faustedition/1_H.11,1 H.11,Witness,,287,3,1017,18,,,,,,,,14
+1 H.15,faust://document/faustedition/1_H.15,1 H.15,Witness,,288,7,1018,19,,,,,,,,18
+H P22 i_uebrige,faust://inscription/faustedition/H_P22/i_uebrige,H P22 i_uebrige,Inscription,H P22,289,951,1019,23,,,,,,,,689
+H P13,faust://document/faustedition/H_P13,H P13,Witness,,290,841,1020,23,,,,,,,,562
+S,faust://document/faustedition/S,S,Witness,,291,991,1021,36,,,,,,,,715
+1 H.4,faust://document/faustedition/1_H.4,1 H.4,Witness,,292,12,1022,42,,,,,,,,7
+1 H.13,faust://document/faustedition/1_H.13,1 H.13,Witness,,293,5,1023,43,,,,,,,,16
+2 II H.5 i_r,faust://inscription/faustedition/2_II_H.5/i_r,2 II H.5 i_r,Inscription,2 II H.5,294,622,1024,45,,,,,,,,43
+2 V H.15a i_r_gt,faust://inscription/faustedition/2_V_H.15a/i_r_gt,2 V H.15a i_r_gt,Inscription,2 V H.15a,295,659,1025,44,,,,,,,,56
+H P14,faust://document/faustedition/H_P14,H P14,Witness,,296,842,1026,43,,,,,,,,563
+H P20,faust://document/faustedition/H_P20,H P20,Witness,,297,893,1027,44,,,,,,,,565
+H P26,faust://document/faustedition/H_P26,H P26,Witness,,298,898,1028,43,,,,,,,,568
+H P50,faust://document/faustedition/H_P50,H P50,Witness,,299,910,1029,44,,,,,,,,576
+H P67,faust://document/faustedition/H_P67,H P67,Witness,,300,915,1030,43,,,,,,,,580
+H P68,faust://document/faustedition/H_P68,H P68,Witness,,301,916,1031,45,,,,,,,,581
+H P69,faust://document/faustedition/H_P69,H P69,Witness,,302,919,1032,44,,,,,,,,583
+H P75,faust://document/faustedition/H_P75,H P75,Witness,,303,920,1033,43,,,,,,,,584
+H P8,faust://document/faustedition/H_P8,H P8,Witness,,304,922,1034,43,,,,,,,,557
+H P81,faust://document/faustedition/H_P81,H P81,Witness,,305,923,1035,43,,,,,,,,586
+H P82,faust://document/faustedition/H_P82,H P82,Witness,,306,924,1036,46,,,,,,,,587
+H P9,faust://document/faustedition/H_P9,H P9,Witness,,307,928,1037,43,,,,,,,,558
+H P96,faust://document/faustedition/H_P96,H P96,Witness,,308,932,1038,43,,,,,,,,592
+H P65 i_4_r,faust://inscription/faustedition/H_P65/i_4_r,H P65 i_4_r,Inscription,H P65,309,952,1039,45,,,,,,,,685
+H P65,faust://document/faustedition/H_P65,H P65,Witness,,310,914,1040,50,,,,,,,,579
+H P121a,faust://document/faustedition/H_P121a,H P121a,Witness,,311,821,1041,47,,,,,,,,606
+H P22 i_1_o,faust://inscription/faustedition/H_P22/i_1_o,H P22 i_1_o,Inscription,H P22,312,946,1042,53,,,,,,,,682
+H P22,faust://document/faustedition/H_P22,H P22,Witness,,313,896,1043,60,,,,,,,,566
+H P91,faust://document/faustedition/H_P91,H P91,Witness,,314,930,1044,56,,,,,,,,590
+H P11,faust://document/faustedition/H_P11,H P11,Witness,,315,818,1045,57,,,,,,,,560
+H P12,faust://document/faustedition/H_P12,H P12,Witness,,316,820,1046,57,,,,,,,,561
+H P15,faust://document/faustedition/H_P15,H P15,Witness,,317,847,1047,57,,,,,,,,564
+1 H.10 i_uebrige,faust://inscription/faustedition/1_H.10/i_uebrige,1 H.10 i_uebrige,Inscription,1 H.10,318,19,1048,61,,,,,,,,1
+1 H.10,faust://document/faustedition/1_H.10,1 H.10,Witness,,319,2,1049,60,,,,,,,,13
+H P4,faust://document/faustedition/H_P4,H P4,Witness,,320,905,1050,79,,,,,,,,554
+1 H.3,faust://document/faustedition/1_H.3,1 H.3,Witness,,321,11,1051,80,,,,,,,,6
+H P3,faust://document/faustedition/H_P3,H P3,Witness,,322,902,1052,81,,,,,,,,553
+H P5,faust://document/faustedition/H_P5,H P5,Witness,,323,909,1053,80,,,,,,,,555
+1 H.9,faust://document/faustedition/1_H.9,1 H.9,Witness,,324,18,1054,86,,,,,,,,12
+2 III H.10,faust://document/faustedition/2_III_H.10,2 III H.10,Witness,,325,27,1055,88,,,,,,,,336
+2 III H.9,faust://document/faustedition/2_III_H.9,2 III H.9,Witness,,326,212,1056,88,,,,,,,,334
+H P25,faust://document/faustedition/H_P25,H P25,Witness,,327,897,1057,87,,,,,,,,567
+H P97,faust://document/faustedition/H_P97,H P97,Witness,,328,933,1058,95,,,,,,,,593
+H P1,faust://document/faustedition/H_P1,H P1,Witness,,329,809,1059,99,,,,,,,,552
+H P98,faust://document/faustedition/H_P98,H P98,Witness,,330,934,1060,99,,,,,,,,594
+bohnenkamp: P10 i_3_u,faust://inscription/bohnenkamp/P10/i_3_u,bohnenkamp: P10 i_3_u,Inscription,bohnenkamp: P10,331,962,1061,96,,,,,,,,698
+bohnenkamp: P10,faust://document/bohnenkamp/P10,bohnenkamp: P10,UnknownRef,,332,961,1062,96,,,,,,,,697
+R 1,faust://document/faustedition/R_1,R 1,Witness,,333,986,1063,95,,,,,,,,712
+H P27,faust://document/faustedition/H_P27,H P27,Witness,,334,899,1064,102,,,,,,,,569
+H P28,faust://document/faustedition/H_P28,H P28,Witness,,335,900,1065,101,,,,,,,,570
+H P29,faust://document/faustedition/H_P29,H P29,Witness,,336,901,1066,101,,,,,,,,571
+H P30,faust://document/faustedition/H_P30,H P30,Witness,,337,903,1067,101,,,,,,,,572
+H P32,faust://document/faustedition/H_P32,H P32,Witness,,338,904,1068,101,,,,,,,,573
+H P62a,faust://document/faustedition/H_P62a,H P62a,Witness,,339,912,1069,101,,,,,,,,577
+1 H.14,faust://document/faustedition/1_H.14,1 H.14,Witness,,340,6,1070,102,,,,,,,,17
+gsa_1: GSA_25_XVII_1_1a,faust://document/gsa_1/GSA_25_XVII_1_1a,gsa_1: GSA_25_XVII_1_1a,UnknownRef,,341,798,1071,123,,,,,,,,673
+1 H.12,faust://document/faustedition/1_H.12,1 H.12,Witness,,342,4,1072,136,,,,,,,,15
+H P110a,faust://document/faustedition/H_P110a,H P110a,Witness,,343,819,1073,140,,,,,,,,605
+A,faust://document/faustedition/A,A,Witness,,344,769,1074,146,,,,,,,,652
+J.2,faust://document/faustedition/J.2,J.2,Witness,,345,956,1075,145,,,,,,,,694
+D.1,faust://document/faustedition/D.1,D.1,Witness,,346,788,1076,149,,,,,,,,667
+1 H.2,faust://document/faustedition/1_H.2,1 H.2,Witness,,347,10,1077,150,,,,,,,,5
+H P47,faust://document/faustedition/H_P47,H P47,Witness,,348,908,1078,150,,,,,,,,575
+T 1 H.0,faust://document/faustedition/T_1_H.0,T 1 H.0,Witness,,349,994,1079,157,,,,,,,,717
+T 3 H.1,faust://document/faustedition/T_3_H.1,T 3 H.1,Witness,,350,997,1080,159,,,,,,,,720
+T 1 H.1,faust://document/faustedition/T_1_H.1,T 1 H.1,Witness,,351,995,1081,159,,,,,,,,718
+T 2 H,faust://document/faustedition/T_2_H,T 2 H,Witness,,352,996,1082,166,,,,,,,,719
+T 4 H.1,faust://document/faustedition/T_4_H.1,T 4 H.1,Witness,,353,1002,1083,166,,,,,,,,723
+T 4 H.2,faust://document/faustedition/T_4_H.2,T 4 H.2,Witness,,354,1003,1084,166,,,,,,,,724
+T 4 H.3,faust://document/faustedition/T_4_H.3,T 4 H.3,Witness,,355,1004,1085,166,,,,,,,,725
+T 5 H.2,faust://document/faustedition/T_5_H.2,T 5 H.2,Witness,,356,1006,1086,171,,,,,,,,727
+T 5 H.1,faust://document/faustedition/T_5_H.1,T 5 H.1,Witness,,357,1005,1087,174,,,,,,,,726
+B,faust://document/faustedition/B,B,Witness,,358,770,1088,178,,,,,,,,653
+H P63,faust://document/faustedition/H_P63,H P63,Witness,,359,913,1089,181,,,,,,,,578
+B.a,faust://document/faustedition/B.a,B.a,Witness,,360,771,1090,182,,,,,,,,654
+D.3,faust://bibliography/D.3,D.3,UnknownRef,,361,793,1091,190,,,,,,,,670
+2 III H.15,faust://document/faustedition/2_III_H.15,2 III H.15,Witness,,362,34,1092,200,,,,,,,,342
+2 III H.18,faust://document/faustedition/2_III_H.18,2 III H.18,Witness,,363,37,1093,194,,,,,,,,345
+2 III H.23,faust://document/faustedition/2_III_H.23,2 III H.23,Witness,,364,42,1094,192,,,,,,,,350
+2 III H.35,faust://document/faustedition/2_III_H.35,2 III H.35,Witness,,365,79,1095,195,,,,,,,,369
+2 III H.6:1,faust://document/faustedition/2_III_H.6_1,2 III H.6:1,Witness,,366,178,1096,193,,,,,,,,322
+2 III H.6: … (2),faust://document/wa/2_III_H.6,2 III H.6: … (2),AmbiguousRef,,367,733,1097,207,,,,,,,,321
+2 III H.50b,faust://document/faustedition/2_III_H.50b,2 III H.50b,Witness,,368,124,1098,199,,,,,,,,397
+2 III H.65,faust://document/faustedition/2_III_H.65,2 III H.65,Witness,,369,168,1099,203,,,,,,,,427
+2 III H.80,faust://document/faustedition/2_III_H.80,2 III H.80,Witness,,370,201,1100,207,,,,,,,,448
+2 III H.44a,faust://document/faustedition/2_III_H.44a,2 III H.44a,Witness,,371,100,1101,208,,,,,,,,381
+2 III H.44,faust://document/faustedition/2_III_H.44,2 III H.44,Witness,,372,99,1102,208,,,,,,,,380
+1 H.16,faust://document/faustedition/1_H.16,1 H.16,Witness,,373,8,1103,207,,,,,,,,19
+2 V H.24 i_v,faust://inscription/faustedition/2_V_H.24/i_v,2 V H.24 i_v,Inscription,2 V H.24,374,666,1104,213,,,,,,,,82
+2 V H.31a,faust://document/faustedition/2_V_H.31a,2 V H.31a,Witness,,375,568,1105,211,,,,,,,,533
+2 III H.19,faust://document/faustedition/2_III_H.19,2 III H.19,Witness,,376,38,1106,219,,,,,,,,346
+2 III H.27 i_v,faust://inscription/faustedition/2_III_H.27/i_v,2 III H.27 i_v,Inscription,2 III H.27,377,601,1107,212,,,,,,,,88
+2 III H.14,faust://document/faustedition/2_III_H.14,2 III H.14,Witness,,378,33,1108,223,,,,,,,,341
+2 III H.49 i_uebrige,faust://inscription/faustedition/2_III_H.49/i_uebrige,2 III H.49 i_uebrige,Inscription,2 III H.49,379,607,1109,216,,,,,,,,74
+2 III H.41,faust://document/faustedition/2_III_H.41,2 III H.41,Witness,,380,93,1110,219,,,,,,,,376
+H P188,faust://document/faustedition/H_P188,H P188,Witness,,381,881,1111,221,,,,,,,,642
+H P195,faust://document/faustedition/H_P195,H P195,Witness,,382,889,1112,229,,,,,,,,648
+2 III H.1,faust://document/faustedition/2_III_H.1,2 III H.1,Witness,,383,26,1113,315,,,,,,,,305
+2 V H.11,faust://document/faustedition/2_V_H.11,2 V H.11,Witness,,384,534,1114,232,,,,,,,,506
+2 V H.15,faust://document/faustedition/2_V_H.15,2 V H.15,Witness,,385,543,1115,230,,,,,,,,513
+2 V H.20,faust://document/faustedition/2_V_H.20,2 V H.20,Witness,,386,553,1116,230,,,,,,,,520
+2 V H.21,faust://document/faustedition/2_V_H.21,2 V H.21,Witness,,387,554,1117,239,,,,,,,,521
+2 V H.22,faust://document/faustedition/2_V_H.22,2 V H.22,Witness,,388,555,1118,231,,,,,,,,522
+2 V H.25,faust://document/faustedition/2_V_H.25,2 V H.25,Witness,,389,558,1119,233,,,,,,,,525
+2 V H.27,faust://document/faustedition/2_V_H.27,2 V H.27,Witness,,390,562,1120,233,,,,,,,,528
+2 V H.28,faust://document/faustedition/2_V_H.28,2 V H.28,Witness,,391,563,1121,240,,,,,,,,529
+2 V H.29,faust://document/faustedition/2_V_H.29,2 V H.29,Witness,,392,564,1122,240,,,,,,,,530
+2 V H.3,faust://document/faustedition/2_V_H.3,2 V H.3,Witness,,393,565,1123,242,,,,,,,,498
+2 V H.30,faust://document/faustedition/2_V_H.30,2 V H.30,Witness,,394,566,1124,239,,,,,,,,531
+2 V H.32,faust://document/faustedition/2_V_H.32,2 V H.32,Witness,,395,569,1125,232,,,,,,,,534
+2 V H.5,faust://document/faustedition/2_V_H.5,2 V H.5,Witness,,396,591,1126,235,,,,,,,,500
+2 V H.6,faust://document/faustedition/2_V_H.6,2 V H.6,Witness,,397,592,1127,243,,,,,,,,501
+2 III H.11,faust://document/faustedition/2_III_H.11,2 III H.11,Witness,,398,28,1128,234,,,,,,,,337
+2 III H.12,faust://document/faustedition/2_III_H.12,2 III H.12,Witness,,399,29,1129,243,,,,,,,,338
+2 III H.17,faust://document/faustedition/2_III_H.17,2 III H.17,Witness,,400,36,1130,261,,,,,,,,344
+2 III H.30,faust://document/faustedition/2_III_H.30,2 III H.30,Witness,,401,70,1131,240,,,,,,,,363
+2 III H.34,faust://document/faustedition/2_III_H.34,2 III H.34,Witness,,402,76,1132,233,,,,,,,,368
+2 III H.36,faust://document/faustedition/2_III_H.36,2 III H.36,Witness,,403,80,1133,232,,,,,,,,370
+2 III H.6:2,faust://document/faustedition/2_III_H.6_2,2 III H.6:2,Witness,,404,179,1134,233,,,,,,,,323
+2 V H.10,faust://document/faustedition/2_V_H.10,2 V H.10,Witness,,405,533,1135,234,,,,,,,,505
+2 V H.15b,faust://document/faustedition/2_V_H.15b,2 V H.15b,Witness,,406,545,1136,232,,,,,,,,515
+2 V H.23,faust://document/faustedition/2_V_H.23,2 V H.23,Witness,,407,556,1137,235,,,,,,,,523
+2 V H.7,faust://document/faustedition/2_V_H.7,2 V H.7,Witness,,408,593,1138,247,,,,,,,,502
+2 V H.9,faust://document/faustedition/2_V_H.9,2 V H.9,Witness,,409,595,1139,234,,,,,,,,504
+2 III H.5 i_r_r,faust://inscription/faustedition/2_III_H.5/i_r_r,2 III H.5 i_r_r,Inscription,2 III H.5,410,608,1140,232,,,,,,,,58
+2 III H.5 i_uebrige,faust://inscription/faustedition/2_III_H.5/i_uebrige,2 III H.5 i_uebrige,Inscription,2 III H.5,411,609,1141,231,,,,,,,,69
+2 III H.5,faust://document/faustedition/2_III_H.5,2 III H.5,Witness,,412,120,1142,234,,,,,,,,320
+2 III H.8 i_r,faust://inscription/faustedition/2_III_H.8/i_r,2 III H.8 i_r,Inscription,2 III H.8,413,619,1143,232,,,,,,,,44
+2 II H.5 i_v,faust://inscription/faustedition/2_II_H.5/i_v,2 II H.5 i_v,Inscription,2 II H.5,414,623,1144,231,,,,,,,,76
+2 II H.5,faust://document/faustedition/2_II_H.5,2 II H.5,Witness,,415,286,1145,234,,,,,,,,222
+2 V H.15a i_r_g,faust://inscription/faustedition/2_V_H.15a/i_r_g,2 V H.15a i_r_g,Inscription,2 V H.15a,416,658,1146,231,,,,,,,,55
+2 V H.15a,faust://document/faustedition/2_V_H.15a,2 V H.15a,Witness,,417,544,1147,237,,,,,,,,514
+2 V H.4 i_uebrige,faust://inscription/faustedition/2_V_H.4/i_uebrige,2 V H.4 i_uebrige,Inscription,2 V H.4,418,695,1148,238,,,,,,,,67
+2 V H.4,faust://document/faustedition/2_V_H.4,2 V H.4,Witness,,419,590,1149,242,,,,,,,,499
+2 V H.8 i_uebrige,faust://inscription/faustedition/2_V_H.8/i_uebrige,2 V H.8 i_uebrige,Inscription,2 V H.8,420,700,1150,243,,,,,,,,68
+2 V H.8,faust://document/faustedition/2_V_H.8,2 V H.8,Witness,,421,594,1151,243,,,,,,,,503
+gsa_2: GSA_25_W_1575,faust://document/gsa_2/GSA_25_W_1575,gsa_2: GSA_25_W_1575,UnknownRef,,422,799,1152,231,,,,,,,,676
+H P163,faust://document/faustedition/H_P163,H P163,Witness,,423,855,1153,232,,,,,,,,628
+H P93,faust://document/faustedition/H_P93,H P93,Witness,,424,931,1154,234,,,,,,,,591
+2 V H.24 i_r,faust://inscription/faustedition/2_V_H.24/i_r,2 V H.24 i_r,Inscription,2 V H.24,425,665,1155,233,,,,,,,,53
+2 V H.24,faust://document/faustedition/2_V_H.24,2 V H.24,Witness,,426,557,1156,238,,,,,,,,524
+2 III H.13,faust://document/faustedition/2_III_H.13,2 III H.13,Witness,,427,32,1157,240,,,,,,,,340
+2 III H.8 i_v,faust://inscription/faustedition/2_III_H.8/i_v,2 III H.8 i_v,Inscription,2 III H.8,428,620,1158,238,,,,,,,,86
+2 III H.8,faust://document/faustedition/2_III_H.8,2 III H.8,Witness,,429,200,1159,242,,,,,,,,330
+2 V H.13 i_r,faust://inscription/faustedition/2_V_H.13/i_r,2 V H.13 i_r,Inscription,2 V H.13,430,656,1160,241,,,,,,,,48
+2 V H.12: … (2),faust://document/wa/2_V_H.12,2 V H.12: … (2),AmbiguousRef,,431,760,1161,241,,,,,,,,507
+H P176a,faust://document/faustedition/H_P176a,H P176a,Witness,,432,871,1162,238,,,,,,,,637
+inscription: wa P230,faust://inscription/wa/P230,inscription: wa P230,UnknownRef,,433,983,1163,238,,,,,,,,702
+2 III H.31,faust://document/faustedition/2_III_H.31,2 III H.31,Witness,,434,71,1164,258,,,,,,,,364
+2 III H.25a,faust://document/faustedition/2_III_H.25a,2 III H.25a,Witness,,435,54,1165,256,,,,,,,,358
+2 V H.14,faust://document/faustedition/2_V_H.14,2 V H.14,Witness,,436,540,1166,263,,,,,,,,511
+2 V H.13 i_v,faust://inscription/faustedition/2_V_H.13/i_v,2 V H.13 i_v,Inscription,2 V H.13,437,657,1167,257,,,,,,,,79
+2 V H.13,faust://document/faustedition/2_V_H.13,2 V H.13,Witness,,438,539,1168,264,,,,,,,,510
+H P140,faust://document/faustedition/H_P140,H P140,Witness,,439,843,1169,261,,,,,,,,620
+2 III H.27 i_r,faust://inscription/faustedition/2_III_H.27/i_r,2 III H.27 i_r,Inscription,2 III H.27,440,600,1170,262,,,,,,,,54
+2 V H.17 i_v,faust://inscription/faustedition/2_V_H.17/i_v,2 V H.17 i_v,Inscription,2 V H.17,441,661,1171,267,,,,,,,,80
+2 V H.17 i_r,faust://inscription/faustedition/2_V_H.17/i_r,2 V H.17 i_r,Inscription,2 V H.17,442,660,1172,263,,,,,,,,52
+2 V H.17,faust://document/faustedition/2_V_H.17,2 V H.17,Witness,,443,547,1173,272,,,,,,,,517
+2 III H.42,faust://document/faustedition/2_III_H.42,2 III H.42,Witness,,444,94,1174,268,,,,,,,,377
+2 III H.27,faust://document/faustedition/2_III_H.27,2 III H.27,Witness,,445,57,1175,279,,,,,,,,360
+2 III H.28,faust://document/faustedition/2_III_H.28,2 III H.28,Witness,,446,58,1176,272,,,,,,,,361
+2 III H.29,faust://document/faustedition/2_III_H.29,2 III H.29,Witness,,447,59,1177,273,,,,,,,,362
+2 III H.38,faust://document/faustedition/2_III_H.38,2 III H.38,Witness,,448,84,1178,270,,,,,,,,373
+2 III H.39,faust://document/faustedition/2_III_H.39,2 III H.39,Witness,,449,85,1179,268,,,,,,,,374
+2 III H.40,faust://document/faustedition/2_III_H.40,2 III H.40,Witness,,450,92,1180,268,,,,,,,,375
+H P164a,faust://document/faustedition/H_P164a,H P164a,Witness,,451,859,1181,271,,,,,,,,629
+2 III H.23d,faust://document/faustedition/2_III_H.23d,2 III H.23d,Witness,,452,49,1182,293,,,,,,,,354
+2 III H.2a:1,faust://document/faustedition/2_III_H.2a_1,2 III H.2a:1,Witness,,453,64,1183,298,,,,,,,,309
+2 III H.2a:4,faust://document/faustedition/2_III_H.2a_4,2 III H.2a:4,Witness,,454,67,1184,297,,,,,,,,312
+2 III H.2a:5,faust://document/faustedition/2_III_H.2a_5,2 III H.2a:5,Witness,,455,68,1185,295,,,,,,,,313
+2 III H.8a,faust://document/faustedition/2_III_H.8a,2 III H.8a,Witness,,456,208,1186,293,,,,,,,,331
+2 III H.8b,faust://document/faustedition/2_III_H.8b,2 III H.8b,Witness,,457,209,1187,295,,,,,,,,332
+2 III H.8c,faust://document/faustedition/2_III_H.8c,2 III H.8c,Witness,,458,211,1188,293,,,,,,,,333
+2 III H.9a,faust://document/faustedition/2_III_H.9a,2 III H.9a,Witness,,459,213,1189,293,,,,,,,,335
+H P166a,faust://document/faustedition/H_P166a,H P166a,Witness,,460,862,1190,301,,,,,,,,631
+2 III H.59a,faust://document/faustedition/2_III_H.59a,2 III H.59a,Witness,,461,148,1191,328,,,,,,,,414
+2 V H.26a,faust://document/faustedition/2_V_H.26a,2 V H.26a,Witness,,462,561,1192,333,,,,,,,,527
+2 I H.1,faust://document/faustedition/2_I_H.1,2 I H.1,Witness,,463,401,1193,331,,,,,,,,123
+2 III H.58 i_v,faust://inscription/faustedition/2_III_H.58/i_v,2 III H.58 i_v,Inscription,2 III H.58,464,611,1194,335,,,,,,,,87
+1 H.1,faust://document/faustedition/1_H.1,1 H.1,Witness,,465,1,1195,337,,,,,,,,4
+1 H.6,faust://document/faustedition/1_H.6,1 H.6,Witness,,466,14,1196,345,,,,,,,,9
+D.4,faust://bibliography/D.4,D.4,UnknownRef,,467,794,1197,350,,,,,,,,671
+D.4α ,faust://bibliography/D.4alpha,D.4α ,UnknownRef,,468,795,1198,350,,,,,,,,672
+2 III H.60 i_uebrige,faust://inscription/faustedition/2_III_H.60/i_uebrige,2 III H.60 i_uebrige,Inscription,2 III H.60,469,614,1199,372,,,,,,,,75
+2 I H.9e*,faust://document/faustedition/2_I_H.9e_,2 I H.9e*,Witness,,470,510,1200,372,,,,,,,,138
+2 I H.9h,faust://document/faustedition/2_I_H.9h,2 I H.9h,Witness,,471,515,1201,372,,,,,,,,141
+2 I H.9i*,faust://document/faustedition/2_I_H.9i_,2 I H.9i*,Witness,,472,516,1202,376,,,,,,,,142
+2 III H.3,faust://document/faustedition/2_III_H.3,2 III H.3,Witness,,473,69,1203,383,,,,,,,,314
+H P176 Var i_r,faust://inscription/faustedition/H_P176_Var/i_r,H P176 Var i_r,Inscription,H P176 Var,474,945,1204,374,,,,,,,,686
+H P176 Var,faust://document/faustedition/H_P176_Var,H P176 Var,Witness,,475,870,1205,374,,,,,,,,636
+1 H.17,faust://document/faustedition/1_H.17,1 H.17,Witness,,476,9,1206,378,,,,,,,,20
+2 III H.0,faust://document/faustedition/2_III_H.0,2 III H.0,Witness,,477,25,1207,381,,,,,,,,304
+2 III H.72,faust://document/faustedition/2_III_H.72,2 III H.72,Witness,,478,182,1208,384,,,,,,,,436
+2 III H.53,faust://document/faustedition/2_III_H.53,2 III H.53,Witness,,479,130,1209,386,,,,,,,,402
+2 III H.45,faust://document/faustedition/2_III_H.45,2 III H.45,Witness,,480,101,1210,385,,,,,,,,382
+2 III H.79,faust://document/faustedition/2_III_H.79,2 III H.79,Witness,,481,194,1211,387,,,,,,,,447
+2 III H.2: … (2),faust://document/wa/2_III_H.2,2 III H.2: … (2),AmbiguousRef,,482,724,1212,502,,,,,,,,306
+2 III H.43,faust://document/faustedition/2_III_H.43,2 III H.43,Witness,,483,98,1213,388,,,,,,,,379
+2 III H.48a,faust://document/faustedition/2_III_H.48a,2 III H.48a,Witness,,484,113,1214,385,,,,,,,,390
+2 III H.55,faust://document/faustedition/2_III_H.55,2 III H.55,Witness,,485,133,1215,385,,,,,,,,404
+2 III H.57,faust://document/faustedition/2_III_H.57,2 III H.57,Witness,,486,141,1216,387,,,,,,,,409
+2 III H.78a,faust://document/faustedition/2_III_H.78a,2 III H.78a,Witness,,487,193,1217,385,,,,,,,,446
+2 V H.2,faust://document/faustedition/2_V_H.2,2 V H.2,Witness,,488,551,1218,446,,,,,,,,497
+2 III H.49 i_r_u,faust://inscription/faustedition/2_III_H.49/i_r_u,2 III H.49 i_r_u,Inscription,2 III H.49,489,606,1219,385,,,,,,,,59
+2 III H.49,faust://document/faustedition/2_III_H.49,2 III H.49,Witness,,490,114,1220,390,,,,,,,,391
+2 III H.58 i_r,faust://inscription/faustedition/2_III_H.58/i_r,2 III H.58 i_r,Inscription,2 III H.58,491,610,1221,387,,,,,,,,51
+2 III H.58,faust://document/faustedition/2_III_H.58,2 III H.58,Witness,,492,144,1222,395,,,,,,,,411
+2 III H.59b i_uebrige,faust://inscription/faustedition/2_III_H.59b/i_uebrige,2 III H.59b i_uebrige,Inscription,2 III H.59b,493,612,1223,390,,,,,,,,71
+2 III H.59b,faust://document/faustedition/2_III_H.59b,2 III H.59b,Witness,,494,149,1224,394,,,,,,,,415
+2 V H.31 i_r_uebrige,faust://inscription/faustedition/2_V_H.31/i_r_uebrige,2 V H.31 i_r_uebrige,Inscription,2 V H.31,495,682,1225,386,,,,,,,,60
+2 V H.31 i_v,faust://inscription/faustedition/2_V_H.31/i_v,2 V H.31 i_v,Inscription,2 V H.31,496,683,1226,387,,,,,,,,83
+2 V H.31,faust://document/faustedition/2_V_H.31,2 V H.31,Witness,,497,567,1227,393,,,,,,,,532
+2 III H.3a: … (2),faust://document/wa/2_III_H.III,2 III H.3a: … (2),AmbiguousRef,,498,739,1228,413,,,,,,,,315
+H P167 i_v,faust://inscription/faustedition/H_P167/i_v,H P167 i_v,Inscription,H P167,499,944,1229,386,,,,,,,,691
+H P167,faust://document/faustedition/H_P167,H P167,Witness,,500,864,1230,390,,,,,,,,632
+2 III H.77,faust://document/faustedition/2_III_H.77,2 III H.77,Witness,,501,191,1231,389,,,,,,,,444
+2 III H.7:5,faust://document/faustedition/2_III_H.7_5,2 III H.7:5,Witness,,502,199,1232,391,,,,,,,,329
+2 III H.46,faust://document/faustedition/2_III_H.46,2 III H.46,Witness,,503,106,1233,398,,,,,,,,385
+2 III H.47,faust://document/faustedition/2_III_H.47,2 III H.47,Witness,,504,110,1234,394,,,,,,,,388
+H P84 ,faust://document/faustedition/H_P84,H P84 ,Witness,,505,927,1235,396,,,,,,,,589
+H P168,faust://document/faustedition/H_P168,H P168,Witness,,506,865,1236,401,,,,,,,,633
+2 III H.51,faust://document/faustedition/2_III_H.51,2 III H.51,Witness,,507,128,1237,405,,,,,,,,400
+2 III H.46b,faust://document/faustedition/2_III_H.46b,2 III H.46b,Witness,,508,109,1238,402,,,,,,,,387
+2 III H.50d,faust://document/faustedition/2_III_H.50d,2 III H.50d,Witness,,509,126,1239,406,,,,,,,,399
+2 III H.2a:2,faust://document/faustedition/2_III_H.2a_2,2 III H.2a:2,Witness,,510,65,1240,416,,,,,,,,310
+2 III H.2a:3,faust://document/faustedition/2_III_H.2a_3,2 III H.2a:3,Witness,,511,66,1241,415,,,,,,,,311
+2 III H.54,faust://document/faustedition/2_III_H.54,2 III H.54,Witness,,512,132,1242,410,,,,,,,,403
+2 III H.56,faust://document/faustedition/2_III_H.56,2 III H.56,Witness,,513,134,1243,415,,,,,,,,405
+fischer_lamberg: 2_III_H.22_1,faust://document/fischer_lamberg/2_III_H.22_1,fischer_lamberg: 2_III_H.22_1,UnknownRef,,514,703,1244,411,,,,,,,,93
+fischer_lamberg: 2_III_H.22_2,faust://document/fischer_lamberg/2_III_H.22_2,fischer_lamberg: 2_III_H.22_2,UnknownRef,,515,704,1245,412,,,,,,,,91
+fischer_lamberg: 2_III_H.22_3,faust://document/fischer_lamberg/2_III_H.22_3,fischer_lamberg: 2_III_H.22_3,UnknownRef,,516,705,1246,411,,,,,,,,94
+fischer_lamberg: 2_III_H.22_4,faust://document/fischer_lamberg/2_III_H.22_4,fischer_lamberg: 2_III_H.22_4,UnknownRef,,517,706,1247,411,,,,,,,,95
+2 III H.71,faust://document/faustedition/2_III_H.71,2 III H.71,Witness,,518,181,1248,427,,,,,,,,435
+2 III H.64,faust://document/faustedition/2_III_H.64,2 III H.64,Witness,,519,156,1249,429,,,,,,,,421
+2 III H.67,faust://document/faustedition/2_III_H.67,2 III H.67,Witness,,520,173,1250,426,,,,,,,,430
+2 III H.33a,faust://document/faustedition/2_III_H.33a,2 III H.33a,Witness,,521,75,1251,432,,,,,,,,367
+2 III H.59,faust://document/faustedition/2_III_H.59,2 III H.59,Witness,,522,147,1252,434,,,,,,,,413
+2 III H.7:3,faust://document/faustedition/2_III_H.7_3,2 III H.7:3,Witness,,523,197,1253,436,,,,,,,,327
+2 III H.7:4,faust://document/faustedition/2_III_H.7_4,2 III H.7:4,Witness,,524,198,1254,439,,,,,,,,328
+2 III H.7:1,faust://document/faustedition/2_III_H.7_1,2 III H.7:1,Witness,,525,195,1255,441,,,,,,,,324
+2 III H.78,faust://document/faustedition/2_III_H.78,2 III H.78,Witness,,526,192,1256,443,,,,,,,,445
+2 III H.70,faust://document/faustedition/2_III_H.70,2 III H.70,Witness,,527,180,1257,449,,,,,,,,434
+H P123.1,faust://document/faustedition/H_P123.1,H P123.1,Witness,,528,822,1258,447,,,,,,,,607
+2 III H.4,faust://document/faustedition/2_III_H.4,2 III H.4,Witness,,529,91,1259,451,,,,,,,,319
+2 III H.60,faust://document/faustedition/2_III_H.60,2 III H.60,Witness,,530,151,1260,455,,,,,,,,417
+fischer_lamberg: P170a i_1_o,faust://inscription/fischer_lamberg/P170a/i_1_o,fischer_lamberg: P170a i_1_o,Inscription,fischer_lamberg: P170a,531,964,1261,454,,,,,,,,700
+fischer_lamberg: P170a,faust://document/fischer_lamberg/P170a,fischer_lamberg: P170a,UnknownRef,,532,963,1262,456,,,,,,,,699
+2 III H.50a,faust://document/faustedition/2_III_H.50a,2 III H.50a,Witness,,533,123,1263,459,,,,,,,,396
+H P78,faust://document/faustedition/H_P78,H P78,Witness,,534,921,1264,473,,,,,,,,585
+2 H,faust://document/faustedition/2_H,2 H,Witness,,535,24,1265,658,,,,,,,,117
+2 III H.75 … (2),faust://document/fischer_lamberg/2_III_H.75a,2 III H.75 … (2),AmbiguousRef,,536,708,1266,488,,,,,,,,440
+2 III H.75b,faust://document/faustedition/2_III_H.75b,2 III H.75b,Witness,,537,188,1267,489,,,,,,,,442
+2 III H.3b,faust://document/faustedition/2_III_H.3b,2 III H.3b,Witness,,538,90,1268,492,,,,,,,,318
+H P99.1,faust://document/faustedition/H_P99.1,H P99.1,Witness,,539,935,1269,495,,,,,,,,595
+H P99.2,faust://document/faustedition/H_P99.2,H P99.2,Witness,,540,936,1270,499,,,,,,,,596
+H P123.2,faust://document/faustedition/H_P123.2,H P123.2,Witness,,541,823,1271,504,,,,,,,,608
+H P123.5,faust://document/faustedition/H_P123.5,H P123.5,Witness,,542,828,1272,506,,,,,,,,611
+H P101a,faust://document/faustedition/H_P101a,H P101a,Witness,,543,811,1273,512,,,,,,,,598
+2 III H.73,faust://document/faustedition/2_III_H.73,2 III H.73,Witness,,544,183,1274,515,,,,,,,,437
+2 III H.74,faust://document/faustedition/2_III_H.74,2 III H.74,Witness,,545,184,1275,523,,,,,,,,438
+2 II H.4,faust://document/faustedition/2_II_H.4,2 II H.4,Witness,,546,268,1276,524,,,,,,,,220
+C.1 4,faust://document/faustedition/C.1_4,C.1 4,Witness,,547,773,1277,528,,,,,,,,660
+2 I H.9 … (3),faust://document/wa/2_I_H.9,2 I H.9 … (3),AmbiguousRef,,548,757,1278,536,,,,,,,,133
+2 I H.12: … (2),faust://document/wa/2_I_H.12,2 I H.12: … (2),AmbiguousRef,,549,756,1279,537,,,,,,,,151
+H P108b,faust://document/faustedition/H_P108b,H P108b,Witness,,550,816,1280,535,,,,,,,,603
+H P108c,faust://document/faustedition/H_P108c,H P108c,Witness,,551,817,1281,535,,,,,,,,604
+H P101,faust://document/faustedition/H_P101,H P101,Witness,,552,810,1282,537,,,,,,,,597
+2 I H.11,faust://document/faustedition/2_I_H.11,2 I H.11,Witness,,553,404,1283,540,,,,,,,,150
+2 II H.1,faust://document/faustedition/2_II_H.1,2 II H.1,Witness,,554,214,1284,543,,,,,,,,214
+2 I H.13,faust://document/faustedition/2_I_H.13,2 I H.13,Witness,,555,411,1285,544,,,,,,,,155
+2 I H.24,faust://document/faustedition/2_I_H.24,2 I H.24,Witness,,556,434,1286,542,,,,,,,,169
+2 I H.5,faust://document/faustedition/2_I_H.5,2 I H.5,Witness,,557,477,1287,542,,,,,,,,127
+2 I H.19 i_uebrige,faust://inscription/faustedition/2_I_H.19/i_uebrige,2 I H.19 i_uebrige,Inscription,2 I H.19,558,646,1288,543,,,,,,,,66
+2 I H.9k,faust://document/faustedition/2_I_H.9k,2 I H.9k,Witness,,559,517,1289,547,,,,,,,,143
+inscription: wa 2_I_H.10,faust://inscription/wa/2_I_H.10,inscription: wa 2_I_H.10,UnknownRef,,560,768,1290,547,,,,,,,,107
+2 II H.2:3,faust://document/faustedition/2_II_H.2_3,2 II H.2:3,Witness,,561,249,1291,549,,,,,,,,218
+2 I H.22,faust://document/faustedition/2_I_H.22,2 I H.22,Witness,,562,431,1292,548,,,,,,,,167
+fischer-lamberg: 2_II_H.2d,faust://document/fischer-lamberg/2_II_H.2d,fischer-lamberg: 2_II_H.2d,UnknownRef,,563,701,1293,549,,,,,,,,90
+2 II H.2:1,faust://document/faustedition/2_II_H.2_1,2 II H.2:1,Witness,,564,246,1294,551,,,,,,,,215
+2 I H.17,faust://document/faustedition/2_I_H.17,2 I H.17,Witness,,565,423,1295,565,,,,,,,,162
+H P102,faust://document/faustedition/H_P102,H P102,Witness,,566,812,1296,561,,,,,,,,599
+2 I H.8,faust://document/faustedition/2_I_H.8,2 I H.8,Witness,,567,503,1297,562,,,,,,,,131
+2 I H.15,faust://document/faustedition/2_I_H.15,2 I H.15,Witness,,568,414,1298,563,,,,,,,,157
+2 I H.25,faust://document/faustedition/2_I_H.25,2 I H.25,Witness,,569,440,1299,566,,,,,,,,173
+2 I H.26,faust://document/faustedition/2_I_H.26,2 I H.26,Witness,,570,441,1300,567,,,,,,,,174
+2 I H.24b,faust://document/faustedition/2_I_H.24b,2 I H.24b,Witness,,571,437,1301,566,,,,,,,,171
+H P105,faust://document/faustedition/H_P105,H P105,Witness,,572,813,1302,570,,,,,,,,600
+2 II H.3,faust://document/faustedition/2_II_H.3,2 II H.3,Witness,,573,250,1303,566,,,,,,,,219
+2 I H.3,faust://document/faustedition/2_I_H.3,2 I H.3,Witness,,574,447,1304,574,,,,,,,,125
+2 I H.4,faust://document/faustedition/2_I_H.4,2 I H.4,Witness,,575,461,1305,574,,,,,,,,126
+2 I H.34,faust://document/faustedition/2_I_H.34,2 I H.34,Witness,,576,453,1306,575,,,,,,,,182
+2 I H.36,faust://document/faustedition/2_I_H.36,2 I H.36,Witness,,577,457,1307,577,,,,,,,,185
+2 I H.38,faust://document/faustedition/2_I_H.38,2 I H.38,Witness,,578,459,1308,575,,,,,,,,187
+2 I H.39,faust://document/faustedition/2_I_H.39,2 I H.39,Witness,,579,460,1309,575,,,,,,,,188
+2 I H.40,faust://document/faustedition/2_I_H.40,2 I H.40,Witness,,580,462,1310,575,,,,,,,,189
+2 I H.41,faust://document/faustedition/2_I_H.41,2 I H.41,Witness,,581,463,1311,575,,,,,,,,190
+2 I H.6,faust://document/faustedition/2_I_H.6,2 I H.6,Witness,,582,498,1312,575,,,,,,,,128
+2 I H.7,faust://document/faustedition/2_I_H.7,2 I H.7,Witness,,583,502,1313,575,,,,,,,,130
+2 I H.9,faust://document/faustedition/2_I_H.9,2 I H.9,Witness,,584,504,1314,577,,,,,,,,132
+2 I H.9a,faust://document/faustedition/2_I_H.9a,2 I H.9a,Witness,,585,505,1315,577,,,,,,,,134
+2 I H.32 i_uebrige,faust://inscription/faustedition/2_I_H.32/i_uebrige,2 I H.32 i_uebrige,Inscription,2 I H.32,586,654,1316,588,,,,,,,,72
+2 I H.42,faust://document/faustedition/2_I_H.42,2 I H.42,Witness,,587,466,1317,584,,,,,,,,192
+2 I H.29,faust://document/faustedition/2_I_H.29,2 I H.29,Witness,,588,445,1318,583,,,,,,,,177
+2 I H.19 i_4,faust://inscription/faustedition/2_I_H.19/i_4,2 I H.19 i_4,Inscription,2 I H.19,589,645,1319,588,,,,,,,,41
+2 I H.19,faust://document/faustedition/2_I_H.19,2 I H.19,Witness,,590,426,1320,592,,,,,,,,164
+2 I H.34a,faust://document/faustedition/2_I_H.34a,2 I H.34a,Witness,,591,455,1321,588,,,,,,,,183
+2 I H.35,faust://document/faustedition/2_I_H.35,2 I H.35,Witness,,592,456,1322,596,,,,,,,,184
+2 I H.37,faust://document/faustedition/2_I_H.37,2 I H.37,Witness,,593,458,1323,594,,,,,,,,186
+2 I H.45,faust://document/faustedition/2_I_H.45,2 I H.45,Witness,,594,471,1324,588,,,,,,,,196
+2 I H.32 i_7_v,faust://inscription/faustedition/2_I_H.32/i_7_v,2 I H.32 i_7_v,Inscription,2 I H.32,595,653,1325,589,,,,,,,,42
+2 I H.32,faust://document/faustedition/2_I_H.32,2 I H.32,Witness,,596,451,1326,606,,,,,,,,180
+2 I H.43 i_uebrige,faust://inscription/faustedition/2_I_H.43/i_uebrige,2 I H.43 i_uebrige,Inscription,2 I H.43,597,655,1327,589,,,,,,,,73
+2 I H.43,faust://document/faustedition/2_I_H.43,2 I H.43,Witness,,598,467,1328,592,,,,,,,,193
+H P106 i_v,faust://inscription/faustedition/H_P106/i_v,H P106 i_v,Inscription,H P106,599,939,1329,588,,,,,,,,692
+H P106,faust://document/faustedition/H_P106,H P106,Witness,,600,814,1330,593,,,,,,,,601
+2 I H.33,faust://document/faustedition/2_I_H.33,2 I H.33,Witness,,601,452,1331,589,,,,,,,,181
+2 I H.9c*,faust://document/faustedition/2_I_H.9c_,2 I H.9c*,Witness,,602,508,1332,597,,,,,,,,136
+2 I H.9m,faust://document/faustedition/2_I_H.9m,2 I H.9m,Witness,,603,520,1333,595,,,,,,,,145
+2 I H.9n*,faust://document/faustedition/2_I_H.9n_,2 I H.9n*,Witness,,604,521,1334,597,,,,,,,,146
+2 I H.9o*,faust://document/faustedition/2_I_H.9o_,2 I H.9o*,Witness,,605,522,1335,595,,,,,,,,147
+2 I H.9p*,faust://document/faustedition/2_I_H.9p_,2 I H.9p*,Witness,,606,523,1336,598,,,,,,,,148
+2 I H.9d,faust://document/faustedition/2_I_H.9d,2 I H.9d,Witness,,607,509,1337,604,,,,,,,,137
+H P107,faust://document/faustedition/H_P107,H P107,Witness,,608,815,1338,624,,,,,,,,602
+2 I H.46,faust://document/faustedition/2_I_H.46,2 I H.46,Witness,,609,473,1339,628,,,,,,,,197
+C.1 12,faust://document/faustedition/C.1_12,C.1 12,Witness,,610,772,1340,640,,,,,,,,659
+C.3 4,faust://document/faustedition/C.3_4,C.3 4,Witness,,611,776,1341,640,,,,,,,,664
+H P179a,faust://document/faustedition/H_P179a,H P179a,Witness,,612,874,1342,644,,,,,,,,639
+C.2α 4,faust://document/faustedition/C.2alpha_4,C.2α 4,Witness,,613,774,1343,648,,,,,,,,661
+2 III H.69a,faust://document/faustedition/2_III_H.69a,2 III H.69a,Witness,,614,177,1344,660,,,,,,,,433
+2 II H.14,faust://document/faustedition/2_II_H.14,2 II H.14,Witness,,615,223,1345,668,,,,,,,,237
+C.3 12,faust://document/faustedition/C.3_12,C.3 12,Witness,,616,775,1346,670,,,,,,,,663
+gsa_2: GSA_25_W_1806,faust://document/gsa_2/GSA_25_W_1806,gsa_2: GSA_25_W_1806,UnknownRef,,617,803,1347,673,,,,,,,,678
+2 II H.13,faust://document/faustedition/2_II_H.13,2 II H.13,Witness,,618,220,1348,681,,,,,,,,235
+2 II H.8:1,faust://document/faustedition/2_II_H.8_1,2 II H.8:1,Witness,,619,331,1349,699,,,,,,,,228
+2 II H.20,faust://document/faustedition/2_II_H.20,2 II H.20,Witness,,620,231,1350,683,,,,,,,,244
+2 II H.27: … (2),faust://document/wa/2_II_H.27,2 II H.27: … (2),AmbiguousRef,,621,746,1351,685,,,,,,,,251
+H P124,faust://document/faustedition/H_P124,H P124,Witness,,622,837,1352,680,,,,,,,,616
+2 I H.58,faust://document/faustedition/2_I_H.58,2 I H.58,Witness,,623,496,1353,681,,,,,,,,211
+2 I H.57,faust://document/faustedition/2_I_H.57,2 I H.57,Witness,,624,495,1354,680,,,,,,,,210
+2 I H.59,faust://document/faustedition/2_I_H.59,2 I H.59,Witness,,625,497,1355,685,,,,,,,,212
+2 I H.60,faust://document/faustedition/2_I_H.60,2 I H.60,Witness,,626,499,1356,684,,,,,,,,213
+2 II H.4a*,faust://document/faustedition/2_II_H.4a_,2 II H.4a*,Witness,,627,285,1357,686,,,,,,,,221
+2 I H.47,faust://document/faustedition/2_I_H.47,2 I H.47,Witness,,628,474,1358,694,,,,,,,,198
+2 I H.50a,faust://document/faustedition/2_I_H.50a,2 I H.50a,Witness,,629,480,1359,687,,,,,,,,202
+2 I H.50b,faust://document/faustedition/2_I_H.50b,2 I H.50b,Witness,,630,481,1360,687,,,,,,,,203
+2 I H.48,faust://document/faustedition/2_I_H.48,2 I H.48,Witness,,631,475,1361,691,,,,,,,,199
+H P149,faust://document/faustedition/H_P149,H P149,Witness,,632,846,1362,691,,,,,,,,622
+2 II H.16a,faust://document/faustedition/2_II_H.16a,2 II H.16a,Witness,,633,227,1363,697,,,,,,,,240
+2 II H.9,faust://document/faustedition/2_II_H.9,2 II H.9,Witness,,634,335,1364,700,,,,,,,,230
+2 I H.56,faust://document/faustedition/2_I_H.56,2 I H.56,Witness,,635,493,1365,707,,,,,,,,209
+2 II H.10,faust://document/faustedition/2_II_H.10,2 II H.10,Witness,,636,215,1366,700,,,,,,,,231
+2 II H.11,faust://document/faustedition/2_II_H.11,2 II H.11,Witness,,637,216,1367,706,,,,,,,,232
+2 II H.6,faust://document/faustedition/2_II_H.6,2 II H.6,Witness,,638,306,1368,697,,,,,,,,224
+2 II H.46,faust://document/faustedition/2_II_H.46,2 II H.46,Witness,,639,280,1369,702,,,,,,,,274
+2 II H.15,faust://document/faustedition/2_II_H.15,2 II H.15,Witness,,640,224,1370,705,,,,,,,,238
+2 II H.74 i_uebrige,faust://inscription/faustedition/2_II_H.74/i_uebrige,2 II H.74 i_uebrige,Inscription,2 II H.74,641,632,1371,711,,,,,,,,65
+2 II H.74,faust://document/faustedition/2_II_H.74,2 II H.74,Witness,,642,327,1372,805,,,,,,,,303
+2 II H.63,faust://document/faustedition/2_II_H.63,2 II H.63,Witness,,643,310,1373,707,,,,,,,,292
+gsa_2: GSA_25_W_1772,faust://document/gsa_2/GSA_25_W_1772,gsa_2: GSA_25_W_1772,UnknownRef,,644,802,1374,707,,,,,,,,675
+2 II H.38,faust://document/faustedition/2_II_H.38,2 II H.38,Witness,,645,266,1375,710,,,,,,,,266
+2 II H.17,faust://document/faustedition/2_II_H.17,2 II H.17,Witness,,646,228,1376,723,,,,,,,,241
+2 II H.25,faust://document/faustedition/2_II_H.25,2 II H.25,Witness,,647,237,1377,723,,,,,,,,249
+2 II H.23,faust://document/faustedition/2_II_H.23,2 II H.23,Witness,,648,235,1378,729,,,,,,,,247
+2 II H.27:2,faust://document/faustedition/2_II_H.27_2,2 II H.27:2,Witness,,649,242,1379,718,,,,,,,,253
+2 II H.45,faust://document/faustedition/2_II_H.45,2 II H.45,Witness,,650,279,1380,719,,,,,,,,273
+2 II H.22,faust://document/faustedition/2_II_H.22,2 II H.22,Witness,,651,234,1381,724,,,,,,,,246
+2 II H.42,faust://document/faustedition/2_II_H.42,2 II H.42,Witness,,652,273,1382,726,,,,,,,,270
+2 II H.49,faust://document/faustedition/2_II_H.49,2 II H.49,Witness,,653,284,1383,728,,,,,,,,278
+H P125,faust://document/faustedition/H_P125,H P125,Witness,,654,838,1384,735,,,,,,,,617
+2 V H.1a,faust://document/faustedition/2_V_H.1a,2 V H.1a,Witness,,655,550,1385,738,,,,,,,,496
+2 II H.19,faust://document/faustedition/2_II_H.19,2 II H.19,Witness,,656,230,1386,738,,,,,,,,243
+2 II H.56,faust://document/faustedition/2_II_H.56,2 II H.56,Witness,,657,299,1387,741,,,,,,,,285
+2 II H.57,faust://document/faustedition/2_II_H.57,2 II H.57,Witness,,658,300,1388,747,,,,,,,,286
+2 II H.58,faust://document/faustedition/2_II_H.58,2 II H.58,Witness,,659,301,1389,740,,,,,,,,287
+2 II H.60,faust://document/faustedition/2_II_H.60,2 II H.60,Witness,,660,307,1390,746,,,,,,,,289
+2 II H.33,faust://document/faustedition/2_II_H.33,2 II H.33,Witness,,661,258,1391,753,,,,,,,,260
+2 II H.52,faust://document/faustedition/2_II_H.52,2 II H.52,Witness,,662,291,1392,754,,,,,,,,281
+2 II H.55,faust://document/faustedition/2_II_H.55,2 II H.55,Witness,,663,298,1393,756,,,,,,,,284
+2 II H.61,faust://document/faustedition/2_II_H.61,2 II H.61,Witness,,664,308,1394,756,,,,,,,,290
+2 II H.62,faust://document/faustedition/2_II_H.62,2 II H.62,Witness,,665,309,1395,759,,,,,,,,291
+2 II H.31a,faust://document/faustedition/2_II_H.31a,2 II H.31a,Witness,,666,255,1396,762,,,,,,,,258
+2 II H.34,faust://document/faustedition/2_II_H.34,2 II H.34,Witness,,667,259,1397,768,,,,,,,,261
+2 II H.64,faust://document/faustedition/2_II_H.64,2 II H.64,Witness,,668,311,1398,770,,,,,,,,293
+2 II H.65,faust://document/faustedition/2_II_H.65,2 II H.65,Witness,,669,312,1399,771,,,,,,,,294
+2 II H.66,faust://document/faustedition/2_II_H.66,2 II H.66,Witness,,670,313,1400,771,,,,,,,,295
+H P159,faust://document/faustedition/H_P159,H P159,Witness,,671,851,1401,776,,,,,,,,625
+H P160,faust://document/faustedition/H_P160,H P160,Witness,,672,852,1402,776,,,,,,,,626
+H P126,faust://document/faustedition/H_P126,H P126,Witness,,673,839,1403,777,,,,,,,,618
+2 II H.67,faust://document/faustedition/2_II_H.67,2 II H.67,Witness,,674,314,1404,781,,,,,,,,296
+2 II H.68,faust://document/faustedition/2_II_H.68,2 II H.68,Witness,,675,315,1405,778,,,,,,,,297
+2 II H.71,faust://document/faustedition/2_II_H.71,2 II H.71,Witness,,676,323,1406,783,,,,,,,,300
+2 II H.48,faust://document/faustedition/2_II_H.48,2 II H.48,Witness,,677,283,1407,780,,,,,,,,277
+H P157,faust://document/faustedition/H_P157,H P157,Witness,,678,850,1408,779,,,,,,,,624
+2 V H.38a,faust://document/faustedition/2_V_H.38a,2 V H.38a,Witness,,679,589,1409,785,,,,,,,,551
+2 V H.37a i_r,faust://inscription/faustedition/2_V_H.37a/i_r,2 V H.37a i_r,Inscription,2 V H.37a,680,692,1410,784,,,,,,,,45
+2 V H.37a i_v,faust://inscription/faustedition/2_V_H.37a/i_v,2 V H.37a i_v,Inscription,2 V H.37a,681,693,1411,782,,,,,,,,77
+2 V H.37a,faust://document/faustedition/2_V_H.37a,2 V H.37a,Witness,,682,578,1412,787,,,,,,,,542
+landeck: 2_V_H.h,faust://document/landeck/2_V_H.h,landeck: 2_V_H.h,UnknownRef,,683,720,1413,781,,,,,,,,99
+2 II H.70,faust://document/faustedition/2_II_H.70,2 II H.70,Witness,,684,322,1414,806,,,,,,,,299
+landeck: 2_V_H.1I,faust://document/landeck/2_V_H.1I,landeck: 2_V_H.1I,UnknownRef,,685,715,1415,806,,,,,,,,100
+landeck: 2_V_H.1II,faust://document/landeck/2_V_H.1II,landeck: 2_V_H.1II,UnknownRef,,686,716,1416,808,,,,,,,,102
+landeck: 2_V_H.1III,faust://document/landeck/2_V_H.1III,landeck: 2_V_H.1III,UnknownRef,,687,717,1417,806,,,,,,,,101
+2 V H.34,faust://document/faustedition/2_V_H.34,2 V H.34,Witness,,688,572,1418,811,,,,,,,,537
+2 V H.35,faust://document/faustedition/2_V_H.35,2 V H.35,Witness,,689,573,1419,811,,,,,,,,538
+2 V H.37b,faust://document/faustedition/2_V_H.37b,2 V H.37b,Witness,,690,579,1420,814,,,,,,,,543
+2 V H.32a i_r,faust://inscription/faustedition/2_V_H.32a/i_r,2 V H.32a i_r,Inscription,2 V H.32a,691,686,1421,821,,,,,,,,50
+2 V H.32a i_v,faust://inscription/faustedition/2_V_H.32a/i_v,2 V H.32a i_v,Inscription,2 V H.32a,692,687,1422,823,,,,,,,,85
+2 V H.32a,faust://document/faustedition/2_V_H.32a,2 V H.32a,Witness,,693,570,1423,825,,,,,,,,535
+2 V H.33 i_uebrige,faust://inscription/faustedition/2_V_H.33/i_uebrige,2 V H.33 i_uebrige,Inscription,2 V H.33,694,691,1424,824,,,,,,,,70
+2 V H.37 … (2),faust://document/wa/2_V_H.g,2 V H.37 … (2),AmbiguousRef,,695,763,1425,812,,,,,,,,546
+H P196,faust://document/faustedition/H_P196,H P196,Witness,,696,891,1426,812,,,,,,,,649
+2 V H.16,faust://document/faustedition/2_V_H.16,2 V H.16,Witness,,697,546,1427,839,,,,,,,,516
+2 V H.37,faust://document/faustedition/2_V_H.37,2 V H.37,Witness,,698,577,1428,839,,,,,,,,541
+2 V H.33 i_3_r,faust://inscription/faustedition/2_V_H.33/i_3_r,2 V H.33 i_3_r,Inscription,2 V H.33,699,688,1429,841,,,,,,,,39
+2 V H.33 i_3_v,faust://inscription/faustedition/2_V_H.33/i_3_v,2 V H.33 i_3_v,Inscription,2 V H.33,700,690,1430,841,,,,,,,,40
+2 V H.33,faust://document/faustedition/2_V_H.33,2 V H.33,Witness,,701,571,1431,852,,,,,,,,536
+2 V H.0b,faust://document/faustedition/2_V_H.0b,2 V H.0b,Witness,,702,525,1432,852,,,,,,,,490
+2 V H.0a,faust://document/faustedition/2_V_H.0a,2 V H.0a,Witness,,703,524,1433,851,,,,,,,,489
+2 V H.0f,faust://document/faustedition/2_V_H.0f,2 V H.0f,Witness,,704,531,1434,851,,,,,,,,494
+2 V H.0c,faust://document/faustedition/2_V_H.0c,2 V H.0c,Witness,,705,526,1435,852,,,,,,,,491
+2 V H.38,faust://document/faustedition/2_V_H.38,2 V H.38,Witness,,706,588,1436,853,,,,,,,,550
+2 IV H.6: … (2),faust://document/wa/2_IV_H.6,2 IV H.6: … (2),AmbiguousRef,,707,753,1437,856,,,,,,,,457
+H P197a,faust://document/faustedition/H_P197a,H P197a,Witness,,708,892,1438,853,,,,,,,,650
+H P188a,faust://document/faustedition/H_P188a,H P188a,Witness,,709,882,1439,855,,,,,,,,643
+H P190a,faust://document/faustedition/H_P190a,H P190a,Witness,,710,885,1440,862,,,,,,,,645
+2 IV H.22 i_1_r,faust://inscription/faustedition/2_IV_H.22/i_1_r,2 IV H.22 i_1_r,Inscription,2 IV H.22,711,643,1441,867,,,,,,,,36
+2 IV H.22 i_uebrige,faust://inscription/faustedition/2_IV_H.22/i_uebrige,2 IV H.22 i_uebrige,Inscription,2 IV H.22,712,644,1442,864,,,,,,,,64
+2 IV H.22,faust://document/faustedition/2_IV_H.22,2 IV H.22,Witness,,713,359,1443,869,,,,,,,,480
+2 IV H.22b,faust://document/faustedition/2_IV_H.22b,2 IV H.22b,Witness,,714,362,1444,871,,,,,,,,482
+2 IV H.8,faust://document/faustedition/2_IV_H.8,2 IV H.8,Witness,,715,386,1445,885,,,,,,,,463
+2 IV H.2,faust://document/faustedition/2_IV_H.2,2 IV H.2,Witness,,716,353,1446,876,,,,,,,,453
+2 IV H.5,faust://document/faustedition/2_IV_H.5,2 IV H.5,Witness,,717,375,1447,873,,,,,,,,456
+2 IV H.18,faust://document/faustedition/2_IV_H.18,2 IV H.18,Witness,,718,351,1448,877,,,,,,,,475
+2 IV H.21a,faust://document/faustedition/2_IV_H.21a,2 IV H.21a,Witness,,719,358,1449,876,,,,,,,,479
+2 IV H.22d,faust://document/faustedition/2_IV_H.22d,2 IV H.22d,Witness,,720,365,1450,874,,,,,,,,484
+2 IV H.22g,faust://document/faustedition/2_IV_H.22g,2 IV H.22g,Witness,,721,370,1451,874,,,,,,,,488
+2 IV H.22 … (2),faust://document/wa/2_IV_H.g,2 IV H.22 … (2),AmbiguousRef,,722,755,1452,876,,,,,,,,485
+H P181,faust://document/faustedition/H_P181,H P181,Witness,,723,877,1453,874,,,,,,,,641
+2 IV H.19 i_uebrige,faust://inscription/faustedition/2_IV_H.19/i_uebrige,2 IV H.19 i_uebrige,Inscription,2 IV H.19,724,640,1454,881,,,,,,,,62
+2 IV H.19,faust://document/faustedition/2_IV_H.19,2 IV H.19,Witness,,725,352,1455,879,,,,,,,,476
+2 IV H.16,faust://document/faustedition/2_IV_H.16,2 IV H.16,Witness,,726,348,1456,903,,,,,,,,473
+H P129 Var*,faust://document/faustedition/H_P129_Var_,H P129 Var*,Witness,,727,840,1457,908,,,,,,,,619
+C.1 41,faust://bibliography/C.1_41,C.1 41,UnknownRef,,728,786,1458,919,,,,,,,,665
+C.3 41,faust://bibliography/C.3_41,C.3 41,UnknownRef,,729,787,1459,915,,,,,,,,666
+Q,faust://bibliography/Q,Q,UnknownRef,,730,984,1460,923,,,,,,,,711

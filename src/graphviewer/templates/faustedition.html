@@ -4,6 +4,11 @@
     <meta charset='utf-8'>
     <title>Faustedition{% block title %}{% endblock %}</title>
 
+
+    <script type="javascript/worker" src="/js/wasm/index.min.js"></script>
+    <script type="application/javascript" src="/js/d3.min.js"></script>
+    <script type="application/javascript" src="/js/d3-graphviz.min.js"></script>
+
     <script type="text/javascript" src="/js/require.js"></script>
     <script type="text/javascript" src="/js/faust_config.js"></script>
 
@@ -16,6 +21,13 @@
     <link rel="stylesheet" href="/css/chocolat-custom.css">
     <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
     <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+
+    <style>
+        #header-status {
+            padding: 5px;
+            margin-bottom: 0;
+        }
+    </style>
 
     {% block head %}
     {% endblock %}
@@ -33,6 +45,7 @@
         <div id="current" class="pure-nowrap"></div>
         <nav id="nav_all" class="pure-menu pure-menu-open pure-menu-horizontal pure-right pure-nowrap pure-noprint">
           <ul>
+          <li class="pure-alert pure-alert-info pure-invisible" id="header-status">Lade ...</li>
           <li><a href="{% block helpurl %}/help{% endblock %}" title="Hilfe"><i class="fa fa-help-circled fa-lg"></i></a></li>
           <li><a href="#quotation" title="Zitieremfehlung"><i class="fa fa-bookmark fa-lg"></i></a></li>
           <li><a href="#download" title="Download"><i class="fa fa-download fa-lg"></i></a></li>
@@ -190,6 +203,8 @@
     </script>
 
 
+    {% block d3script %}
+    {% endblock %}
 
 <script>
 requirejs(['jquery', 'jquery.chocolat', 'jquery.overlays', 'jquery.clipboard', 'faust_common', 'js.cookie'],

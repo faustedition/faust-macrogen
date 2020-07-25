@@ -1,36 +1,283 @@
 {% extends "faustedition.html" %}
+
+{% block head %}
+    <style>
+        main {
+            display: flex;
+            justify-items: center;
+            flex-direction: column;
+            width: 100%;
+            height: calc(100vh - 3.4em);
+        }
+        main.vertical {
+            flex-direction: row;
+        }
+        #subgraph-form {
+            flex-grow: 0;
+            min-width: 24em;
+        }
+        .flex-form {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .vertical > .flex-form {
+            flex-direction: column;
+        }
+        .flex-form fieldset, .flex-form section {
+            padding: 0 1em;
+            flex-grow: 1;
+        }
+        #refgraph {
+            text-align: center;
+            flex-grow: 1;
+            overflow: auto;
+        }
+        button, input, select, textarea {
+            vertical-align: middle;
+        }
+        footer { display: none; }
+
+        #subgraph-form p {
+            margin: 0.5em 0;
+        }
+    </style>
+{% endblock %}
+
+{% block d3script %}
+    <script type="application/javascript">
+
+        async function updateURLs(query) {
+            const params = new URLSearchParams(query),
+                  searchString = '?' + params.toString(),
+                  location = new URL(window.location);
+
+            if (location.search !== searchString) {
+                location.search = searchString;
+                history.replaceState(null, '', location)
+
+                try {
+                    const downloadTemplateEl = document.getElementById('download');
+                    const parseContainer = document.createElement('div');
+                    parseContainer.innerHTML = downloadTemplateEl.innerHTML;
+                    const graphDownloadArea = parseContainer.querySelector('#download-graph');
+                    for (const a of graphDownloadArea.getElementsByTagName("a")) {
+                        a.search = searchString;
+                    }
+                    downloadTemplateEl.innerHTML = parseContainer.innerHTML;
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+            const breadcrumbElement = document.getElementById('current');
+            current.innerText = 'Teilgraph: ' + params.get('nodes');
+        }
+
+        function message(msg, severity, long) {
+            const headerElement = document.getElementById('header-status'),
+                  longMessage = document.getElementById('long-message'),
+                  updating = long? longMessage: headerElement,
+                  other = long? headerElement: longMessage;
+            longMessage.style.display = (!!msg && long)? "block" : "none";
+            if (msg) {
+                if (!severity)
+                    severity = "info";
+                updating.innerHTML = msg;
+                updating.className = "pure-alert pure-alert-" + severity
+                updating.style.visibility = "visible";
+                other.style.visibility = "hidden";
+            } else {
+                updating.style.visibility = "hidden";
+                other.style.visibility = "hidden";
+            }
+        }
+
+        function getFormData() {
+            const form = document.getElementById('subgraph-form');
+            return new FormData(form);
+        }
+
+        function setFormData(form, data) {
+            if (!form) form = document.getElementById('subgraph-form');
+            if (!data) data = document.location.search;
+            const entries = (new URLSearchParams(data)).entries();
+            console.log(form, data, entries);
+            form.reset();
+            for (const [key, val] of entries) {
+                const input = form.elements[key];
+                if (input) {
+                    if (input.type === 'checkbox')
+                        input.checked = !!val;
+                    else
+                        input.value = val;
+                }
+                console.log(form, key, val)
+            }
+
+        }
+
+        async function getDotStr(formdata) {
+            const response = await fetch('subgraph/dot', {method: "POST", body: formdata});
+            if (response.status === 200)
+                return await response.text();
+            else
+                throw await response.text();
+        }
+        const graphviz = d3.select('#refgraph').graphviz({fit: false}),
+              statusMessages = {
+                start: "Parse Graphdatei …",
+                layoutStart: "Berechne Graphlayout …",
+                  renderStart: "Rendere …",
+                  transitionStart: "Überblende neuen Graph …",
+                  end: ""
+              };
+        for (const eventType in statusMessages) {
+            graphviz.on(eventType, () => message(statusMessages[eventType], 'info'));
+        }
+
+        const transitionFactory = () => d3.transition().duration(750);
+        const updateGraph = function updateGraph() {
+            const formdata = getFormData(),
+                  main = document.getElementsByTagName('main')[0];
+            message("Lade aktualisierten Graphen …")
+            getDotStr(formdata).then(dot => {message("Berechne neues Layout …"); return dot;})
+            .then(dot => {
+                graphviz.transition(transitionFactory).renderDot(dot);
+            })
+            //.then(() => message())
+            .catch(reason => {
+                message(reason, "danger", true)
+                console.error(reason)
+            });
+            updateURLs(formdata);
+            if (formdata.get('dir').includes('B')) { // vertical layout
+                main.classList.add('vertical');
+            } else {
+                main.classList.remove('vertical');
+            }
+        }
+
+        const fixNodesField = function fixNodesField(element) {
+            const origValue = element.value,
+                query = new URLSearchParams([['nodes', origValue]]).toString();
+            fetch('subgraph/check-nodes?' + query)
+                .then(response => response.json())
+                .then(checkedNodes => {
+                    if (element.value === origValue) { // no change from user in the meantime
+                        element.value = checkedNodes.normalized;
+                        if (checkedNodes.not_found) {
+                            message(checkedNodes.error_msg, 'error');
+                            element.valid = false;
+                            element.title = checkedNodes.error_msg;
+                        } else {
+                            element.valid = true;
+                            element.title = checkedNodes.error_msg;
+                        }
+                    }
+                })
+        }
+
+
+        d3.selectAll('#subgraph-form input[type=checkbox], #subgraph-form input[type=radio]').on("click", updateGraph);
+        d3.selectAll('#subgraph-form select').on("input", updateGraph);
+        d3.selectAll('#subgraph-form input[type=text]').on("blur", function() {
+            updateGraph();
+            fixNodesField(this);
+        });
+        document.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                updateGraph();
+                fixNodesField(this);
+            }
+        });
+
+        setFormData();
+        updateGraph();
+
+        function contentRequired(formSelector, nonEmptyFieldName) {
+            const form = document.querySelector(formSelector),
+                  nonEmptyField = form.elements[nonEmptyFieldName],
+                  submitButton = form.querySelector('input[type=submit]'),
+                  checkInput = function() {
+                      if (submitButton)
+                          submitButton.disabled = !nonEmptyField.value; /* ← äußere Variablen */
+                  };
+            nonEmptyField.addEventListener("input", checkInput);
+            checkInput();
+        }
+        contentRequired('#subgraph-form', 'nodes');
+    </script>
+{% endblock %}
+
 {% block content %}
 
-{{ svg }}
-
-
-
-
-<form method="get" class="pure-g-r pure-form">
-    <section class="pure-u-1-3">
-    <h3>Zentrale Knoten
-    <small class="pull-right"><label><input type="checkbox" name="nohl" id="nohl" {% if nohl %}checked{% endif %}> nicht hervorheben</label></small>
-    </h3>
-    <p><input type="text" name="nodes" id="nodes" value="{{ nodes }}" style="width: 100%;" placeholder="2 V H.13"></p>
-    <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
-    <p><input type="checkbox" name="assertions" id="assertions" {% if assertions %}checked{% endif %} <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
-    <p><input type="submit" class="pure-button pure-button-primary" value="Teilgraph zeichnen"></p></section>
-    </section>
-    <section class="pure-u-1-3">
-    <h3>Zusätzliche Pfade</h3>
-    <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
-    <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
-        <input type="text" name="extra" id="extra" value="{{ extra }}" placeholder="A, 2 H" style="width: 100%"><br />
-        <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" {% if paths_wo_timeline %}checked{% endif %}> <label for="paths_wo_timeline">ohne Timeline</label>
+    <p class="pure-alert pure-alert-warning" style="display: none" id="long-message">
     </p>
-    </section>
-    <section class="pure-u-1-3">
-    <h3>Kantenauswahl und -gestaltung:</h3>
-    <p><input type="checkbox" name="induced_edges" id="induced_edges" {% if induced_edges %}checked{% endif %}> <label for="induced_edges">alle induzierten Kanten</label></p>
-    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" {% if ignored_edges %}checked{% endif %}> <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
-    <p><input type="checkbox" name="tred" id="tred" {% if tred %}checked{% endif %}> <label for="tred">Transitive Reduktion</label> </p>
-    <p><input type="checkbox" name="no_edge_labels" id="no_edge_labels" {% if no_edge_labels %}checked{% endif %}> <label for="no_edge_labels">keine Kantenbeschriftung</label> </p>
+
+    <div id="refgraph"></div>
+
+    <form id="subgraph-form" method="get" class="flex-form pure-form">
+    <fieldset>
+    <legend>Zentrale Knoten
+    <small class="pull-right"><label><input type="checkbox" name="nohl" id="nohl" > nicht hervorheben</label></small>
+    </legend>
+    <p><input type="text" name="nodes" id="nodes" value="" style="width: 100%;" placeholder="2 V H.13">
+    </p>
+    <p>Pfade dazwischen:
+        <input type="radio" name="central_paths" value="no" id="ce_no"> <label for="ce_no">keine</label>
+        <input type="radio" name="central_paths" value="dag" id="ce_dag"> <label for="ce_dag">nur positive</label>
+        <input type="radio" name="central_paths" value="all" id="ce_all" checked> <label for="ce_all">alle</label>
+    </p>
+    <p><input type="checkbox" name="context" id="context" > <label for="context">Nachbarknoten</label></p>
+
+        <p><input type="checkbox" name="inscriptions" id="inscriptions" >
+            <label for="inscriptions">Inskriptionen ↔ Zeugen</label> </p>
+    <p><input type="checkbox" name="syn" id="syn" > <label for="syn">ungefähr gleichzeitige Knoten</label> </p>
+    </fieldset>
+    <fieldset>
+    <legend>Zusätzliche Pfade</legend>
+    <p><input type="checkbox" name="abs_dates" id="abs_dates" > <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
+    <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
+        <input type="text" name="extra" id="extra" value="" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
+        <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" > <label for="paths_wo_timeline">ohne Timeline</label>
+    </p>
+        {% if models|length > 1 %}
+            <p>
+                <label for="model">Modell: </label>
+                <select id="model" name="model" value="">
+                    {% for model_name in models %}
+                        <option value="{{ model_name }}">{{ model_name }}</option>
+                    {% endfor %}
+                </select>
+            </p>
+        {% endif %}
+    </fieldset>
+    <fieldset>
+    <legend>Kantenauswahl</legend>
+    <p><input type="checkbox" name="assertions" id="assertions" > <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
+    <p><input type="checkbox" name="induced_edges" id="induced_edges" > <label for="induced_edges">alle induzierten Kanten</label></p>
+    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" > <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
+    <p><input type="checkbox" name="tred" id="tred" > <label for="tred">Transitive Reduktion</label> </p>
+    </fieldset>
+    <fieldset>
+    <legend>Graphlayout</legend>
+    <p><input type="checkbox" name="no_edge_labels" id="no_edge_labels" > <label for="no_edge_labels">keine Kantenbeschriftung</label> </p>
+    <p><input type="checkbox" name="collapse" id="collapse" > <label for="collapse">Parallelkanten zusammenfassen</label> </p>
+    <p><input type="checkbox" name="order" id="order" > <label for="order">Topologische Sortierung</label></p>
+    <p style="vertical-align: middle">
+        Richtung:
+        <input id="dir-lr" name="dir" type="radio" value="LR" checked> <label for="dir-lr">→</label> 
+        <input id="dir-tb" name="dir" type="radio" value="TB"> <label for="dir-tb">↓</label> 
+        <input id="dir-rl" name="dir" type="radio" value="RL"> <label for="dir-rl">←</label> 
+        <input id="dir-bt" name="dir" type="radio" value="BT"> <label for="dir-bt">↑</label>
+    </p>
+    </fieldset>
 </form>
+
+    <datalist id="interesting-nodes">
+        <option value="A, 2 H"></option>
+        <option value="1 H.5, J.1, S, 2 III H.1, H P1, A, H P63, 2 V H.2, C.1 4, C.1 12, 2 H"></option>
+    </datalist>
 
 {% endblock %}
 
@@ -39,7 +286,7 @@
 {%- endblock -%}
 
 {% block download_current %}
-    <div class="pure-u-1-3 pure-gap">
+    <div id="download-graph" class="pure-u-1-3 pure-gap">
         <a>aktueller Graph</a>
         <a href="subgraph/pdf?{{ query }}"><i class="fa fa-file-pdf"></i> als PDF</a>
         <a href="subgraph/dot?{{ query }}"><i class="fa fa-doc-text"></i> als GraphViz .dot</a>

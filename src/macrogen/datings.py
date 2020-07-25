@@ -9,6 +9,7 @@ from typing import List, Tuple, Optional, Any, Generator, Union
 import networkx as nx
 from datetime import date, timedelta, datetime
 from lxml import etree
+from macrogen.splitgraph import start_end_graph
 from more_itertools import pairwise
 
 from .bibliography import BiblSource
@@ -285,6 +286,8 @@ def build_datings_graph() -> nx.MultiDiGraph:
                                    source=BiblSource('faust://heuristic', other_limit[1]['source'].citation),
                                    kind='not_before', xml=other_limit[1]['xml'])
 
+    if config.model in ('split', 'split-reverse'):
+        graph = start_end_graph(graph, config.model)
     add_timeline_edges(graph)
     return graph
 

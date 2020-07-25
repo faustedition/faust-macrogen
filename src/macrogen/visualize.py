@@ -15,10 +15,11 @@ from tqdm import tqdm
 
 from .config import config
 from .datings import add_timeline_edges
-from macrogen import BiblSource
-from macrogen.graphutils import pathlink
+from .bibliography import BiblSource
+from .graphutils import pathlink, base_n
 from .uris import Reference
 from .graph import Node
+from .splitgraph import SplitReference
 import logging
 
 logger: logging.Logger = config.getLogger(__name__)
@@ -38,16 +39,27 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attrs['kind'] = 'date'
             translation[node] = node.isoformat()
         elif isinstance(node, Reference):
-            attrs['kind'] = node.__class__.__name__
             attrs['label'] = node.label
             translation[node] = node.uri
+            if isinstance(node, SplitReference):
+                attrs['kind'] = node.side.value
+            else:
+                attrs['kind'] = node.__class__.__name__
+        else:
+            attrs['kind'] = type(node).__name__
+            attrs['label'] = str(node)
+            translation[node] = base_n(hash(node), 62)  # use a stable, short representation
         _simplify_attrs(attrs)
 
     nx.relabel_nodes(graph, translation, copy=False)
 
     for u, v, attrs in graph.edges(data=True):
         if 'source' in attrs and not 'label' in attrs:
-            attrs['label'] = str(attrs['source'])
+            source_ = attrs['source']
+            if isinstance(source_, Sequence) and not isinstance(source_, str):
+                attrs['label'] = '\n'.join(f"{s.citation}: {s.detail}" if s.detail else s.citation for s in source_)
+            else:
+                attrs['label'] = str(source_)
         _simplify_attrs(attrs)
 
     return graph
@@ -123,6 +135,11 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
     if highlight is not None:
         if not isinstance(highlight, Sequence):
             highlight = [highlight]
+
+        for node in list(highlight):
+            if isinstance(node, SplitReference) and node.other:
+                highlight.append(node.other)
+
         if 'highlight' in style['node']:
             for highlight_node in highlight:
                 try:
@@ -144,6 +161,8 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
             for styled_attr in attr.keys() & style['edge']:
                 if attr[styled_attr]:
                     simplified.edges[u, v, k].update(style['edge'][styled_attr])
+            if 'topo' in attr and 'constraint' in attr:
+                del attr['constraint']
 
     if 'node' in style:
         for node, attr in simplified.nodes(data=True):

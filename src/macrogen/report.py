@@ -3,9 +3,11 @@ import json
 import os
 import urllib
 from collections import defaultdict, Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from functools import partial
 from html import escape
-from itertools import chain, groupby
+from io import StringIO
+from itertools import chain, groupby, zip_longest
 from operator import itemgetter
 from os import fspath
 from pathlib import Path
@@ -23,9 +25,10 @@ from pandas import DataFrame
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
-from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node
+from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, temp_syn_groups
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
+from .splitgraph import Side, SplitReference, side_node
 from .visualize import write_dot, simplify_graph
 from .witnesses import WitInscrInfo, DocumentCoverage, InscriptionCoverage, SceneInfo
 
@@ -40,6 +43,26 @@ RELATION_LABELS = {'not_before': 'nicht vor',
                    'temp-pre': 'zeitlich vor',
                    None: '???'
                    }
+
+class SingleItem:
+    """A special representation for a single item."""
+    def __init__(self, item):
+        self.item = item
+    def __len__(self):
+        return 1
+    def __getitem__(self, item):
+        s = item if isinstance(item, slice) else slice(item)
+        s = s.indices(1)
+        if s[0] != 0 or s[1] != 1:
+            raise IndexError(f"SingleItem only has a single item, so you cannot index it with {item}")
+        else:
+            return item
+    def __iter__(self):
+        yield self.item
+    def __str__(self):
+        return str(self.item)
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.item!r})"
 
 
 class HtmlTable:
@@ -117,6 +140,16 @@ class HtmlTable:
         self.row_attrs.append(row_attrs)
         return self
 
+    def __len__(self):
+        return len(self.rows)
+
+    @staticmethod
+    def _build_attrs(attrdict: Dict):
+        """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
+        return ''.join(
+                ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
+                attrdict.items())
+
     def _format_column(self, index, data) -> str:
         """
         Returns the HTML for the given cell.
@@ -150,11 +183,15 @@ class HtmlTable:
         """
         attributes = _build_attrs(rowattrs)
         try:
-            return f'<tr{attributes}>' + ''.join(
-                    self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
+            if isinstance(row, SingleItem):
+                return f'<tr{attributes}><td colspan="{len(self.titles)}">{row.item}</td></tr>'
+            else:
+                return f'<tr{attributes}>' + ''.join(
+                        self._format_column(index, column) for index, column in enumerate(row)) + '</tr>'
         except:
-            logger.exception('Error formatting row %s', row)
-            return f'<tr class="pure-alert pure-error"><td>Error formatting row {row}</td></tr>'
+            row_str = ", ".join(f"{title!s}: {value!r}" for title, value in zip_longest(self.titles, row))
+            logger.exception('Error formatting row (%s)', row_str)
+            return f'<tr class="pure-alert pure-error"><td colspan="{len(self.titles)}">Error formatting row ({row_str})</td></tr>'
 
     def _format_rows(self, rows: Iterable[Iterable]) -> Generator[str, None, None]:
         """Formats the given rows."""
@@ -325,12 +362,17 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
             writer.writerow([bibl, BiblSource(bibl).weight, total] + [bibls[bibl][kind] for kind in kinds])
 
 
-def _fmt_node(node: Union[Reference, object]):
+def _fmt_node(node: Union[Reference, date], prefix: str = None) -> str:
     """Formats a node by creating a link of possible"""
+    prefix = prefix or ''
     if isinstance(node, Reference):
-        return f'<a href="{node.filename.stem}">{node}</a>'
+        return f'<a href="{prefix}{node.filename.stem}">{node}</a>'
     else:
         return format(node)
+
+
+def nodeformatter(prefix: str) -> Callable[[Union[Reference, date]], str]:
+    return partial(_fmt_node, prefix=prefix)
 
 
 def _edition_link(ref: Reference):
@@ -370,6 +412,24 @@ def _subgraph_link(*nodes: List[Node], html_content: Optional[str] = None, **opt
     return f'<a href="subgraph?{urllib.parse.urlencode(params)}">{html_content}</a>'
 
 
+def _fmt_date(d: date, delta: timedelta = timedelta(), na: str = '') -> str:
+    """
+    Helper to format a given date.
+
+    Args:
+        d: The date to format
+        delta: If present, a difference to add to d before formatting
+        na: When date is a N/A value, return this string instead
+
+    Returns:
+        iso-formatted, delta corrected date or the given na string
+    """
+    if not d or pd.isna(d):
+        return na
+    else:
+        return (d + delta).isoformat()
+
+
 class RefTable(HtmlTable):
     """
     Builds a table of references.
@@ -377,15 +437,16 @@ class RefTable(HtmlTable):
 
     def __init__(self, graphs: MacrogenesisInfo, **table_attrs):
         super().__init__(data_sortable="true", **table_attrs)
-        (self.column('Nr.', data_sortable="numericplus")
-         .column('Knoten davor', data_sortable="numericplus")
-         .column('Objekt', data_sortable="sigil", format_spec=_fmt_node)
-         .column('Typ / Edition', data_sortable="sigil", format_spec=_edition_link)
-         .column('nicht vor', data_sortable="alpha", format_spec=lambda d: format(d) if d != EARLIEST else "")
-         .column('nicht nach', data_sortable="alpha", format_spec=lambda d: format(d) if d != LATEST else "")
-         .column('erster Vers', data_sortable="numericplus")
-         .column('Aussagen', data_sortable="numericplus")
-         .column('<a href="conflicts">Konflikte</a>', data_sortable="numericplus"))
+        (self.column('Nr.', data_sortable_type="numericplus")
+         .column('(BL)', data_sortable_type="numericplus", format_spec=lambda f: str(int(f)) if f else '')
+         .column('Knoten davor', data_sortable_type="numericplus")
+         .column('Objekt', data_sortable_type="sigil", format_spec=_fmt_node)
+         .column('Typ / Edition', data_sortable_type="sigil", format_spec=_edition_link)
+         .column('nicht vor', data_sortable_type="alpha", format_spec=partial(_fmt_date, delta=DAY))
+         .column('nicht nach', data_sortable_type="alpha", format_spec=partial(_fmt_date, delta=-DAY))
+         .column('erster Vers', data_sortable_type="numericplus")
+         .column('Aussagen', data_sortable_type="numericplus")
+         .column('<a href="conflicts">Konflikte</a>', data_sortable_type="numericplus"))
         self.graphs = graphs
         self.base = graphs.base
 
@@ -396,38 +457,55 @@ class RefTable(HtmlTable):
         Args:
             ref: the object for which the row will be created
             index: if present, the index to display for the node.
-            write_subpage: if true, create a subpage with all assertions for the referende
+            write_subpage: if true, create a subpage with all assertions for the reference
         """
+        details = self.graphs.details
         if ref in self.base:
             if index is None:
                 index = self.graphs.index.get(ref, -1)
-            assertions = list(chain(self.base.in_edges(ref, data=True), self.base.out_edges(ref, data=True)))
+            if isinstance(ref, SplitReference):
+                wit = ref.reference
+                start_node = side_node(self.base, wit, Side.START)
+                end_node = side_node(self.base, wit, Side.END)
+            else:
+                start_node, wit, end_node = ref, ref, ref
+            assertions = list(
+                    chain(self.base.in_edges(start_node, data=True), self.base.out_edges(end_node, data=True)))
             conflicts = [assertion for assertion in assertions if 'delete' in assertion[2] and assertion[2]['delete']]
-            self.row((f'<a href="refs#idx{index}">{index}</a>', ref.rank, ref, ref, ref.earliest, ref.latest,
-                      getattr(ref, 'min_verse', ''), len(assertions), len(conflicts)),
-                     id=f'idx{index}', class_=type(ref).__name__)
+            self.row(
+                    (f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit, 'rank'],
+                     wit, wit, details.max_before_date[wit], details.min_after_date[wit],
+                     getattr(wit, 'min_verse', ''), len(assertions), len(conflicts)),
+                    id=f'idx{index}', class_=type(wit).__name__)
             if write_subpage:
                 self._last_ref_subpage(ref)
         else:
-            self.row((index, 0, format(ref), ref, '', '', getattr(ref, 'min_verse', ''), ''),
-                     class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
+            wit = ref.reference if isinstance(ref, SplitReference) else ref
+            self.row(
+                    (f'<a href="refs#idx{index}">{index}</a>', details.baseline_position[wit], details.loc[wit, 'rank'],
+                     wit, wit, details.max_before_date[wit], details.min_after_date[wit],
+                     getattr(wit, 'min_verse', ''), 0, 0),
+                    # (index, 0, format(wit), wit, '', '', getattr(wit, 'min_verse', ''), ''),
+                    class_='pure-fade-40', title='Keine Macrogenesedaten', id=f'idx{index}')
 
     def _last_ref_subpage(self, ref):
         """Writes a subpage for ref, but only if it’s the last witness we just wrote"""
         target = config.path.report_dir
-        basename = target / ref.filename
-        relevant_nodes = {ref} | set(self.base.predecessors(ref)) | set(self.base.successors(ref))
-        if ref.earliest != EARLIEST:
-            relevant_nodes |= set(nx.shortest_path(self.base, ref.earliest - DAY, ref))
-        if ref.latest != LATEST:
-            relevant_nodes |= set(nx.shortest_path(self.base, ref, ref.latest + DAY))
-        ref_subgraph = self.base.subgraph(relevant_nodes)
+        if isinstance(ref, SplitReference):
+            start_node = side_node(self.base, ref, Side.START)
+            end_node = side_node(self.base, ref, Side.END)
+            wit = ref.reference
+        else:
+            start_node, end_node, wit = ref, ref, ref
+        basename = target / wit.filename
+
+        ref_subgraph = self.graphs.subgraph(ref, context=True, abs_dates=True, direct_assertions=True)
         write_dot(ref_subgraph, basename.with_name(basename.stem + '-graph.dot'), highlight=ref)
         report = f"<!-- {repr(ref)} -->\n"
         report += self.format_table(self.rows[-1:])
         report += f"""<object id="refgraph" class="refgraph" type="image/svg+xml" data="{basename.with_name(
                 basename.stem + '-graph.svg').name}"></object>
-                {_subgraph_link(ref, abs_dates=True, assertions=True, ignored=True, induced_edges=True)}\n"""
+                {_subgraph_link(wit, abs_dates=True, assertions=True, ignored=True, induced_edges=True)}\n"""
         kinds = {'not_before': 'nicht vor',
                  'not_after': 'nicht nach',
                  'from_': 'von',
@@ -437,6 +515,7 @@ class RefTable(HtmlTable):
                  'temp-pre': 'entstanden nach',
                  'orphan': '(Verweis)',
                  'inscription': 'Inskription von',
+                 'progress': 'Schreibverlauf',
                  None: '???'
                  }
         assertionTable = (HtmlTable(data_sortable='true')
@@ -446,7 +525,7 @@ class RefTable(HtmlTable):
                           .column('Quelle', data_sortable_type='bibliography', format_spec=_fmt_source)
                           .column('Kommentare', format_spec=_fmt_comments)
                           .column('XML', format_spec=_fmt_xml))
-        for (u, v, attr) in self.base.in_edges(ref, data=True):
+        for (u, v, attr) in self.base.in_edges(start_node, data=True):
             delete_ = 'delete' in attr and attr['delete']
             assertionTable.row((
                 f'<a href="{pathlink(u, v)}">nein</a>' if attr.get('delete', False) else \
@@ -458,7 +537,7 @@ class RefTable(HtmlTable):
                 attr.get('xml', [])),
                     class_='delete' if delete_ else str(attr['kind']))
         kinds['temp-pre'] = 'entstanden vor'
-        for (u, v, attr) in self.base.out_edges(ref, data=True):
+        for (u, v, attr) in self.base.out_edges(end_node, data=True):
             delete_ = 'delete' in attr and attr['delete']
             assertionTable.row((f'<a href="{pathlink(u, v).stem}">nein</a>' if delete_ else 'ja',
                                 kinds[attr['kind']],
@@ -469,17 +548,22 @@ class RefTable(HtmlTable):
                                class_='delete' if delete_ else str(attr['kind']))
         write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
                    breadcrumbs=[dict(caption='Referenzen', link='refs')],
-                   head=str(ref), graph_id='refgraph')
+                   head=ref.label, graph_id='refgraph')
 
 
 class AssertionTable(HtmlTable):
 
-    def __init__(self, **table_attrs):
+    def __init__(self, prefix=None, **table_attrs):
         super().__init__(data_sortable='true', **table_attrs)
+        self.prefix = prefix or ''
+        if prefix:
+            nodeformat = nodeformatter(self.prefix)
+        else:
+            nodeformat = _fmt_node
         (self.column('berücksichtigt?', data_sortable_type="alpha")
-         .column('Subjekt', _fmt_node, data_sortable_type="sigil")
+         .column('Subjekt', nodeformat, data_sortable_type="sigil")
          .column('Relation', RELATION_LABELS.get, data_sortable_type="alpha")
-         .column('Objekt', _fmt_node, data_sortable_type="sigil")
+         .column('Objekt', nodeformat, data_sortable_type="sigil")
          .column('Quelle', _fmt_source, data_sortable_type="bibliography")
          .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
          .column('XML', _fmt_xml, data_sortable_type="alpha"))
@@ -489,7 +573,7 @@ class AssertionTable(HtmlTable):
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
         self.row((
-            f'<a href="{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
+            f'<a href="{self.prefix}{Path(pathlink(u, v)).stem}">nein</a>' if attr.get('delete', False) else
             'ignoriert' if attr.get('ignore', False) else 'ja',
             u,
             attr['kind'],
@@ -628,7 +712,7 @@ def report_downloads(graphs: MacrogenesisInfo):
     from macrogen import MacrogenesisInfo
     graphs = MacrogenesisInfo('macrogen-info.zip')
     </pre>
-    <p>Note this is barely tested yet.</p>
+    <p>
     """, "Downloads")
 
 
@@ -646,7 +730,7 @@ def report_refs(graphs: MacrogenesisInfo):
     nx.write_gpickle(graphs.working, str(target / 'working.gpickle'))
     nx.write_gpickle(graphs.base, str(target / 'base.gpickle'))
 
-    refs = graphs.order_refs()
+    refs = graphs.order_refs_post_model()
     overview = RefTable(graphs)
 
     for index, ref in enumerate(refs, start=1):
@@ -686,7 +770,8 @@ def _flatten(items: List) -> List:
 
 def report_missing(graphs: MacrogenesisInfo):
     target = config.path.report_dir
-    refs = {node for node in graphs.base.nodes if isinstance(node, Reference)}
+    refs = {node.reference if isinstance(node, SplitReference) else node
+            for node in graphs.base.nodes if isinstance(node, Reference)}
     all_wits = {wit for wit in Witness.database.values() if isinstance(wit, Witness)}
     used_wits = {wit for wit in refs if isinstance(wit, Witness)}
     unknown_refs = {wit for wit in refs if isinstance(wit, UnknownRef)}
@@ -896,10 +981,13 @@ def report_index(graphs):
               'Graph aller für die Sortierung berücksichtigter Aussagen (einzoomen!)'),
              ('tred', 'transitive Reduktion',
               '<a href="https://de.wikipedia.org/w/index.php?title=Transitive_Reduktion">Transitive Reduktion</a> des Gesamtgraphen'),
+             ('syn', 'Zeitliche Nähe', 'Zeugengruppen, für die Aussagen über ungefähre Gleichzeitigkeit vorliegen'),
              ('timeline', 'Zeitstrahl', 'Zeitstrahl datierter Zeugen'),
              ('help', 'Legende', 'Legende zu den Graphen'),
+             ('stats', 'Statistik', 'Der Graph in Zahlen'),
+             ('config', 'Konfiguration', 'Einstellungen, mit denen der Graph generiert wurde'),
              ('downloads', 'Downloads', 'Graphen zum Download'),
-             ('stats', 'Statistik', 'Der Graph in Zahlen')]
+             ]
     links = "\n".join(
             ('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page
              in pages))
@@ -1025,22 +1113,6 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     write_html(target / 'help.php', report, 'Legende')
 
 
-def _yearlabel(ref: Reference):
-    earliest_year = ref.earliest.year
-    latest_year = ref.latest.year
-    if earliest_year == latest_year:
-        return str(earliest_year)
-    else:
-        sep = " … "
-        result = ""
-        if ref.earliest != EARLIEST:
-            result += str(earliest_year)
-        result += sep
-        if ref.latest != LATEST:
-            result += str(latest_year)
-        return result if result != sep else ""
-
-
 def report_scenes(graphs: MacrogenesisInfo):
     target = config.path.report_dir
     sceneTable = (HtmlTable(data_sortable="true")
@@ -1083,6 +1155,32 @@ def report_scenes(graphs: MacrogenesisInfo):
     write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
 
 
+def report_syngroups(graphs: MacrogenesisInfo):
+    clusters = temp_syn_groups(graphs.base)
+    target: Path = config.path.report_dir
+    table = (HtmlTable(data_sortable="true")
+             .column('Referenzen', data_sortable_type='sigil')
+             .column('Anzahl', data_sortable_type='numericplus')
+             .column('Aussagen', data_sortable_type='numericplus'))
+    for cluster in clusters:
+        representant = min(cluster, key=lambda item: item.filename)
+        file_stem = f"syn-{representant.filename.stem}"
+        subgraph = graphs.subgraph(*cluster)
+        write_dot(subgraph, target / (file_stem + "-graph.dot"), highlight=list(cluster))
+        assertions = AssertionTable()
+        for u, v, attr in graphs.base.subgraph(cluster).edges(data=True):
+            if attr.get('kind', None) == 'temp-syn':
+                assertions.edge(u, v, attr)
+        write_html(target / (file_stem + '.php'),
+                   f"""<object id="refgraph" type="image/svg+xml" data="{file_stem}-graph.svg"></object>\n""" +
+                   _subgraph_link(*cluster) +
+                   assertions.format_table(),
+                   graph_id='refgraph', head=f'Zeitgleich mit {representant.label}',
+                   breadcrumbs=[dict(caption='ca. gleichzeitig', link='syn')])
+        table.row((f'<a href="{file_stem}">{", ".join(map(str, cluster))}</a>', len(cluster), len(assertions)))
+    write_html(target / 'syn.php', table.format_table(), head='ca. gleichzeitig')
+
+
 def report_unused(graphs: MacrogenesisInfo):
     unused_nodes = set(node for node in graphs.base.nodes if isinstance(node, Reference)) - set(graphs.dag.nodes)
     not_in_dag_table = RefTable(graphs)
@@ -1103,30 +1201,35 @@ def report_unused(graphs: MacrogenesisInfo):
                "Nicht eingeordnete Zeugen")
 
 
-def write_order_xml(graphs):
+def write_order_xml(graphs: MacrogenesisInfo):
     order_xml: Path = config.path.order or config.path.report_dir / 'order.xml'
     logger.debug('Writing order file to %s', order_xml.absolute())
+    ordered_refs = graphs.order_refs_post_model()
+    if any(isinstance(ref, SplitReference) for ref in ordered_refs):
+        ordered_refs = [sr.reference for sr in ordered_refs]
+    ordered_wits = [ref for ref in ordered_refs if isinstance(ref, Witness)]
     F = ElementMaker(namespace='http://www.faustedition.net/ns', nsmap=config.namespaces)
     root = F.order(
             Comment('This file has been generated from the macrogenesis data. Do not edit.'),
-            *[F.item(format(witness),
-                     index=format(index),
-                     uri=witness.uri,
-                     sigil_t=witness.sigil_t,
-                     earliest=witness.earliest.isoformat() if witness.earliest != EARLIEST else '',
-                     latest=witness.latest.isoformat() if witness.latest != LATEST else '',
-                     yearlabel=_yearlabel(witness))
-              for index, witness in enumerate(graphs.order_refs(), start=1)
-              if isinstance(witness, Witness)],
+            *[F.item(format(row.Index),
+                     index=format(row.position),
+                     uri=row.uri,
+                     sigil_t=row.Index.sigil_t,
+                     earliest=(row.max_before_date + DAY).isoformat() if not pd.isna(row.max_before_date) else '',
+                     latest=(row.min_after_date - DAY).isoformat() if not pd.isna(row.min_after_date) else '',
+                     yearlabel=row.yearlabel)
+              for row in graphs.details.query('kind == "Witness"').itertuples(index=True)],
             generated=datetime.now().isoformat())
     order_xml.parent.mkdir(parents=True, exist_ok=True)
     root.getroottree().write(str(order_xml), pretty_print=True)
 
     stats = graphs.year_stats()
-    data = dict(max=max(stats.values()), counts=stats)
+    data = dict(max=max(stats.values(), default=None), counts=stats)
     config.path.report_dir.mkdir(exist_ok=True, parents=True)
     with (config.path.report_dir / 'witness-stats.json').open('wt', encoding='utf-8') as out:
         json.dump(data, out)
+
+    graphs.details.to_csv(config.path.report_dir / 'ref_info.csv', date_format='iso')
 
 
 def report_stats(graphs: MacrogenesisInfo):
@@ -1143,6 +1246,7 @@ def report_stats(graphs: MacrogenesisInfo):
     Returns:
 
     """
+    report = dict()
     refs = graphs.order_refs()
     extra_refs_count = len(refs) - len(set(refs))
     logger.warning('Extra ref count: %s', extra_refs_count)
@@ -1188,21 +1292,48 @@ def report_stats(graphs: MacrogenesisInfo):
                     for source in dating.sources:
                         yield item, item.__class__.__name__, dating.start, dating.end, source
 
-    dating_stat = pd.DataFrame(list(_dating_table()), columns='item kind start end source'.split())
-
     edge_df = pd.DataFrame([dict(start=u, end=v, key=k, **attr)
                             for u, v, k, attr in graphs.base.edges(keys=True, data=True)])
-    edge_df.delete = edge_df.delete.fillna(False)
+    edge_df['delete'] = edge_df['delete'].fillna(False) if 'delete' in edge_df.columns else False
     edge_df.ignore = edge_df.ignore.fillna(False)
 
+    report['edges'] = len(edge_df)
+    report['assertions'] = (edge_df.kind != 'timeline').sum()
+    report.update(edge_df.kind.value_counts())
+    report['ignored'] = edge_df.ignore.sum()
+    report['deleted'] = edge_df.delete.sum()
+    report['deleted_unique'] = len(edge_df[edge_df.delete].groupby(['start', 'end']))
+    report['spearman'] = graphs.spearman_rank_correlation()
+
+    details = graphs.details
+    report['not_before.direct'] = (~details.max_abs_before_date.isna()).sum()
+    report['not_before.inferred'] = (details.max_abs_before_date.isna() & ~details.max_before_date.isna()).sum()
+    report['not_before.adjusted'] = (~details.max_abs_before_date.isna() & (details.max_abs_before_date != details.max_before_date)).sum()
+    report['not_before.missing'] = (details.max_before_date.isna()).sum()
+
+    report['not_after.direct'] = (~details.min_abs_after_date.isna()).sum()
+    report['not_after.inferred'] = (details.min_abs_after_date.isna() & ~details.min_after_date.isna()).sum()
+    report['not_after.adjusted'] = (~details.min_abs_after_date.isna() & (details.min_abs_after_date != details.min_after_date)).sum()
+    report['not_after.missing'] = (details.min_after_date.isna()).sum()
+
+    with (config.path.report_dir / 'statistics.csv').open('wt', encoding='utf-8') as csv_file:
+        csv_writer = csv.DictWriter(csv_file, report.keys())
+        csv_writer.writeheader()
+        csv_writer.writerow(report)
+
     html = f"""
+    <a class="pure-pull-right" href="statistics.csv"><i class="fa fa-download"></i> CSV</a>
     <h2>Kanten (Aussagen)</h2>
-    <p>{len(edge_df)} Kanten, {(edge_df.kind != 'timeline').sum()} Datierungsaussagen:</p>
+    <p>{report['edges']} Kanten, {report['assertions']} Datierungsaussagen:</p>
     <pre>{edge_df.kind.value_counts()}</pre>
     <p>{edge_df.ignore.sum()} Aussagen (manuell) ignoriert,
     {edge_df.delete.sum()} widersprüchliche Aussagen (automatisch) ausgeschlossen
     ({len(edge_df[edge_df.delete].groupby(['start', 'end']))} ohne Parallelaussagen)
     </p>
+    
+    <h2>Sortierung</h2>
+    <p>Korrelation um <strong><var>ρ</var> = {report['spearman']:+.5f}</strong> ∈ [-1, +1] 
+       mit einer Sortierung ohne Makrogeneseinformationen.</p>
 
     <h2>Absolute Datierungen</h2>
     <table class="pure-table">
@@ -1210,31 +1341,34 @@ def report_stats(graphs: MacrogenesisInfo):
         <thead><tr><td/><th>direkt</th><th>erschlossen</th><th>angepasst</th><th>fehlend</th></tr></thead>
         <tbody>
         <tr><th>Datumsuntergrenze</th>
-            <td>{(stat.pred_dates > 0).sum()}</td>
-            <td>{(~stat.auto_pre.isna() & ~(stat.pred_dates > 0)).sum()}</td>
-            <td>{(~stat.auto_pre.isna() & ~stat.pre.isna() & (stat.auto_pre != stat.pre)).sum()}</td>
-            <td>{(stat.auto_pre.isna()).sum()}</td>
+            <td>{report['not_before.direct']}</td>
+            <td>{report['not_before.inferred']}</td>
+            <td>{report['not_before.adjusted']}</td>
+            <td>{report['not_before.missing']}</td>
         </tr>
         <tr><th>Datumsobergrenze</th>
-            <td>{(stat.succ_dates > 0).sum()}</td>
-            <td>{(~stat.auto_post.isna() & ~(stat.succ_dates > 0)).sum()}</td>
-            <td>{(~stat.auto_post.isna() & ~stat.post.isna() & (stat.auto_post != stat.post)).sum()}</td>
-            <td>{(stat.auto_post.isna()).sum()}</td>
+            <td>{report['not_after.direct']}</td>
+            <td>{report['not_after.inferred']}</td>
+            <td>{report['not_after.adjusted']}</td>
+            <td>{report['not_after.missing']}</td>
         </tr>
         </tbody>
     </table>
     """
     write_html(config.path.report_dir / "stats.php", html, "Statistik")
 
-    return stat, dating_stat, edge_df
 
 
 def report_timeline(graphs: MacrogenesisInfo):
     witinfo = WitInscrInfo.get()
 
-    def ref_info(ref) -> dict:
-        result = dict(start=ref.earliest.isoformat(), end=(ref.latest + DAY).isoformat(),
-                      content=_fmt_node(ref), id=ref.filename.stem, index=graphs.index[ref])
+    def ref_info(row) -> dict:
+        ref = row.Index
+        result = dict(start=row.max_before_date.isoformat(),
+                      end=row.min_after_date.isoformat(),
+                      content=_fmt_node(ref),
+                      id=ref.filename.stem,
+                      index=row.position)
         info = witinfo.get().by_uri.get(ref.uri, None)
         if info:
             result['scenes'] = sorted([scene.n for scene in info.max_scenes])
@@ -1246,12 +1380,12 @@ def report_timeline(graphs: MacrogenesisInfo):
             result['group'] = None
         return result
 
-    refs = graphs.order_refs()
+    rows = graphs.details.itertuples(index=True)
     data = list()  # FIXME list comprehension after #25 is resolved
     known = set()
-    for ref in refs:
-        if ref.earliest > EARLIEST and ref.latest < LATEST:
-            info = ref_info(ref)
+    for row in rows:
+        if not (pd.isna(row.max_before_date) or pd.isna(row.min_after_date)):
+            info = ref_info(row)
             if info['id'] not in known:
                 data.append(info)
                 known.add(info['id'])
@@ -1364,6 +1498,111 @@ def report_inscriptions(info: MacrogenesisInfo):
                </section></div>
                """,
                'Inskriptionen')
+
+
+def report_config(info: MacrogenesisInfo):
+    models = {
+        'single': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten repräsentiert wird.',
+        'split': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
+                 'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
+                 'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
+                 'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
+                 '<em>A wurde beendet, bevor mit B begonnen wurde</em>.',
+        'split-reverse': 'Datenmodell, bei dem jeder Zeuge und jede Inskription durch je einen Knoten für den Beginn und einen '
+                         'Knoten für das Ende des Schreibprozesses repräsentiert wird. '
+                         'Eine Kante stellt sicher, dass der Beginn vor dem Ende liegt. '
+                         'Eine Aussage wie <em>A vor B</em> wird interpretiert als '
+                         '<em>A wurde begonnen, bevor B beendet wurde</em>.',
+    }
+
+    inscriptions = {
+        'orphan': 'Falls für einen Zeugen <var>w</var> keine Makrogeneseaussagen vorliegen, aber für mindestens eine '
+                  'Inskription <var>w<sub>i</sub></var> von <var>w</var>, so wird für jede Inskription von <var>w</var>'
+                  'eine Kante <var>w<sub>i</sub> → w</var> eingezogen.',
+        'copy': 'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert.',
+        'copy-orphans': 'Alle Aussagen über Inskriptionen werden auf die zugehörigen Zeugen kopiert, wenn'
+                        'für die Zeugen keine eigenen Aussagen vorliegen.',
+        'inline': 'Eine Inskription <var>w<sub>i</sub></var> eines Zeugen <var>w</var> wird so eingebunden, dass '
+                  'sie nach dem Beginn von <var>w</var> beginnt und vor dem Ende von <var>w</var> endet.',
+    }
+    half_interval_mode = {
+        'off': 'Abgeleitete Intervallgrenzen wurden niemals hinzugefügt.',
+        'light': 'Nur wenn für einen Zeugen keine einzige belegte Angabe der einen Intervallgrenze einer absoluten '
+                 'Datierung, aber mindestens '
+                 'eine Angabe der anderen Intervallgrenze existiert, wird eine künstliche Intervallgrenze eingezogen,'
+                 f'und zwar um <strong>{config.half_interval_correction}</strong> (<code>half_interval_correction</code>) '
+                 'Tage von der dem Zeugen nächsten Intervallgrenze entfernt.',
+        'always': 'Gibt eine Quelle für einen Zeugen nur eine Intervallgrenze zur absoluten Datierung an, so wird '
+                  f'automatisch eine um ± <strong>{config.half_interval_correction}</strong> '
+                  '(<code>half_interval_correction</code> Tage entfernte andere Intervallgrenze ergänzt.)'
+    }
+    content = f"""
+    <p>Durch die Konfiguration kann die makrogenetische Analyse beeinflusst werden. Diese Seite zeigt und erläutert 
+    wichtige Einstellungen, wie sie bei der Generierung dieser Daten aktuell waren.</p>
+    <h2 id="model">Graphmodell (<code>model</code>)</h2>
+    <dl>
+    <dt><code>{config.model}</code></dt>
+    <dd>{models[config.model]}</dd>
+    </dl>
+    <h3 id="inscriptions">Inskriptionsbehandlung</h3>
+    <p>Die folgenden Regeln wurden angewandt, um Inskriptionen und die zugehörigen Zeugen zu verbinden:</p>
+    <ul>
+    """
+    for option in config.inscriptions or []:
+        content += f'<li>(<code>{option}</code>) {inscriptions.get(option, "…")}</li>\n'
+    content += f"""
+    </ul>
+    <h3 id="heuristics">Ergänzende Heuristiken</h3>
+    <p>Für manche Knoten existiert nur eine »halbe« absolute Datierung, d. h. nur die Angabe entweder eines frühesten
+       Beginns oder eines spätesten Endes. Eine Heuristik kann ggf. die andere Seite ergänzen 
+       (<code>half_interval_mode</code>):</p>
+    <dl><dt><code>{config.half_interval_mode}</code></dt><dd>{half_interval_mode[config.half_interval_mode]}</dd></dl>
+    """
+
+    content += """
+    <h3 id="temp-syn">Umgang mit Gleichzeitigkeit (<code>temp_syn</code>)</h3>
+    """
+    if not config.temp_syn or config.temp_syn == 'ignore':
+        content += """
+            <p>Aussagen, dass bestimmte Zeugen in zeitlicher Nähe verfasst wurden, werden <a href='syn'>dargestellt</a>,
+            aber nicht weiter ausgewertet.</p>"""
+    else:
+        temp_syn = {
+            'copy': 'Alle eingehenden Kanten aller Gruppenknoten werden auf den Vorher-Knoten kopiert, alle ausgehenden '
+                    'Kanten auf den Nachher-Knoten',
+            'closest': 'Die späteste absolute vorher-Datierung eines der Gruppenknoten und die früheste absolute '
+                       'nachher-Datierun wird übertragen',
+            'farthest': 'Die früheste absolute vorher-Datierung eines der Gruppenknoten und die späteste absolute '
+                       'nachher-Datierun wird übertragen',
+        }
+        content += f"""
+        <p>Einzelne Aussagen besagen, dass bestimmte Zeugen in zeitlicher Nähe zueinander verfasst worden sind. Die
+        <a href="syn">durch solche Aussagen verbundenen Zeugen (Äquivalenzklassen)</a> werden so behandelt, dass jeweils vor
+        und nach den entsprechenden Zeugengruppen ein »Dummyknoten« • eingefügt wird, der zu jedem der Knoten verbunden wird.
+        Dann werden Datierungsaussagen zu den Zeugengruppen ausgewählt und auf die Dummyknoten übertragen:</p>
+        {temp_syn[config.temp_syn]} (<code>{config.temp_syn}</code>)
+        """
+
+    content += """<h2 id="bibscores">Gewichte für bibliographische Quellen</h2>
+    <table class="pure-table" data-sortable="true">
+    <thead><tr><th data-sortable-type="alpha">Quelle</th><th data-sortable-type="numeric">Gewicht</th></tr></thead>
+    <tbody>
+    """
+    for uri, value in sorted(config.bibscores.items(), key=itemgetter(1)):
+        source = BiblSource(uri)
+        content += f"<tr><td><a href='{source.filename}' title='{source.long_citation}'>{source}</td><td class='pure-right'>{value}</td></tr>"
+    content += """</tbody></table>"""
+
+    config_io = StringIO()
+    config.save_config(config_io)
+    content += f"""
+    <h2 id="config.yaml">Konfigurationsdatei</h2>
+    <pre class="lang-yaml">
+    {config_io.getvalue()}
+    </pre>
+    """
+
+    write_html(config.path.report_dir / "config.php", content, head="Konfiguration")
 
 
 def generate_reports(info: MacrogenesisInfo):

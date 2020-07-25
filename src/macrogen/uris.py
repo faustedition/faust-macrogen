@@ -78,8 +78,11 @@ class Reference(metaclass=ABCMeta):
         elif self.uri.startswith('faust://document'):
             kind, sigil = self.uri.split('/')[-2:]
             return f"{kind}: {sigil}"
-        else:
-            return self.uri
+        elif self.uri.startswith('faust://bibliography'):
+            bibentry = config.bibliography.get(self.uri)
+            if bibentry:
+                return bibentry.citation
+        return self.uri
 
     def sort_tuple(self):
         """
@@ -112,7 +115,7 @@ class Reference(metaclass=ABCMeta):
         Returns:
             Path, with extension `.dot`
         """
-        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?$', self.uri)
+        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?(#\S+?)$', self.uri)
         if match:
             result = f'{match.group(2)}.{match.group(3)}'
             if match.group(5):
@@ -154,6 +157,9 @@ class Inscription(Reference):
     def sort_tuple(self):
         v, s1, n, s2 = super().sort_tuple()
         return (v, s1, n, s2 + " " + self.inscription)
+
+    def sigil_sort_key(self):
+        return self.witness.sigil_sort_key() + (self.inscription,)
 
 
 class UnknownRef(Reference):
@@ -291,6 +297,8 @@ class Witness(Reference):
             cls._load_paralipomena()
 
         orig_uri = uri
+        if '#' in uri:
+            uri = uri[:uri.index('#')]
         uri = uri.replace('-', '_')
 
         if uri in cls.corrections:

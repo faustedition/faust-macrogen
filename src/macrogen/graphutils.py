@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence
+from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional, Set
 
 import networkx as nx
 
@@ -37,28 +37,37 @@ def pathlink(*nodes) -> Path:
             node_names.append(node.filename.stem)
         elif isinstance(node, date):
             node_names.append(node.isoformat())
+        elif isinstance(node, str):
+            node_names.append(node)
         else:
             logger.warning('Unknown node type: %s (%s)', type(node), node)
-            node_names.append(str(hash(node)))
+            node_names.append(base_n(hash(node), 62))
     return Path("--".join(node_names) + '.php')
 
 
-def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]]) -> Generator[
-    Tuple[Any, Any, int, dict], None, None]:
+def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]], filter: bool = False) \
+        -> Generator[Tuple[Any, Any, int, dict], None, None]:
     """
     Expands a 'simple' edge list (of node pairs) to the corresponding full edge list, including keys and data.
     Args:
         graph: the graph with the edges
         edges: edge list, a list of (u, v) node tuples
+        filter: if true, remove missing edges instead of raising an exception
 
     Returns:
         all edges from the multigraph that are between any node pair from edges as tuple (u, v, key, attrs)
 
     """
     for u, v in edges:
-        atlas = graph[u][v]
-        for key in atlas:
-            yield u, v, key, atlas[key]
+        try:
+            atlas = graph[u][v]
+            for key in atlas:
+                yield u, v, key, atlas[key]
+        except KeyError as e:
+            if filter:
+                logger.warning('Edge %s→%s from edge list not in graph', u, v)
+            else:
+                raise e
 
 
 def collapse_edges(graph: nx.MultiDiGraph):
@@ -85,8 +94,26 @@ def collapse_edges(graph: nx.MultiDiGraph):
             result.add_edge(u, v,
                             kind='collapsed',
                             weight=total_weight,
-                            sources=tuple(attr['source'] for w, r, k, attr in edges))
+                            source=tuple(attr['source'] for w, r, k, attr in edges))
 
+    return result
+
+
+def collapse_parallel_edges(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    """
+    Returns a graph with all _parallel_ edges collapsed.
+    """
+    result = nx.MultiDiGraph()
+    result.add_nodes_from(graph.nodes)
+    for u, v in set(graph.edges(keys=False)):
+        parallel_edges = list(graph[u][v].values())
+        attrs = dict(parallel_edges[0])
+        if len(parallel_edges) > 1:
+            attrs['source'] = [e['source'] for e in parallel_edges]
+            attrs['comment'] = '\n'.join(e.get('comment', '') for e in parallel_edges)
+            attrs['weight'] = sum(e.get('weight', 0) for e in parallel_edges)
+            attrs['iweight'] = 1 / attrs['weight']
+        result.add_edge(u, v, **attrs)
     return result
 
 
@@ -116,11 +143,25 @@ def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return result
 
 
-def first(sequence: Iterable[T], default: S = None) -> Union[T, S]:
+def first(sequence: Iterable[T], default: S = None, checked: bool = False) -> Union[T, S]:
+    """
+    Returns the first item in the given iterable.
+
+    Args:
+        sequence: The iterable
+        default: if the iterable, return this value.
+        checked: if True and the sequence is empty, do not return a default but instead raise an IndexError.
+
+    Raises:
+        IndexError if checked == True and the iterable is empty
+    """
     try:
         return next(iter(sequence))
     except StopIteration:
-        return default
+        if checked:
+            raise IndexError("No item available")
+        else:
+            return default
 
 
 def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
@@ -234,3 +275,93 @@ def simplify_timeline(graph: nx.MultiDiGraph):
     #         if prev is not None:
     #             graph.add_edge(prev, node, kind='timeline')
     #         prev = node
+
+
+def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
+    """
+    Calculates a base-n string representation of the given number.
+    Args:
+        number: The number to convert
+        base: 2-36
+
+    Returns:
+        string representing number_base
+    """
+    if not (isinstance(number, int)):
+        raise TypeError(f"Number must be an integer, not a {type(number)}")
+    if neg is None and int < 0:
+        raise ValueError("number must not be negative if no neg character is given")
+    if base < 2 or base > 64:
+        raise ValueError("Base must be between 2 and 62")
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if neg in alphabet:
+        raise ValueError(f"neg char, '{neg}', must not be from alphabet '{alphabet}")
+
+    digits = []
+    if number == 0:
+        return alphabet[0]
+    rest = abs(number)
+    while rest > 0:
+        digits.append(alphabet[rest % base])
+        rest = rest // base
+
+    if number < 0:
+        digits.append(neg)
+
+    return "".join(reversed(digits))
+
+
+def is_orphan(node, graph: nx.DiGraph):
+    return node not in graph.nodes or graph.in_degree[node] == 0 and graph.out_degree[node] == 0
+
+
+def find_reachable_by_edge(graph: nx.MultiDiGraph, source: T, key, value, symmetric=True) -> Set[T]:
+    """
+    Finds all nodes that are reachable via edges with a certain attribute/value combination.
+
+    Args:
+        graph: the graph we're searching in
+        source: the source node
+        key: attribute key we're looking for
+        value: attribute vaue we're looking for
+
+    Returns:
+        a set of nodes, includes at least source
+    """
+    result = set()
+    todo = [source]
+    while todo:
+        logger.warn('looking for %s=%s, todo: %s, result: %s', key, value, todo, result)
+        node = todo.pop()
+        if node in result:
+            continue
+        result.add(node)
+        items = list(graph[node].items())
+        if symmetric:
+            items.extend(graph.pred[node].items())
+        for neighbor, edges in items:
+            for k, attr in edges.items():
+                if key in attr and attr[key] == value:
+                    todo.insert(0, neighbor)
+    return result
+
+
+def path2str(path: Iterable[Union[date, Reference]], connector=' → ', timeline_connector=' ⤑ ') -> str:
+    result_and_connectors = []
+    last_date = None
+    for node in path:
+        if isinstance(node, Reference):
+            if last_date is not None:
+                result_and_connectors += [timeline_connector, last_date, connector, node]
+                last_date = None
+            else:
+                result_and_connectors += [connector, node]
+        elif isinstance(node, date):
+            if last_date:
+                last_date = node
+            else:
+                result_and_connectors += [connector, node]
+                last_date = True
+    if last_date:
+        result_and_connectors += [timeline_connector, last_date]
+    return ''.join(map(str, result_and_connectors[1:]))
