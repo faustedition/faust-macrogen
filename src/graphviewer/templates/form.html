@@ -220,8 +220,13 @@
     </legend>
     <p><input type="text" name="nodes" id="nodes" value="" style="width: 100%;" placeholder="2 V H.13">
     </p>
-    <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
-    <p><input type="checkbox" name="assertions" id="assertions" {% if assertions %}checked{% endif %} <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
+    <p>Kanten dazwischen:
+        <input type="radio" name="central_paths" value="no" id="ce_no"> <label for="ce_no">keine</label>
+        <input type="radio" name="central_paths" value="dag" id="ce_dag"> <label for="ce_dag">nur positive</label>
+        <input type="radio" name="central_paths" value="all" id="ce_all" checked> <label for="ce_all">alle</label>
+    </p>
+    <p><input type="checkbox" name="context" id="context" > <label for="context">Nachbarknoten</label></p>
+    <p><input type="checkbox" name="assertions" id="assertions" > <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
     {% if models|length > 1 %}
         <p>
             <label for="model">Modell: </label>

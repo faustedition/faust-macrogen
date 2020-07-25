@@ -18,7 +18,7 @@ import networkx as nx
 import pandas as pd
 from dataclasses import dataclass
 
-from macrogen.graphutils import is_orphan, find_reachable_by_edge
+from macrogen.graphutils import is_orphan, find_reachable_by_edge, path2str
 from more_itertools import windowed
 
 from .graphutils import mark_edges_to_delete, remove_edges, in_path, first
@@ -627,7 +627,8 @@ class MacrogenesisInfo:
             if edges_from is None:
                 edges_from = self.dag
             path = nx.shortest_path(edges_from, source, target, weight, method)
-            logger.debug('Shortest path from %s to %s: %s', source, target, " → ".join(map(str, path)))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Shortest path from %s to %s: %s', source, target, path2str(path))
             edges = list(expand_edges(edges_from, nx.utils.pairwise(path), filter=True))
             graph.add_edges_from(edges)
             return path
@@ -639,8 +640,8 @@ class MacrogenesisInfo:
 
     def subgraph(self, *nodes: Node, context: bool = True, path_to: Iterable[Node] = {}, abs_dates: bool = True,
                  path_from: Iterable[Node] = {}, paths: Iterable[Node] = {}, paths_without_timeline: bool = False,
-                 paths_between_nodes: bool = True, keep_timeline: bool = False, direct_assertions: bool = False,
-                 temp_syn_context: bool = False, include_syn_clusters: bool = False) \
+                 paths_between_nodes: Union[bool, str] = 'all', keep_timeline: bool = False, direct_assertions: bool = False,
+                 temp_syn_context: bool = False, include_syn_clusters: bool = False, include_inscription_clusters = False) \
             -> nx.MultiDiGraph:
         """
         Extracts a sensible subgraph from the base graph.
@@ -653,7 +654,8 @@ class MacrogenesisInfo:
             path_from: Node from which the shortest path should be included, if any
             paths: Node(s) from / to which the spp should be included, if any
             paths_without_timeline: Paths should be built without considering the timeline
-            paths_between_nodes: iff True (the default), include the shortest paths between the given nodes
+            paths_between_nodes: If `'all'` or `True` (the default), include the shortest paths between the given nodes
+                                on the base graph. If `'dag'`, only allow assertions from the dag.
             keep_timeline: if True, keep the timeline as is, otherwise remove useless date nodes
             direct_assertions: if True, include all edges induced by the given node(s)
 
@@ -722,11 +724,12 @@ class MacrogenesisInfo:
                 self.add_path(subgraph, source, node, edges_from=path_base)
             for target in targets:
                 self.add_path(subgraph, node, target, edges_from=path_base)
-            if paths_between_nodes:
+            if paths_between_nodes in {True, 'dag', 'all'}:
+                inbetween_base = self.dag if paths_between_nodes == 'dag' else self.base
                 for other in central_nodes:
                     if other != node:
-                        self.add_path(subgraph, node, other, edges_from=self.base)
-                        self.add_path(subgraph, other, node, edges_from=self.base)
+                        self.add_path(subgraph, node, other, edges_from=inbetween_base)
+                        self.add_path(subgraph, other, node, edges_from=inbetween_base)
 
             if direct_assertions:
                 subgraph.add_edges_from(self.base.in_edges(node, keys=True, data=True))

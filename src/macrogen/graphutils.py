@@ -112,7 +112,7 @@ def collapse_parallel_edges(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
             attrs['source'] = [e['source'] for e in parallel_edges]
             attrs['comment'] = '\n'.join(e.get('comment', '') for e in parallel_edges)
             attrs['weight'] = sum(e.get('weight', 0) for e in parallel_edges)
-            attrs['iweight'] = 1/attrs['weight']
+            attrs['iweight'] = 1 / attrs['weight']
         result.add_edge(u, v, **attrs)
     return result
 
@@ -287,7 +287,7 @@ def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
     Returns:
         string representing number_base
     """
-    if not(isinstance(number, int)):
+    if not (isinstance(number, int)):
         raise TypeError(f"Number must be an integer, not a {type(number)}")
     if neg is None and int < 0:
         raise ValueError("number must not be negative if no neg character is given")
@@ -344,3 +344,24 @@ def find_reachable_by_edge(graph: nx.MultiDiGraph, source: T, key, value, symmet
                 if key in attr and attr[key] == value:
                     todo.insert(0, neighbor)
     return result
+
+
+def path2str(path: Iterable[Union[date, Reference]], connector=' → ', timeline_connector=' ⤑ ') -> str:
+    result_and_connectors = []
+    last_date = None
+    for node in path:
+        if isinstance(node, Reference):
+            if last_date is not None:
+                result_and_connectors += [timeline_connector, last_date, connector, node]
+                last_date = None
+            else:
+                result_and_connectors += [connector, node]
+        elif isinstance(node, date):
+            if last_date:
+                last_date = node
+            else:
+                result_and_connectors += [connector, node]
+                last_date = True
+    if last_date:
+        result_and_connectors += [timeline_connector, last_date]
+    return ''.join(map(str, result_and_connectors[1:]))

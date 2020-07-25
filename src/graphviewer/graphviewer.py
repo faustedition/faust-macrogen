@@ -54,10 +54,12 @@ def prepare_agraph():
     order = request.values.get('order', False)
     collapse = request.values.get('collapse', False)
     direction = request.values.get('dir', 'LR').upper()
+    central_paths = request.values.get('central_paths', 'all').lower()
     if direction not in {'LR', 'RL', 'TB', 'BT'}:
         direction = 'LR'
     if nodes:
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
+                          paths_between_nodes=central_paths,
                           paths_without_timeline=paths_wo_timeline,
                           direct_assertions=direct_assertions, include_syn_clusters=syn)
         if induced_edges:
