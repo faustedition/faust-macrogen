@@ -53,7 +53,8 @@
     <script type="application/javascript">
 
         async function updateURLs(query) {
-            const searchString = '?' + new URLSearchParams(query).toString(),
+            const params = new URLSearchParams(query),
+                  searchString = '?' + params.toString(),
                   location = new URL(window.location);
 
             if (location.search !== searchString) {
@@ -73,6 +74,8 @@
                     console.warn(e);
                 }
             }
+            const breadcrumbElement = document.getElementById('current');
+            current.innerText = 'Teilgraph: ' + params.get('nodes');
         }
 
         function message(msg, severity, long) {
@@ -126,10 +129,10 @@
         }
         const graphviz = d3.select('#refgraph').graphviz({fit: false}),
               statusMessages = {
-                start: "Parse Graphdatei",
-                layoutStart: "Berechne Graphlayout",
-                  renderStart: "Rendere",
-                  transitionStart: "Überblende neuen Graph",
+                start: "Parse Graphdatei …",
+                layoutStart: "Berechne Graphlayout …",
+                  renderStart: "Rendere …",
+                  transitionStart: "Überblende neuen Graph …",
                   end: ""
               };
         for (const eventType in statusMessages) {
@@ -299,5 +302,5 @@
 {% block helpurl %}subgraph/help{% endblock %}
 
 {%- block breadcrumbs -%}
-[{caption: 'Makrogenese', link: '/macrogenesis'}, {caption: 'Teilgraph: '}]
+[{caption: 'Makrogenese', link: '/macrogenesis'}, {caption: 'Teilgraph: {{ nodes }}'}]
 {%- endblock -%}
