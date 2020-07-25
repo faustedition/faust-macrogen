@@ -14,6 +14,7 @@
         }
         #subgraph-form {
             flex-grow: 0;
+            min-width: 24em;
         }
         .flex-form {
             display: flex;
@@ -40,6 +41,10 @@
         #header-status {
             padding: 5px;
             margin-bottom: 0;
+        }
+
+        #subgraph-form p {
+            margin: 0.5em 0;
         }
     </style>
 {% endblock %}
@@ -220,23 +225,16 @@
     </legend>
     <p><input type="text" name="nodes" id="nodes" value="" style="width: 100%;" placeholder="2 V H.13">
     </p>
-    <p>Kanten dazwischen:
+    <p>Pfade dazwischen:
         <input type="radio" name="central_paths" value="no" id="ce_no"> <label for="ce_no">keine</label>
         <input type="radio" name="central_paths" value="dag" id="ce_dag"> <label for="ce_dag">nur positive</label>
         <input type="radio" name="central_paths" value="all" id="ce_all" checked> <label for="ce_all">alle</label>
     </p>
     <p><input type="checkbox" name="context" id="context" > <label for="context">Nachbarknoten</label></p>
-    <p><input type="checkbox" name="assertions" id="assertions" > <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
-    {% if models|length > 1 %}
-        <p>
-            <label for="model">Modell: </label>
-            <select id="model" name="model" value="">
-                {% for model_name in models %}
-                    <option value="{{ model_name }}">{{ model_name }}</option>
-                {% endfor %}
-            </select>
-        </p>
-    {% endif %}
+
+        <p><input type="checkbox" name="inscriptions" id="inscriptions" >
+            <label for="inscriptions">Inskriptionen ↔ Zeugen</label> </p>
+    <p><input type="checkbox" name="syn" id="syn" > <label for="syn">ungefähr gleichzeitige Knoten</label> </p>
     </fieldset>
     <fieldset>
     <legend>Zusätzliche Pfade</legend>
@@ -245,14 +243,22 @@
         <input type="text" name="extra" id="extra" value="" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
         <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" > <label for="paths_wo_timeline">ohne Timeline</label>
     </p>
-    <p><input type="checkbox" name="inscriptions" id="inscriptions" >
-        <label for="inscriptions">Inskriptionen ↔ Zeugen</label> </p>
+        {% if models|length > 1 %}
+            <p>
+                <label for="model">Modell: </label>
+                <select id="model" name="model" value="">
+                    {% for model_name in models %}
+                        <option value="{{ model_name }}">{{ model_name }}</option>
+                    {% endfor %}
+                </select>
+            </p>
+        {% endif %}
     </fieldset>
     <fieldset>
     <legend>Kantenauswahl</legend>
+    <p><input type="checkbox" name="assertions" id="assertions" > <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
     <p><input type="checkbox" name="induced_edges" id="induced_edges" > <label for="induced_edges">alle induzierten Kanten</label></p>
     <p><input type="checkbox" name="ignored_edges" id="ignored_edges" > <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
-    <p><input type="checkbox" name="syn" id="syn" > <label for="syn">Kanten für »ungefähr gleichzeitig«</label> </p>
     <p><input type="checkbox" name="tred" id="tred" > <label for="tred">Transitive Reduktion</label> </p>
     </fieldset>
     <fieldset>
@@ -293,5 +299,5 @@
 {% block helpurl %}subgraph/help{% endblock %}
 
 {%- block breadcrumbs -%}
-[{caption: 'Makrogenese', link: '/macrogenesis'}, {caption: 'Teilgraph: {{ nodes }}'}]
+[{caption: 'Makrogenese', link: '/macrogenesis'}, {caption: 'Teilgraph: '}]
 {%- endblock -%}
