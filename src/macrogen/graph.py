@@ -699,6 +699,10 @@ class MacrogenesisInfo:
                 if isinstance(node, SynAnchor):
                     relevant_nodes |= set(self.dag.pred[node]).union(self.dag.succ[node]).union(node.syn_group)
 
+        if include_inscription_clusters:
+            for node in set(central_nodes):
+                relevant_nodes |= find_reachable_by_edge(self.base, node, 'kind', 'inscription', symmetric=True)
+
         subgraph: nx.MultiDiGraph = nx.subgraph(self.base, relevant_nodes).copy()
         sources = set(path_from).union(paths)
         targets = set(path_from).union(paths)

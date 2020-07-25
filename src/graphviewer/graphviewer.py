@@ -51,6 +51,7 @@ def prepare_agraph():
     tred = request.values.get('tred', False)
     nohl = request.values.get('nohl', False)
     syn = request.values.get('syn', False)
+    inscriptions = request.values.get('inscriptions', False)
     order = request.values.get('order', False)
     collapse = request.values.get('collapse', False)
     direction = request.values.get('dir', 'LR').upper()
@@ -61,7 +62,8 @@ def prepare_agraph():
         g = info.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra, keep_timeline=True,
                           paths_between_nodes=central_paths,
                           paths_without_timeline=paths_wo_timeline,
-                          direct_assertions=direct_assertions, include_syn_clusters=syn)
+                          direct_assertions=direct_assertions, include_syn_clusters=syn,
+                          include_inscription_clusters=inscriptions)
         if induced_edges:
             g = info.base.subgraph(g.nodes).copy()
         if not ignored_edges or tred:
