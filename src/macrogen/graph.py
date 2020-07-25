@@ -705,7 +705,7 @@ class MacrogenesisInfo:
 
         subgraph: nx.MultiDiGraph = nx.subgraph(self.base, relevant_nodes).copy()
         sources = set(path_from).union(paths)
-        targets = set(path_from).union(paths)
+        targets = set(path_to).union(paths)
 
         if paths_without_timeline:
             path_base = remove_edges(self.dag, lambda u, v, attr: attr.get('kind') == 'timeline')
