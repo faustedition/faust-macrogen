@@ -78,6 +78,7 @@
                   longMessage = document.getElementById('long-message'),
                   updating = long? longMessage: headerElement,
                   other = long? headerElement: longMessage;
+            longMessage.style.display = (!!msg && long)? "block" : "none";
             if (msg) {
                 if (!severity)
                     severity = "info";
@@ -210,8 +211,7 @@
 
 {% block content %}
 
-    <p class="pure-alert pure-alert-warning pure-invisible" id="long-message">
-        Berechne aktualisierten Graphen …
+    <p class="pure-alert pure-alert-warning" style="display: none" id="long-message">
     </p>
 
     <div id="refgraph"></div>
