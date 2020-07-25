@@ -22,18 +22,32 @@
                 </li>
                 <li>URIs wie in den Makrogenese-Dateien</li>
             </ul>
-            </ul>
             <h2 id="graphaufbau">Graphaufbau</h2>
-            <p>Die <strong>Zentralen Knoten</strong> bilden die Grundlage für den Graphaufbau in
-                <strong>Kontext</strong>. Der dabei entstehende Graph kann dann im Bereich
-                <strong>Kantenauswahl</strong> weiter beeinflusst werden, ohne dass nennenswerte Kanten hinzukommen. Die
-                zentralen Knoten werden im Graphen hervorgehoben.</p>
-            <h3 id="kontext">Kontext</h3>
+            <h3 id="kontext">Zentrale Knoten</h3>
             <dl>
+                <dt>Zentrale Knoten</dt>
+                <dd>Die einzuschließenden Knoten. Gelb hervorgehoben, es sei denn, <strong>nicht hervorheben</strong>
+                    ist gewählt. </dd>
+                <dt>Pfade dazwischen</dt>
+                <dd>Werden bei <em>Zentrale Knoten</em> mehrere Knoten angegeben, so werden bei Einstellung <strong>alle</strong>
+                    jeweils die <strong>kürzesten Pfade</strong>zwischen jedem Knotenpaar hinzugefügt – in jede Richtung.
+                    Bei Einstellung <strong>nur positive</strong> werden kürzeste Pfade, die über Konfliktkanten
+                    (<span style="color: red">⇢</span>) laufen, nicht berücksichtigt.
+                </dd>
                 <dt>Nachbarknoten</dt>
                 <dd>zu jedem zentralen Knoten werden die Nachbarknoten eingeschlossen, d.h. diejenigen Knoten, die im
-                    DAG unmittelbar vor oder nach dem Kontextknoten liegen.
+                    DAG unmittelbar vor oder nach dem Kontextknoten liegen, sowie die kürzesten Pfade dahin.
                 </dd>
+                <dt>Inskriptionen ↔ Zeugen</dt>
+                <dd>
+                    Zu jedem zentralen Knoten werden alle Inskriptionen aufgenommen. Ist ein zentraler Knoten selbst
+                    eine Inskription, so wird der zugehörige Zeuge und alle Inskriptionen aufgenommen.
+                </dd>
+                <dt>ungefähr gleichzeitige Knoten</dt>
+                <dd>alle über eine »ungefähr-gleichzeitig«-Kante (<code>temp-syn</code>) angebundenen Knoten werden aufgenommen.</dd>
+            </dl>
+            <h3 id="pfade">Zusätzliche Pfade</h3>
+            <dl>
                 <dt>absolute Datierungen rechtfertigen</dt>
                 <dd>zu jedem zentralen Knoten wird versucht, das früheste von diesem Knoten aus erreichbare Datum sowie
                     das späteste Datum, von dem der zentrale Knoten erreichbar ist, zu ermitteln. Der kürzeste Pfad
@@ -41,20 +55,22 @@
                     aufgenommen. Diese Pfade rechtfertigen die ‘engstmögliche’ Datierung, die für den Zeugen angegeben
                     werden kann.
                 </dd>
-                <dt>unmittelbare Aussagen</dt>
+                <dt>Pfade von/zu</dt>
+                <dd>Werden hier Knoten aufgeführt, so werden die kürzesten Pfade zwischen jedem Kernknoten und jedem der
+                    hier aufgeführten Pfade in den Graphen aufgenommen, falls existent. Auf diese Weise können die
+                    Kernknoten in einen Kontext zu relevanten Meilensteinen gesetzt werden. Wird <strong>ohne
+                    Zeitstrahl</strong> angekreuzt, werden absolute Datierungen bei der Pfadermittlung nicht
+                    berücksichtigt.
+                </dd>
+            </dl>
+            <h3 id="kantenauswahl">Kantenauswahl</h3>
+            <p>Der so aufgebaute Graph kann nun noch weiter manipuliert werden:</p>
+            <dl>
+                <dt>unmittelbare Aussagen über Kernknoten</dt>
                 <dd>alle Aussagen, die den Kernknoten unmittelbar betreffen, werden in den Graphen eingeschlossen. Dies
                     unterscheidet sich von den Nachbarknoten dadurch, dass hier auch Konflikt- und ggf. ignorierte
                     Kanten mit einbezogen werden.
                 </dd>
-                <dt>Pfade von/zu</dt>
-                <dd>Werden hier Knoten aufgeführt, so werden die kürzesten Pfade zwischen jedem Kernknoten und jedem der
-                    hier aufgeführten Pfade in den Graphen aufgenommen, falls existent. Auf diese Weise können die
-                    Kernknoten in einen Kontext zu relevanten Meilensteinen gesetzt werden.
-                </dd>
-            </dl>
-            <h2 id="kantenauswahl">Kantenauswahl</h2>
-            <p>Der so aufgebaute Graph kann nun noch weiter manipuliert werden:</p>
-            <dl>
                 <dt>alle induzierten Kanten</dt>
                 <dd>alle Kanten zwischen den bislang im Graphen befindlichen Knoten werden eingeschlossen (ignorierte
                     Kanten aber nur, wenn zusätzlich das nächste Kästchen angekreuzt wird)
@@ -65,7 +81,7 @@
                 </dd>
                 <dt>Transitive Reduktion</dt>
                 <dd>zunächst werden alle Konfliktkanten und ignorierten Kanten entfernt, aus dem verbleibenden Graphen
-                    wird dann die Transitive Reduktion berechnet. D.h. es werden alle “überflüssigen” Kanten in Bezug
+                    wird dann die Transitive Reduktion berechnet. D.h. es werden alle „überflüssigen“ Kanten in Bezug
                     auf die Erreichbarkeitsrelation entfernt: wenn <span
                             class="math inline"><em>u</em> → <em>v</em> → <em>w</em></span> und <span
                             class="math inline"><em>u</em> → <em>w</em></span> im Graphen ist, ist <span
@@ -74,9 +90,28 @@
                     über <span class="math inline"><em>v</em></span> erreichbar ist.
                 </dd>
             </dl>
-            <h2>Download</h2>
-            <p>Im Download-Bereich (<i class="fa fa-download"></i>) stehen Versionen als PDF, SVG und GraphViz zur
-                Verfügung. </p>
+            <h3 id="graphlayout">Graphlayout</h3>
+            <dl>
+                <dt>keine Kantenbeschriftungen</dt>
+                <dd>alle Kantenbeschriftungen (Quellen) werden ausgeblendet. Der Graph wird dadurch wesentlich kompakter.</dd>
+                <dt>Parallelkanten zusammenfassen</dt>
+                <dd>Parallel verlaufende Kanten (= gleiche Aussage in unterschiedlichen Quellen) werden zu einer Kante
+                mit einer mehrzeiligen Beschriftung zusammengefasst.</dd>
+                <dt>Topologische Sortierung</dt>
+                <dd>alle im Graph vorhandenen Referenzen (Zeugen und Inskriptionen) werden entsprechend der aus dem
+                    Gesamtmodell berechneten (und in der Edition verwendeten) globalen Reihenfolge auf einer Linie in der
+                    Hauptrichtung angeordnet und durch Kanten verbunden.
+                </dd>
+                <dt>Richtung</dt>
+                <dd>die Hauptrichtung, in der die Zeit verläuft.</dd>
+            </dl>
+            <h2>Links & Downloads</h2>
+            <p>
+                Die Adresszeile wird mit jeder Änderung angepasst, so dass der aktuelle Graph einfach gebookmarkt
+                / verlinkt werden kann.
+            </p>
+            <p>Im Download-Bereich (<i class="fa fa-download"></i>) können Versionen des aktuellen Graphen
+                als PDF, SVG und GraphViz abgerufen werden.</p>
         </section>
     </article>
 {% endblock %}
