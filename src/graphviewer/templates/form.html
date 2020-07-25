@@ -93,6 +93,25 @@
             return new FormData(form);
         }
 
+        function setFormData(form, data) {
+            if (!form) form = document.getElementById('subgraph-form');
+            if (!data) data = document.location.search;
+            const entries = (new URLSearchParams(data)).entries();
+            console.log(form, data, entries);
+            form.reset();
+            for (const [key, val] of entries) {
+                const input = form.elements[key];
+                if (input) {
+                    if (input.type === 'checkbox')
+                        input.checked = !!val;
+                    else
+                        input.value = val;
+                }
+                console.log(form, key, val)
+            }
+
+        }
+
         async function getDotStr(formdata) {
             const response = await fetch('subgraph/dot', {method: "POST", body: formdata});
             if (response.status === 200)
@@ -133,13 +152,42 @@
                 main.classList.remove('vertical');
             }
         }
+
+        const fixNodesField = function fixNodesField(element) {
+            const origValue = element.value,
+                query = new URLSearchParams([['nodes', origValue]]).toString();
+            fetch('subgraph/check-nodes?' + query)
+                .then(response => response.json())
+                .then(checkedNodes => {
+                    if (element.value === origValue) { // no change from user in the meantime
+                        element.value = checkedNodes.normalized;
+                        if (checkedNodes.not_found) {
+                            message(checkedNodes.error_msg, 'error');
+                            element.valid = false;
+                            element.title = checkedNodes.error_msg;
+                        } else {
+                            element.valid = true;
+                            element.title = checkedNodes.error_msg;
+                        }
+                    }
+                })
+        }
+
+
         d3.selectAll('#subgraph-form input[type=checkbox], #subgraph-form input[type=radio]').on("click", updateGraph);
         d3.selectAll('#subgraph-form select').on("input", updateGraph);
-        d3.selectAll('#subgraph-form input[type=text]').on("blur", updateGraph)
-        document.addEventListener("keypress", function (event) {
-            if (event.key === "Enter")
-                updateGraph();
+        d3.selectAll('#subgraph-form input[type=text]').on("blur", function() {
+            updateGraph();
+            fixNodesField(this);
         });
+        document.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                updateGraph();
+                fixNodesField(this);
+            }
+        });
+
+        setFormData();
         updateGraph();
 
         function contentRequired(formSelector, nonEmptyFieldName) {
@@ -168,16 +216,16 @@
     <form id="subgraph-form" method="get" class="flex-form pure-form">
     <fieldset>
     <legend>Zentrale Knoten
-    <small class="pull-right"><label><input type="checkbox" name="nohl" id="nohl" {% if nohl %}checked{% endif %}> nicht hervorheben</label></small>
+    <small class="pull-right"><label><input type="checkbox" name="nohl" id="nohl" > nicht hervorheben</label></small>
     </legend>
-    <p><input type="text" name="nodes" id="nodes" value="{{ nodes }}" style="width: 100%;" placeholder="2 V H.13">
+    <p><input type="text" name="nodes" id="nodes" value="" style="width: 100%;" placeholder="2 V H.13">
     </p>
     <p><input type="checkbox" name="context" id="context" {% if context %}checked{% endif %}> <label for="context">Nachbarknoten</label></p>
     <p><input type="checkbox" name="assertions" id="assertions" {% if assertions %}checked{% endif %} <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
     {% if models|length > 1 %}
         <p>
             <label for="model">Modell: </label>
-            <select id="model" name="model" value="{{ model }}">
+            <select id="model" name="model" value="">
                 {% for model_name in models %}
                     <option value="{{ model_name }}">{{ model_name }}</option>
                 {% endfor %}
@@ -187,24 +235,26 @@
     </fieldset>
     <fieldset>
     <legend>Zusätzliche Pfade</legend>
-    <p><input type="checkbox" name="abs_dates" id="abs_dates" {% if abs_dates %}checked{% endif %}> <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
+    <p><input type="checkbox" name="abs_dates" id="abs_dates" > <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
     <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
-        <input type="text" name="extra" id="extra" value="{{ extra }}" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
-        <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" {% if paths_wo_timeline %}checked{% endif %}> <label for="paths_wo_timeline">ohne Timeline</label>
+        <input type="text" name="extra" id="extra" value="" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
+        <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" > <label for="paths_wo_timeline">ohne Timeline</label>
     </p>
+    <p><input type="checkbox" name="inscriptions" id="inscriptions" >
+        <label for="inscriptions">Inskriptionen ↔ Zeugen</label> </p>
     </fieldset>
     <fieldset>
     <legend>Kantenauswahl</legend>
-    <p><input type="checkbox" name="induced_edges" id="induced_edges" {% if induced_edges %}checked{% endif %}> <label for="induced_edges">alle induzierten Kanten</label></p>
-    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" {% if ignored_edges %}checked{% endif %}> <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
-    <p><input type="checkbox" name="syn" id="syn" {% if syn %}checked{% endif %}> <label for="syn">Kanten für »ungefähr gleichzeitig«</label> </p>
-    <p><input type="checkbox" name="tred" id="tred" {% if tred %}checked{% endif %}> <label for="tred">Transitive Reduktion</label> </p>
+    <p><input type="checkbox" name="induced_edges" id="induced_edges" > <label for="induced_edges">alle induzierten Kanten</label></p>
+    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" > <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
+    <p><input type="checkbox" name="syn" id="syn" > <label for="syn">Kanten für »ungefähr gleichzeitig«</label> </p>
+    <p><input type="checkbox" name="tred" id="tred" > <label for="tred">Transitive Reduktion</label> </p>
     </fieldset>
     <fieldset>
     <legend>Graphlayout</legend>
-    <p><input type="checkbox" name="no_edge_labels" id="no_edge_labels" {% if no_edge_labels %}checked{% endif %}> <label for="no_edge_labels">keine Kantenbeschriftung</label> </p>
-    <p><input type="checkbox" name="collapse" id="collapse" {% if collapse %}checked{% endif %}> <label for="collapse">Parallelkanten zusammenfassen</label> </p>
-    <p><input type="checkbox" name="order" id="order" {% if order %}checked{% endif %}> <label for="order">Topologische Sortierung</label></p>
+    <p><input type="checkbox" name="no_edge_labels" id="no_edge_labels" > <label for="no_edge_labels">keine Kantenbeschriftung</label> </p>
+    <p><input type="checkbox" name="collapse" id="collapse" > <label for="collapse">Parallelkanten zusammenfassen</label> </p>
+    <p><input type="checkbox" name="order" id="order" > <label for="order">Topologische Sortierung</label></p>
     <p style="vertical-align: middle">
         Richtung:
         <input id="dir-lr" name="dir" type="radio" value="LR" checked> <label for="dir-lr">→</label> 
