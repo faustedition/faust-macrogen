@@ -28,7 +28,6 @@ from .datings import build_datings_graph, parse_datestr
 from .graphutils import simplify_timeline
 from .fes import eades, FES_Baharev, V
 from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
-from .igraph_wrapper import to_igraph, nx_edges
 from .uris import Reference, Inscription, Witness, AmbiguousRef
 from .splitgraph import references, SplitReference, Side
 
@@ -182,9 +181,14 @@ class MacrogenesisInfo:
         else:
             if light_timeline:
                 logger.warning('Method %s does not support lightweight timeline', method)
-            igraph = to_igraph(graph)
-            iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
-            return list(nx_edges(iedges, keys=True, data=True))
+            try:
+                from .igraph_wrapper import to_igraph, nx_edges
+                igraph = to_igraph(graph)
+                iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
+                return list(nx_edges(iedges, keys=True, data=True))
+            except ImportError as e:
+                logger.critical('The method %s requires python-igraph, but it is not available: %s', method, e, exc_info=True)
+
 
     def run_analysis(self):
         """
