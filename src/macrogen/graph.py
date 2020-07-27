@@ -277,7 +277,7 @@ class MacrogenesisInfo:
         logger.info('Removed %d of the original %d edges', len(all_feedback_edges), len(working.edges))
         self.conflicts = all_feedback_edges
 
-        self.closure = nx.transitive_closure(nx.DiGraph(result_graph))
+        self.closure = nx.transitive_closure_dag(nx.DiGraph(result_graph))
         add_inscription_links(base)
         self._infer_details()
 
@@ -358,9 +358,10 @@ class MacrogenesisInfo:
             return self.order
 
         logger.info('Creating sort order from DAG')
-        nodes = nx.lexicographical_topological_sort(self.dag, key=self._secondary_key)
+        nodes = list(nx.lexicographical_topological_sort(self.dag, key=self._secondary_key))
         refs = [node for node in nodes if isinstance(node, Reference)]
         self.order = refs
+        self.order_all_nodes = nodes
         self._build_index()
         for ref, index in self.index.items():
             if ref in self.base.nodes:
@@ -528,8 +529,10 @@ class MacrogenesisInfo:
         check_acyclic(self.dag,
                       f'Base graph from {load_from} is not acyclic after removing conflicting and ignored edges.')
         self.order_refs()
-        self.closure = nx.transitive_closure_dag(self.dag, self.order)
+        logger.info('Preparing transitive closure')
+        self.closure = nx.transitive_closure_dag(self.dag, self.order_all_nodes)
         self._infer_details()
+        logger.info('Finished loading model from %s: %d nodes, %d conflicts', load_from, len(self.order), len(self.conflicts))
 
     def node(self, spec: Union[Reference, date, str], default=KeyError):
         """
@@ -721,10 +724,10 @@ class MacrogenesisInfo:
                 try:
                     prev = max((d for d in self.closure.pred[node] if isinstance(d, date)), default=None)
                     if prev is not None and prev not in central_nodes:
-                        self.add_path(subgraph, prev, node, edges_from=path_base)
+                        self.add_path(subgraph, prev, node, edges_from=self.dag)
                     next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
                     if next_ is not None and next not in central_nodes:
-                        self.add_path(subgraph, node, next_, edges_from=path_base)
+                        self.add_path(subgraph, node, next_, edges_from=self.dag)
                 except KeyError as e:
                     logger.warning('%s is not in closure, so no date justification', node)
 
