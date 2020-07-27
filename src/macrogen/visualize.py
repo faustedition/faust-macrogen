@@ -79,6 +79,23 @@ def _simplify_attrs(attrs):
             attrs[key] = str(value)
 
 
+def remove_nondot_keys(graph: nx.MultiDiGraph, inplace=False) -> nx.MultiDiGraph:
+    if not inplace:
+        graph = graph.copy()
+    allowed = set(config.graphviz_attrs)
+
+    def clean_attr(attrs: Dict):
+        for key in attrs.keys() - allowed:
+            del attrs[key]
+
+    for node in graph:
+        clean_attr(graph.nodes[node])
+    for u, v, attr in graph.edges(keys=False, data=True):
+        clean_attr(attr)
+    return graph
+
+
+
 def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph.dot', style: Optional[Dict] = None,
               highlight: Optional[Union[Node, Sequence[Node]]]=None, highlight_path: Optional[Tuple[Node, Node]] = None,
               record: Union[bool, str]='auto', edge_labels: bool = True) -> AGraph:
@@ -178,6 +195,8 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
             if 'label' in attr:
                 del attr['label']
 
+    if config.clean_gv_files:
+        remove_nondot_keys(simplified, inplace=True)
     agraph: AGraph = nx.nx_agraph.to_agraph(simplified)
     agraph.edge_attr['fontname'] = 'Ubuntu derivative Faust'
     agraph.edge_attr['fontsize'] = 8

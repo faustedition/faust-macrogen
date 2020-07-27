@@ -44,6 +44,8 @@ temp_syn: ignore        # what to do with temp-syn nodes: ignore, copy, nearest,
 
 progressbar: true    # allow to show a progress bar in some situations
 
+clean_gv_files: true   # remove non-graphviz attributes from .dot exports
+
 
 ## Other data
 namespaces:

@@ -243,6 +243,7 @@ class Configuration:
     bibscores = LazyConfigLoader('bibscores', partial(parse_kvcsv, default=1, value_type=int, delimiter='\t'),
                                  (_config_package, 'etc/bibscores.tsv'))
     scenes_xml = LazyConfigLoader('scenes_xml', etree.parse, (_config_package, 'etc/scenes.xml'))
+    graphviz_attrs = LazyConfigLoader('graphviz_attrs', _yaml.load, (_config_package, 'etc/graphviz_attrs.yaml'))
 
     def __init__(self, config_override=None):
         self._config_override = {}
