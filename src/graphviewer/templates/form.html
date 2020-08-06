@@ -1,5 +1,10 @@
 {% extends "faustedition.html" %}
 
+{% macro checkbox(name, label) -%}
+    <input type="checkbox" name="{{ name }}" id="{{ name }}">
+    <label for="{{ name }}">{{ label }}</label>
+{%- endmacro %}
+
 {% block head %}
     <style>
         main {
@@ -228,18 +233,16 @@
         <input type="radio" name="central_paths" value="dag" id="ce_dag"> <label for="ce_dag">nur positive</label>
         <input type="radio" name="central_paths" value="all" id="ce_all" checked> <label for="ce_all">alle</label>
     </p>
-    <p><input type="checkbox" name="context" id="context" > <label for="context">Nachbarknoten</label></p>
-
-        <p><input type="checkbox" name="inscriptions" id="inscriptions" >
-            <label for="inscriptions">Inskriptionen ↔ Zeugen</label> </p>
-    <p><input type="checkbox" name="syn" id="syn" > <label for="syn">ungefähr gleichzeitige Knoten</label> </p>
+    <p>{{ checkbox('context', 'Nachbarknoten') }}</p>
+    <p>{{ checkbox('inscriptions', 'Inskriptionen ↔ Zeugen') }}</p>
+    <p>{{ checkbox('syn', 'ungefähr gleichzeitige Knoten') }}</p>
     </fieldset>
     <fieldset>
     <legend>Zusätzliche Pfade</legend>
     <p><input type="checkbox" name="abs_dates" id="abs_dates" > <label for="abs_dates">absolute Datierungen rechtfertigen</label></p>
     <p><label for="extra">Pfade von/zu (falls verfügbar): </label><br/>
         <input type="text" name="extra" id="extra" value="" list="interesting-nodes" placeholder="A, 2 H" style="width: 100%"><br />
-        <input type="checkbox" name="paths_wo_timeline" id="paths_wo_timeline" > <label for="paths_wo_timeline">ohne Timeline</label>
+        {{ checkbox('paths_wo_timeline', 'ohne Zeitstrahl') }}
     </p>
         {% if models|length > 1 %}
             <p>
@@ -254,16 +257,16 @@
     </fieldset>
     <fieldset>
     <legend>Kantenauswahl</legend>
-    <p><input type="checkbox" name="assertions" id="assertions" > <label for="assertions">unmittelbare Aussagen über Kernknoten</label> </p>
-    <p><input type="checkbox" name="induced_edges" id="induced_edges" > <label for="induced_edges">alle induzierten Kanten</label></p>
-    <p><input type="checkbox" name="ignored_edges" id="ignored_edges" > <label for="ignored_edges">ignorierte (graue) Kanten</label> </p>
-    <p><input type="checkbox" name="tred" id="tred" > <label for="tred">Transitive Reduktion</label> </p>
+    <p>{{ checkbox('assertions', 'unmittelbare Aussagen über Kernknoten') }}</p>
+    <p>{{ checkbox('induced_edges', 'alle induzierten Kanten') }}</p>
+    <p>{{ checkbox('ignored_edges', 'ignorierte (graue) Kanten') }}</p>
+    <p>{{ checkbox('tred', 'Transitive Reduktion') }}</p>
     </fieldset>
     <fieldset>
     <legend>Graphlayout</legend>
-    <p><input type="checkbox" name="no_edge_labels" id="no_edge_labels" > <label for="no_edge_labels">keine Kantenbeschriftung</label> </p>
-    <p><input type="checkbox" name="collapse" id="collapse" > <label for="collapse">Parallelkanten zusammenfassen</label> </p>
-    <p><input type="checkbox" name="order" id="order" > <label for="order">Topologische Sortierung</label></p>
+    <p>{{ checkbox('no_edge_labels', 'keine Kantenbeschriftung') }}</p>
+    <p>{{ checkbox('collapse', 'Parallelkanten zusammenfassen') }}</p>
+    <p>{{ checkbox('order', 'Topologische Sortierung') }}</p>
     <p style="vertical-align: middle">
         Richtung:
         <input id="dir-lr" name="dir" type="radio" value="LR" checked> <label for="dir-lr">→</label> 
