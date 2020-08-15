@@ -130,7 +130,8 @@
         }
 
         async function getDotStr(formdata) {
-            const response = await fetch('subgraph/dot', {method: "POST", body: formdata});
+            const query = new URLSearchParams(formdata).toString()
+            const response = await fetch('subgraph/dot?' + query);
             if (response.status === 200)
                 return await response.text();
             else
@@ -159,7 +160,7 @@
             })
             //.then(() => message())
             .catch(reason => {
-                message(reason, "danger", true)
+                message(`<pre>${reason}</pre>`, "danger", true)
                 console.error(reason)
             });
             updateURLs(formdata);
