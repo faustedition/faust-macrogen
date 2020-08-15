@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 import subprocess
 from functools import partial
@@ -11,7 +12,6 @@ from pathlib import Path
 import networkx as nx
 from networkx import MultiDiGraph
 from pygraphviz import AGraph
-from tqdm import tqdm
 
 from .config import config
 from .datings import add_timeline_edges
@@ -62,6 +62,7 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
                 attrs['label'] = str(source_)
         _simplify_attrs(attrs)
 
+    # noinspection PyTypeChecker
     return graph
 
 
@@ -90,15 +91,17 @@ def remove_nondot_keys(graph: nx.MultiDiGraph, inplace=False) -> nx.MultiDiGraph
 
     for node in graph:
         clean_attr(graph.nodes[node])
+    # noinspection PyArgumentList
     for u, v, attr in graph.edges(keys=False, data=True):
         clean_attr(attr)
     return graph
 
 
-
-def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph.dot', style: Optional[Dict] = None,
-              highlight: Optional[Union[Node, Sequence[Node]]]=None, highlight_path: Optional[Tuple[Node, Node]] = None,
-              record: Union[bool, str]='auto', edge_labels: bool = True) -> AGraph:
+def write_dot(graph: nx.MultiDiGraph, target: Optional[Union[PathLike, str]] = 'base_graph.dot',
+              style: Optional[Dict] = None,
+              highlight: Optional[Union[Node, Sequence[Node]]] = None,
+              highlight_path: Optional[Tuple[Node, Node]] = None,
+              record: Union[bool, str] = 'auto', edge_labels: bool = True) -> AGraph:
     """
     Writes a properly styled graphviz file for the given graph.
 
@@ -164,6 +167,7 @@ def write_dot(graph: nx.MultiDiGraph, target: Union[PathLike, str] = 'base_graph
                 except KeyError:
                     logger.warning('Highlight key %s not found while writing %s', highlight, target)
 
+    # noinspection PyTypeChecker
     simplified: MultiDiGraph = simplify_graph(vis)
 
     # now style by kind:
@@ -277,7 +281,35 @@ def render_file_alt(filename: PathLike, timeout: Optional[float] = None) -> \
         return target, e
 
 
-def render_all(timeout=None):
+async def render_file_async(filename: PathLike, semaphore: asyncio.Semaphore, timeout: Optional[float] = None):
+    path = Path(filename)
+    dot = shutil.which('dot')
+    target = path.with_suffix('.svg')
+    args = ['-T', 'svg', '-o', target, path]
+    async with semaphore:
+        logger.debug('Starting process for rendering %s', path)
+        process = await asyncio.create_subprocess_exec(dot, *args, stdin=None, stdout=asyncio.subprocess.PIPE,
+                                                       stderr=asyncio.subprocess.PIPE, close_fds=True)
+        logger.debug('Waiting for rendering of %s', path)
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
+            if stdout:
+                logger.info('Rendering %s: %s', path, stdout)
+            if stderr:
+                logger.warning('Rendering %s: %s', path, stderr)
+            if process.returncode == 0:
+                return target
+            else:
+                logger.error('Rendering %s failed (%d)', path, process.returncode)
+                return target, process.returncode
+        except asyncio.TimeoutError as e:
+            process.terminate()
+            stdout, stderr = await process.communicate()
+            logger.warning('Rendering %s timed out after %g seconds | %s | %s', path, timeout, stdout, stderr)
+            return target, e
+
+
+def render_all_pool(timeout=None):
     if timeout is None:
         timeout = config.render_timeout
     if timeout is not None and timeout <= 0:
@@ -286,16 +318,48 @@ def render_all(timeout=None):
         global _render_queue
         dots, _render_queue = _render_queue, []
         result = list(config.progress(pool.imap_unordered(partial(render_file_alt, timeout=timeout), dots),
-                           desc='Rendering', total=len(dots), unit=' SVGs'))
+                                      desc='Rendering', total=len(dots), unit=' SVGs'))
         not_rendered = [entry for entry in result if isinstance(entry, tuple)]
         timeout = [path for path, err in not_rendered if isinstance(err, subprocess.TimeoutExpired)]
         failed = [path for path, err in not_rendered if isinstance(err, subprocess.CalledProcessError)]
         _render_queue.append(timeout)
-        if failed:
-            loglevel = logging.ERROR
-        elif timeout:
-            loglevel = logging.WARNING
-        else:
-            loglevel = logging.INFO
-        logger.log(loglevel, 'Rendered %d SVGs, %d timed out, %d failed', len(result) - len(timeout) - len(failed),
-                   len(timeout), len(failed))
+    if failed:
+        loglevel = logging.ERROR
+    elif timeout:
+        loglevel = logging.WARNING
+    else:
+        loglevel = logging.INFO
+    logger.log(loglevel, 'Rendered %d SVGs, %d timed out, %d failed', len(result) - len(timeout) - len(failed),
+               len(timeout), len(failed))
+
+
+def render_all(timeout=None, render_mode=None):
+    render_mode = render_mode or config.render_mode
+    if render_mode == 'async':
+        asyncio.run(render_all_async(timeout))
+    else:
+        render_all_pool(timeout)
+
+
+async def render_all_async(timeout=None):
+    if timeout is None:
+        timeout = config.render_timeout
+    if timeout is not None and timeout <= 0:
+        timeout = None
+
+    global _render_queue
+    dots, _render_queue = _render_queue, []
+    sem = asyncio.Semaphore(10)
+    results = await asyncio.gather(*[render_file_async(file, sem, timeout) for file in dots])
+    not_rendered = [entry for entry in results if isinstance(entry, tuple)]
+    timeout = [path for path, err in not_rendered if isinstance(err, asyncio.TimeoutError)]
+    failed = [path for path, err in not_rendered if isinstance(err, int)]
+    _render_queue.append(timeout)
+    if failed:
+        loglevel = logging.ERROR
+    elif timeout:
+        loglevel = logging.WARNING
+    else:
+        loglevel = logging.INFO
+    logger.log(loglevel, 'Rendered %d SVGs, %d timed out, %d failed', len(results) - len(timeout) - len(failed),
+               len(timeout), len(failed))
