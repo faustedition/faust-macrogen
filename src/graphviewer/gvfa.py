@@ -1,6 +1,9 @@
 import codecs
 import subprocess
 from collections import Mapping
+
+import pydantic
+from dataclasses import dataclass, Field
 from enum import Enum
 from typing import TypeVar, Hashable, Callable, List, Dict, Optional, Iterable
 
@@ -10,6 +13,7 @@ from macrogen import MacrogenesisInfo, write_dot
 import uvicorn
 from fastapi import FastAPI, Depends, Request, Response
 from fastapi.templating import Jinja2Templates
+from macrogen.graph import Node
 from macrogen.graphutils import remove_edges, expand_edges, simplify_timeline, collapse_parallel_edges
 from pydantic import BaseModel
 from pygraphviz import AGraph
@@ -117,6 +121,21 @@ def check_nodes(nodeinfo: NodeInput = Depends()) -> NodeReport:
                       normalized=', '.join(map(str, nodes)),
                       not_found=errors)
 
+@dataclass
+class _AGraphInfo:
+    graph: AGraph
+    nodes: List[Node]
+    extra_nodes: List[Node]
+    unknown_nodes: List[str]
+    basename: str
+
+@pydantic.dataclasses.dataclass
+class AGraphInfo:
+    dot: str
+    nodes: List[str]
+    extra_nodes: List[str]
+    unknown_nodes: List[str]
+
 
 def agraph(nodeinfo: NodeInput = Depends(),
            context: bool = False,
@@ -124,7 +143,7 @@ def agraph(nodeinfo: NodeInput = Depends(),
            induced_edges: bool = False,
            ignored_edges: bool = False,
            assertions: bool = False,
-           extra_paths: str = '',
+           extra: str = '',
            paths_wo_timeline: bool = False,
            tred: bool = False,
            nohl: bool = False,
@@ -134,15 +153,15 @@ def agraph(nodeinfo: NodeInput = Depends(),
            collapse: bool = False,
            dir: Direction = Direction.LR,
            central_paths: CentralPaths = CentralPaths.ALL,
-           no_edge_labels: bool = False) -> AGraph:
+           no_edge_labels: bool = False) -> _AGraphInfo:
     """
     Creates the actual graph.
     """
 
     # retrieve the nodes by string
     model = models[nodeinfo.model]
-    nodes = model.nodes(nodeinfo.nodes)
-    extra_nodes = model.nodes(extra_paths)
+    nodes, unknown_nodes = model.nodes(nodeinfo.nodes, report_errors=True)
+    extra_nodes, unknown_extra_nodes = model.nodes(extra, report_errors=True)
 
     # extract the basic subgraph
     g = model.subgraph(*nodes, context=context, abs_dates=abs_dates, paths=extra_nodes,
@@ -184,31 +203,39 @@ def agraph(nodeinfo: NodeInput = Depends(),
         g = model.order_graph(g)  # adjusts weights & invisible edges to make graphviz layout the nodes in
         # a straight line according to the order of the model
     agraph = write_dot(g, target=None, highlight=None if nohl else nodes, edge_labels=not no_edge_labels)
-    agraph.graph_attr['basename'] = ",".join(
+    basename = ",".join(
             [str(node.filename.stem if hasattr(node, 'filename') else node) for node in nodes])
     agraph.graph_attr['bgcolor'] = 'transparent'
     agraph.graph_attr['rankdir'] = dir.value
     if order:
         agraph.graph_attr['ranksep'] = '0.2'
-    return agraph
+    return _AGraphInfo(agraph, nodes, extra_nodes, unknown_nodes + unknown_extra_nodes, basename)
+
+
+@app.get('/macrogenesis/subgraph/extract')
+def extract_dot(info: _AGraphInfo = Depends(agraph)) -> AGraphInfo:
+    return AGraphInfo(dot=info.graph.to_string(),
+                      nodes=[str(node) for node in info.nodes],
+                      extra_nodes=[str(node) for node in info.extra_nodes],
+                      unknown_nodes=info.unknown_nodes)
 
 
 @app.get('/macrogenesis/subgraph/dot')
-def render_dot(agraph: AGraph = Depends(agraph)):
-    return Response(content=agraph.to_string(),
+def render_dot(info: _AGraphInfo = Depends(agraph)):
+    return Response(content=info.graph.to_string(),
                     media_type='text/vnd.graphviz',
-                    headers={'Content-Disposition': f'attachment; filename="{agraph.graph_attr["basename"]}.dot"'})
+                    headers={'Content-Disposition': f'attachment; filename="{info.basename}.dot"'})
 
 
 @app.get('/macrogenesis/subgraph/{format}')
-def render_image(format: ExportFormat, agraph: AGraph = Depends(agraph)):
+def render_image(format: ExportFormat, agraph_info: _AGraphInfo = Depends(agraph)):
     # TODO convert to asyncio.subprocess
-    output = subprocess.check_output(['dot', '-T', format.value], input=codecs.encode(agraph.to_string()), timeout=30)
+    output = subprocess.check_output(['dot', '-T', format.value], input=codecs.encode(agraph_info.graph.to_string()), timeout=30)
     return Response(output,
                     media_type=MIME_TYPES[format],
                     headers={
-                        'Content-Disposition': f'attachment; filename="{agraph.graph_attr["basename"]}.{format.value}"'})
+                        'Content-Disposition': f'attachment; filename="{agraph_info.basename}.{format.value}"'})
 
 
 if __name__ == '__main__':
-    uvicorn.run('gvfa:app', host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run('gvfa:app', host="0.0.0.0", port=5000, reload=True, reload_dirs=["src/graphviewer"])

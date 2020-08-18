@@ -69,24 +69,44 @@
                 location.search = searchString;
                 history.replaceState(null, '', location)
 
-                try {
-                    const downloadTemplateEl = document.getElementById('download');
-                    const parseContainer = document.createElement('div');
-                    parseContainer.innerHTML = downloadTemplateEl.innerHTML;
-                    const graphDownloadArea = parseContainer.querySelector('#download-graph');
-                    for (const a of graphDownloadArea.getElementsByTagName("a")) {
-                        a.search = searchString;
-                    }
-                    downloadTemplateEl.innerHTML = parseContainer.innerHTML;
-                } catch (e) {
-                    console.warn(e);
-                }
             }
+
+            try {
+                const downloadTemplateEl = document.getElementById('download');
+                const parseContainer = document.createElement('div');
+                parseContainer.innerHTML = downloadTemplateEl.innerHTML;
+                const graphDownloadArea = parseContainer.querySelector('#download-graph');
+                for (const a of graphDownloadArea.getElementsByTagName("a")) {
+                    a.search = searchString;
+                }
+                downloadTemplateEl.innerHTML = parseContainer.innerHTML;
+            } catch (e) {
+                console.warn(e);
+            }
+
             const breadcrumbElement = document.getElementById('current');
             current.innerText = 'Teilgraph: ' + params.get('nodes');
         }
 
+        function addLongMessage(msg, severity) {
+            const container = document.getElementById('long-messages'),
+                  el = document.createElement('div');
+            container.appendChild(el);
+            el.innerHTML = `<div class="pure-alert pure-alert-${severity}">
+                <a href="#" class="pull-right"><strong>×</strong></a>
+                ${msg}
+            </div>`;
+            el.firstElementChild.firstElementChild.onclick = () => container.removeChild(el);
+        }
+
+        function clearLongMessages() {
+            document.getElementById('long-messages').innerHTML = '';
+        }
+
         function message(msg, severity, long) {
+            if (long) {
+                return addLongMessage(msg, severity);  // legacy
+            }
             const headerElement = document.getElementById('header-status'),
                   longMessage = document.getElementById('long-message'),
                   updating = long? longMessage: headerElement,
@@ -98,10 +118,10 @@
                 updating.innerHTML = msg;
                 updating.className = "pure-alert pure-alert-" + severity
                 updating.style.visibility = "visible";
-                other.style.visibility = "hidden";
+                //other.style.visibility = "hidden";
             } else {
                 updating.style.visibility = "hidden";
-                other.style.visibility = "hidden";
+                //other.style.visibility = "hidden";
             }
         }
 
@@ -129,6 +149,15 @@
 
         }
 
+        async function querySubgraph(formdata) {
+            const query = new URLSearchParams(formdata).toString()
+            const response = await fetch('subgraph/extract?' + query);
+            if (response.status === 200)
+                return await response.json();
+            else
+                throw await response.text();
+        }
+
         async function getDotStr(formdata) {
             const query = new URLSearchParams(formdata).toString()
             const response = await fetch('subgraph/dot?' + query);
@@ -154,13 +183,31 @@
             const formdata = getFormData(),
                   main = document.getElementsByTagName('main')[0];
             message("Lade aktualisierten Graphen …")
-            getDotStr(formdata).then(dot => {message("Berechne neues Layout …"); return dot;})
-            .then(dot => {
-                graphviz.transition(transitionFactory).renderDot(dot);
-            })
+            clearLongMessages();
+            querySubgraph(formdata)
+                .then(resp => {
+                    message("Berechne neues Layout …");
+                    if (resp.unknown_nodes && resp.unknown_nodes.length > 0) {
+                        addLongMessage('Die folgenden Knoten sind nicht im Graphen: ' + resp.unknown_nodes.join(', '), 'warning', true)
+                    }
+                    if (resp.nodes.length === 0) {
+                        addLongMessage(`<p>
+                            <strong>Keine zentralen Knoten angefragt.</strong>
+                            Geben Sie im Feld <em>Zentrale Knoten</em> eine oder mehrere Siglen
+                            aus den Makrogenesedaten an.</p>`, 'danger');
+                        document.getElementById('nodes').focus();
+                    } else {
+                        document.getElementById('nodes').value = resp.nodes.join(', ');
+                        document.getElementById('extra').value = resp.extra_nodes.join(', ');
+                    }
+                    return resp;
+                })
+                .then(resp => {
+                    graphviz.transition(transitionFactory).renderDot(resp.dot);
+                })
             //.then(() => message())
             .catch(reason => {
-                message(`<pre>${reason}</pre>`, "danger", true)
+                addLongMessage(`<pre>${reason}</pre>`, "danger")
                 console.error(reason)
             });
             updateURLs(formdata);
@@ -227,6 +274,7 @@
 
     <p class="pure-alert pure-alert-warning" style="display: none" id="long-message">
     </p>
+    <div id="long-messages"></div>
 
     <div id="refgraph"></div>
 
