@@ -207,8 +207,21 @@
                 })
             //.then(() => message())
             .catch(reason => {
-                addLongMessage(`<pre>${reason}</pre>`, "danger")
-                console.error(reason)
+                try {
+                    const details = JSON.parse(reason).detail;
+                    console.error(details);
+                    if (details.msg) {
+                        addLongMessage(details.msg, 'danger')
+                    } else {
+                        addLongMessage(`<pre>${details}</pre>`, "danger")
+                    }
+                    if (details.dot) {
+                        graphviz.transition(transitionFactory).renderDot(details.dot);
+                    }
+                } catch (e) {
+                    addLongMessage(`<pre>${reason}</pre>`, "danger")
+                    console.error(reason)
+                }
             });
             updateURLs(formdata);
             if (formdata.get('dir').includes('B')) { // vertical layout

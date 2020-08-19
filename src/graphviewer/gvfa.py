@@ -187,8 +187,10 @@ def agraph(nodeinfo: NodeInput = Depends(),
             reduction = nx.transitive_reduction(g)
             g = g.edge_subgraph([(u, v, k) for u, v, k, _ in expand_edges(g, reduction.edges)])
         else:
-            raise ValueError(
-                    'Cannot produce transitive reduction – the subgraph is not acyclic after removing conflict edges!')
+            raise HTTPException(500, dict(
+                    error="not-acyclic",
+                    msg='Cannot produce transitive reduction – the subgraph is not acyclic after removing conflict edges!',
+                    dot=write_dot(g, target=None, highlight=nodes).to_string()))
 
     g = simplify_timeline(g)
 
