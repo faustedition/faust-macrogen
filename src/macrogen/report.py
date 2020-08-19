@@ -366,7 +366,11 @@ def _fmt_node(node: Union[Reference, date], prefix: str = None) -> str:
     """Formats a node by creating a link of possible"""
     prefix = prefix or ''
     if isinstance(node, Reference):
-        return f'<a href="{prefix}{node.filename.stem}">{node}</a>'
+        linked_to_edition = isinstance(node, Witness) or isinstance(node, Inscription) and isinstance(node.witness, Witness)
+        if linked_to_edition:
+            return f'<a href="{prefix}{node.filename.stem}">{node}</a>'
+        else:
+            return f'<a class="mark-warning-ref" href="{prefix}{node.filename.stem}">{node}</a>'
     else:
         return format(node)
 
