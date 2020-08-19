@@ -1,5 +1,6 @@
+import asyncio
 import codecs
-import subprocess
+from asyncio import create_subprocess_exec, wait_for
 from collections import Mapping
 
 import pydantic
@@ -11,7 +12,7 @@ import networkx as nx
 from macrogen import MacrogenesisInfo, write_dot
 
 import uvicorn
-from fastapi import FastAPI, Depends, Request, Response
+from fastapi import FastAPI, Depends, Request, Response, HTTPException
 from fastapi.templating import Jinja2Templates
 from macrogen.graph import Node
 from macrogen.graphutils import remove_edges, expand_edges, simplify_timeline, collapse_parallel_edges
@@ -228,13 +229,23 @@ def render_dot(info: _AGraphInfo = Depends(agraph)):
 
 
 @app.get('/macrogenesis/subgraph/{format}')
-def render_image(format: ExportFormat, agraph_info: _AGraphInfo = Depends(agraph)):
-    # TODO convert to asyncio.subprocess
-    output = subprocess.check_output(['dot', '-T', format.value], input=codecs.encode(agraph_info.graph.to_string()), timeout=30)
-    return Response(output,
-                    media_type=MIME_TYPES[format],
-                    headers={
-                        'Content-Disposition': f'attachment; filename="{agraph_info.basename}.{format.value}"'})
+async def render_image(format: ExportFormat, agraph_info: _AGraphInfo = Depends(agraph)):
+    if not agraph_info.nodes:
+        raise HTTPException(404, dict(error="empty", msg="No nodes in graph", unknown_nodes=agraph_info.unknown_nodes))
+    proc = await create_subprocess_exec('dot', '-T', format.value, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        output, errors = await wait_for(proc.communicate(codecs.encode(agraph_info.graph.to_string())), timeout=10)
+        if proc.returncode != 0:
+            raise HTTPException(513, f'Rendering {format} failed:\n\n{codecs.decode(errors)}')
+        return Response(output,
+                        media_type=MIME_TYPES[format],
+                        headers={
+                            'Content-Disposition': f'attachment; filename="{agraph_info.basename}.{format.value}"'})
+    except asyncio.TimeoutError:
+        proc.terminate()
+        raise HTTPException(504, dict(error="timeout",
+                                      msg="This layout is to complex to be rendered within the server's limits.\n"
+                                          "Download a .dot file and run graphviz on your local machine to get a rendering."))
 
 
 if __name__ == '__main__':
