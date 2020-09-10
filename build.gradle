@@ -60,9 +60,9 @@ task installMacrogen(type: Exec) {
 
 	executable "$venv/bin/pip"
 	workingDir projectDir
-	args "install", "-U", "-e", "."
+	args "install", "-U", "."
 
-    inputs.file "setup.py"
+    inputs.file "pyproject.toml"
 	outputs.file "$venv/bin/macrogen"
 }
 
