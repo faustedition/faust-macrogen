@@ -8,7 +8,7 @@ from macrogen.graph import yearlabel, MacrogenesisInfo
 
 
 
-@pytest.fixture('session')
+@pytest.fixture(scope='session')
 @pytest.mark.slow
 def eades_graphs():
     config.fes_method = 'eades'
