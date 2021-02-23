@@ -343,7 +343,7 @@ class FES_Baharev:
 
         # bounds for the objective
         lower_bound = 0
-        upper_bound = np.sum(initial_fes_vec * self.weights)
+        upper_bound = np.sum(initial_fes_vec @ self.weights)
 
         self.logger.info('Calculating FES for graph with %d edges, max %d feedback edges', self.m, len(initial_fes))
 
@@ -355,11 +355,11 @@ class FES_Baharev:
 
             # Formulate and solve the problem for this iteration:
             y = cp.Variable(self.m, boolean=True, name="y")
-            objective = cp.Minimize(cp.sum(y * self.weights))
+            objective = cp.Minimize(cp.sum(y @ self.weights))
 
             cycle_vectors = [self.edge_vector(nx.utils.pairwise(cycle)) for cycle in simple_cycles]
-            constraints = [cp.sum(a * y) >= 1 for a in cycle_vectors]
-            constraints.append(cp.sum(y * self.force_forward_vec) == 0)  # no force forward vec may be in the result set
+            constraints = [cp.sum(a @ y) >= 1 for a in cycle_vectors]
+            constraints.append(cp.sum(y @ self.force_forward_vec) == 0)  # no force forward vec may be in the result set
             problem = cp.Problem(objective, constraints)
             resolution = problem.solve(**self.solver_args)
             if problem.status != 'optimal':
@@ -397,7 +397,7 @@ class FES_Baharev:
             # determine additional simple cycles (= constraints)
             Fi = eades(Gi, self.force_forward_edges)
             yi = self.edge_vector(Fi) | current_solution
-            zi = np.sum(yi * self.weights)
+            zi = np.sum(yi @ self.weights)
             if zi < upper_bound:
                 upper_bound = zi
                 current_solution = yi
