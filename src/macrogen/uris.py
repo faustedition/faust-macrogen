@@ -412,7 +412,7 @@ class Witness(Reference):
 
 def _collect_wits():
     items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
-    macrogenesis_files = list(config.path.data.join('macrogenesis').rglob('**/*.xml'))
+    macrogenesis_files = list(Path(config.path.data, 'macrogenesis').glob('**/*.xml'))
     for macrogenetic_file in macrogenesis_files:
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
         for element in tree.xpath('//f:item', namespaces=config.namespaces):  # type: etree._Element
