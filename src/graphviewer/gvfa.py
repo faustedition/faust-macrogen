@@ -2,19 +2,17 @@ import asyncio
 import codecs
 from asyncio import create_subprocess_exec, wait_for
 from collections import Mapping
-from pathlib import Path
-
-import pydantic
-from dataclasses import dataclass, Field
+from dataclasses import dataclass
 from enum import Enum
-from typing import TypeVar, Hashable, Callable, List, Dict, Optional, Iterable
+from pathlib import Path
+from typing import TypeVar, Callable, List, Dict, Optional, Iterable
 
 import networkx as nx
-from macrogen import MacrogenesisInfo, write_dot
-
+import pydantic
 import uvicorn
 from fastapi import FastAPI, Depends, Request, Response, HTTPException
 from fastapi.templating import Jinja2Templates
+from macrogen import MacrogenesisInfo, write_dot
 from macrogen.graph import Node
 from macrogen.graphutils import remove_edges, expand_edges, simplify_timeline, collapse_parallel_edges
 from pydantic import BaseModel
@@ -22,7 +20,8 @@ from pygraphviz import AGraph
 
 app = FastAPI()
 
-S, T = TypeVar('S'), TypeVar('T')
+S = TypeVar('S')
+T = TypeVar('T')
 
 
 class LazyLoader(Mapping):
@@ -100,12 +99,11 @@ def load_models():
     model_files = list(Path('target').glob('*-*/macrogen-info.zip'))
     by_key = {'default': Path('target/macrogenesis/macrogen-info.zip')}
     by_key.update({p.parent.stem: p for p in model_files if p not in by_key.values()})
+
     def load_model(key):
         return MacrogenesisInfo(by_key[key])
+
     models = LazyLoader(load_model, by_key.keys())
-
-    # models['default'] = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')
-
 
 
 templates = Jinja2Templates(directory='src/graphviewer/templates')
@@ -132,6 +130,7 @@ def check_nodes(nodeinfo: NodeInput = Depends()) -> NodeReport:
                       normalized=', '.join(map(str, nodes)),
                       not_found=errors)
 
+
 @dataclass
 class _AGraphInfo:
     graph: AGraph
@@ -139,6 +138,7 @@ class _AGraphInfo:
     extra_nodes: List[Node]
     unknown_nodes: List[str]
     basename: str
+
 
 @pydantic.dataclasses.dataclass
 class AGraphInfo:
@@ -244,7 +244,8 @@ def render_dot(info: _AGraphInfo = Depends(agraph)):
 async def render_image(format: ExportFormat, agraph_info: _AGraphInfo = Depends(agraph)):
     if not agraph_info.nodes:
         raise HTTPException(404, dict(error="empty", msg="No nodes in graph", unknown_nodes=agraph_info.unknown_nodes))
-    proc = await create_subprocess_exec('dot', '-T', format.value, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    proc = await create_subprocess_exec('dot', '-T', format.value, stdin=asyncio.subprocess.PIPE,
+                                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         output, errors = await wait_for(proc.communicate(codecs.encode(agraph_info.graph.to_string())), timeout=10)
         if proc.returncode != 0:
