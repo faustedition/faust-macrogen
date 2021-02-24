@@ -2,6 +2,7 @@ import asyncio
 import codecs
 from asyncio import create_subprocess_exec, wait_for
 from collections import Mapping
+from pathlib import Path
 
 import pydantic
 from dataclasses import dataclass, Field
@@ -33,12 +34,12 @@ class LazyLoader(Mapping):
         self._loaded = {}
         self._items = {}
         for key in keys or []:
-            self._load[key] = False
+            self._loaded[key] = False
 
     def __getitem__(self, item: S) -> T:
         if not self._loaded.get(item):
             self._items[item] = self._load(item)
-            self._load[item] = True
+            self._loaded[item] = True
         return self._items[item]
 
     def __iter__(self):
@@ -93,9 +94,18 @@ MIME_TYPES: Dict[ExportFormat, str] = {
 
 @app.on_event('startup')
 def load_models():
-    # TODO load other models if available
     # TODO configurability
-    models['default'] = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')
+    global models
+
+    model_files = list(Path('target').glob('*-*/macrogen-info.zip'))
+    by_key = {'default': Path('target/macrogenesis/macrogen-info.zip')}
+    by_key.update({p.parent.stem: p for p in model_files if p not in by_key.values()})
+    def load_model(key):
+        return MacrogenesisInfo(by_key[key])
+    models = LazyLoader(load_model, by_key.keys())
+
+    # models['default'] = MacrogenesisInfo('target/macrogenesis/macrogen-info.zip')
+
 
 
 templates = Jinja2Templates(directory='src/graphviewer/templates')
@@ -103,12 +113,12 @@ templates = Jinja2Templates(directory='src/graphviewer/templates')
 
 @app.get('/macrogenesis/subgraph')
 async def render_form(request: Request):
-    return templates.TemplateResponse('form.html', {'request': request})
+    return templates.TemplateResponse('form.html', {'request': request, 'models': models})
 
 
 @app.get('/macrogenesis/subgraph/help')
 async def render_form(request: Request):
-    return templates.TemplateResponse('help.html', {'request': request})
+    return templates.TemplateResponse('help.html', {'request': request, 'models': models})
 
 
 @app.get('/macrogenesis/subgraph/check-nodes', response_model=NodeReport)
