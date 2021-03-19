@@ -1,7 +1,7 @@
 import asyncio
 import codecs
 from asyncio import create_subprocess_exec, wait_for
-from collections import Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -48,7 +48,7 @@ class LazyLoader(Mapping):
         return len(self._loaded)
 
 
-models: Dict[str, MacrogenesisInfo] = {}
+models: Mapping[str, MacrogenesisInfo] = {}
 
 
 class NodeInput(BaseModel):
