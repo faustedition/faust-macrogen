@@ -23,8 +23,10 @@ envs {
 	bootstrapDirectory = new File(buildDir, 'tools')
 	envsDirectory = new File(buildDir, 'envs')
 
-	python "python37", "3.7.4", []
-	virtualenv "macrogen", "python37"
+	// python "python37", "3.7.4", []
+        conda "Miniconda3", "Miniconda3-py39_4.9.2", "64", []
+	// virtualenv "macrogen", "python37"
+        condaenv "macrogen", "3.9", "Miniconda3", [condaPackage("graphviz")]
 	project.ext.venv = "$buildDir/envs/macrogen"
 }
 
@@ -32,6 +34,7 @@ task prepareMacrogenOptions {
     project.ext.macrogenArgs = []
 	project.ext.macrogenInputs = []
 	project.ext.macrogenExecutable = "$venv/bin/macrogen"
+        project.ext.macrogenPath = "$venv/bin"
 
 	if (project.hasProperty('macrogenOptions'))
 		macrogenArgs.add(project.macrogenOptions)
@@ -71,6 +74,7 @@ task runMacrogenComplete {
 	dependsOn installMacrogen, prepareMacrogenOptions
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			executable macrogenExecutable
 			args macrogenArgs
 			inputs.files(project.macrogenInputs)
@@ -86,6 +90,7 @@ task runMacrogenAnalysis {
 	inputs.files(project.macrogenInputs)
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			executable macrogenExecutable
 			args macrogenArgs
 			args "--skip-reports"
@@ -106,8 +111,9 @@ task runMacrogenReporting {
 	inputs.files(project.macrogenInputs)
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			args "-i", "$buildDir/macrogen-graphs.zip"
-            args macrogenArgs
+                        args macrogenArgs
 			executable macrogenExecutable
 		}
 		project.copy {
