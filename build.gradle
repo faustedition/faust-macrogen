@@ -22,7 +22,7 @@ if (!project.hasProperty('dataDir')) {
 repositories {
     ivy {
         url "https://repo.anaconda.com/miniconda/"
-        patternLayout { artifact "[module]-[revision]-Linux-x86_64.sh" }
+        patternLayout { artifact "[module]-[revision]-Linux-x86_64.[ext]" }
         metadataSources { artifact() }
         content { includeGroup "miniconda" }
     }
@@ -33,7 +33,7 @@ configurations {
 }
 
 dependencies {
-    python group: 'miniconda', name: 'Miniconda3', version: 'py39_4.9.2'
+    python group: 'miniconda', name: 'Miniconda3', version: 'py39_4.9.2', ext: 'sh'
 }
 
 /*
@@ -75,7 +75,7 @@ task prepareMacrogenOptions {
 }
 
 
-task installMacrogen(type: Exec) {
+task installMacrogenOld(type: Exec) {
 	description 'Installs the macrogenesis tool and its requirements'
 	group 'macrogen'
 	dependsOn 'build_envs'
@@ -88,11 +88,38 @@ task installMacrogen(type: Exec) {
 	outputs.file "$venv/bin/macrogen"
 }
 
-task installAnaconda(type: Exec) {
-    File installer = configurations.python.getSingleFile()
-    executable "/bin/bash"
-    args installer, "-b", "-p", "$buildDir/tools/miniconda"
-    outputs.dir("$buildDir/tools/miniconda")
+task installAnaconda() {
+    description 'Installs Miniconda'
+    project.ext.anacondaDir = "$buildDir/tools/miniconda"
+    project.ext.conda = "$anacondaDir/bin/conda"
+    outputs.dir anacondaDir
+
+    doLast {
+        File installer = configurations.python.getSingleFile()
+        exec {
+            executable "/bin/bash"
+            args installer, "-b", "-p", anacondaDir, "-u"
+        }
+    }
+}
+
+task installMacrogen() {
+    description 'Installs the macrogenesis tool and its requirements (conda)'
+    dependsOn 'installAnaconda'
+    group 'macrogen'
+    inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
+    outputs.dir venv
+    doLast {
+        exec {
+            executable conda
+            args "env", "create", "-p", venv, "-f", "$projectDir/environment.yml"
+        }
+        exec {
+            executable "$venv/bin/pip"
+            workingDir projectDir
+            args "install", "."
+        }
+    }
 }
 
 task runMacrogenComplete {
