@@ -1,6 +1,6 @@
 plugins {
     id "base"
-    id "com.jetbrains.python.envs" version "0.0.30"
+/*    id "com.jetbrains.python.envs" version "0.0.30" */
 }
 
 if (project != rootProject) {
@@ -17,21 +17,43 @@ if (!project.hasProperty('dataDir')) {
 	}
 	logger.info("Using data from $dataDirCandidate")
 }
+	project.ext.venv = "$buildDir/envs/macrogen"
 
+repositories {
+    ivy {
+        url "https://repo.anaconda.com/miniconda/"
+        patternLayout { artifact "[module]-[revision]-Linux-x86_64.[ext]" }
+        metadataSources { artifact() }
+        content { includeGroup "miniconda" }
+    }
+}
 
+configurations {
+    python
+}
+
+dependencies {
+    python group: 'miniconda', name: 'Miniconda3', version: 'py39_4.9.2', ext: 'sh'
+}
+
+/*
 envs {
 	bootstrapDirectory = new File(buildDir, 'tools')
 	envsDirectory = new File(buildDir, 'envs')
 
-	python "python37", "3.7.4", []
-	virtualenv "macrogen", "python37"
+	// python "python37", "3.7.4", []
+        conda "Miniconda3", "Miniconda3-py39_4.9.2", "64", []
+	// virtualenv "macrogen", "python37"
+        condaenv "macrogen", "3.9", "Miniconda3", [condaPackage("graphviz")]
 	project.ext.venv = "$buildDir/envs/macrogen"
 }
+*/
 
 task prepareMacrogenOptions {
     project.ext.macrogenArgs = []
 	project.ext.macrogenInputs = []
 	project.ext.macrogenExecutable = "$venv/bin/macrogen"
+        project.ext.macrogenPath = "$venv/bin"
 
 	if (project.hasProperty('macrogenOptions'))
 		macrogenArgs.add(project.macrogenOptions)
@@ -53,7 +75,7 @@ task prepareMacrogenOptions {
 }
 
 
-task installMacrogen(type: Exec) {
+task installMacrogenOld(type: Exec) {
 	description 'Installs the macrogenesis tool and its requirements'
 	group 'macrogen'
 	dependsOn 'build_envs'
@@ -66,11 +88,55 @@ task installMacrogen(type: Exec) {
 	outputs.file "$venv/bin/macrogen"
 }
 
+task installAnaconda() {
+    description 'Installs Miniconda'
+    project.ext.anacondaDir = "$buildDir/tools/miniconda"
+    project.ext.conda = "$anacondaDir/bin/conda"
+    outputs.dir anacondaDir
+    outputs.file "$anacondaDir/bin/conda"
+
+    doLast {
+        File installer = configurations.python.getSingleFile()
+        exec {
+            executable "/bin/bash"
+            args installer, "-b", "-p", anacondaDir, "-u"
+        }
+    }
+}
+
+task installMacrogen() {
+    description 'Installs the macrogenesis tool and its requirements (conda)'
+    dependsOn 'installAnaconda'
+    group 'macrogen'
+    inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
+    outputs.dir "$venv"
+    outputs.file "$venv/bin/macrogen"
+    doLast {
+        if (new File("$venv").exists()) {
+            exec {
+                executable conda
+                args "env", "update", "-p", venv, "-f", "$projectDir/environment.yml"
+            }
+        } else {
+            exec {
+                executable conda
+                args "env", "create", "-p", venv, "-f", "$projectDir/environment.yml"
+            }
+        }
+        exec {
+            executable "$venv/bin/pip"
+            workingDir projectDir
+            args "install", "."
+        }
+    }
+}
+
 task runMacrogenComplete {
 	description 'Runs the complete macrogenesis analysis and configuration'
 	dependsOn installMacrogen, prepareMacrogenOptions
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			executable macrogenExecutable
 			args macrogenArgs
 			inputs.files(project.macrogenInputs)
@@ -86,6 +152,7 @@ task runMacrogenAnalysis {
 	inputs.files(project.macrogenInputs)
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			executable macrogenExecutable
 			args macrogenArgs
 			args "--skip-reports"
@@ -106,8 +173,9 @@ task runMacrogenReporting {
 	inputs.files(project.macrogenInputs)
 	doLast {
 		project.exec {
+                        environment 'PATH', macrogenPath
 			args "-i", "$buildDir/macrogen-graphs.zip"
-            args macrogenArgs
+                        args macrogenArgs
 			executable macrogenExecutable
 		}
 		project.copy {
