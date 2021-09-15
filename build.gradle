@@ -93,6 +93,7 @@ task installAnaconda() {
     project.ext.anacondaDir = "$buildDir/tools/miniconda"
     project.ext.conda = "$anacondaDir/bin/conda"
     outputs.dir anacondaDir
+    outputs.file "$anacondaDir/bin/conda"
 
     doLast {
         File installer = configurations.python.getSingleFile()
@@ -108,11 +109,19 @@ task installMacrogen() {
     dependsOn 'installAnaconda'
     group 'macrogen'
     inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
-    outputs.dir venv
+    outputs.dir "$venv"
+    outputs.file "$venv/bin/macrogen"
     doLast {
-        exec {
-            executable conda
-            args "env", "create", "-p", venv, "-f", "$projectDir/environment.yml"
+        if (new File("$venv").exists()) {
+            exec {
+                executable conda
+                args "env", "update", "-p", venv, "-f", "$projectDir/environment.yml"
+            }
+        } else {
+            exec {
+                executable conda
+                args "env", "create", "-p", venv, "-f", "$projectDir/environment.yml"
+            }
         }
         exec {
             executable "$venv/bin/pip"
