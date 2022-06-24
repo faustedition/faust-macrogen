@@ -5,10 +5,14 @@
     <label for="{{ name }}">{{ label }}</label>
 {%- endmacro %}
 
-{% macro radiolist(name, items, checked=None) -%}
-    {% for value, label in items %}
-        <input type="radio" name="{{ name }}" id="{{ name }}_{{ value }}" value="{{ value }}" {% if (value == checked) %} checked {% endif %}>
-        <label for="{{ name }}_{{ value }}">{{ label }}</label>
+{% macro radiolist(name, items, checked=None) -%} {# items = [(name, item, title?), (name, item, title?)] #}
+    {% for item in items %}
+        <input type="radio" name="{{ name }}" id="{{ name }}_{{ item[0] }}" value="{{ item[0] }}"
+               {% if (value == checked) %} checked {% endif %}
+               {% if item|length > 2 %} title="{{item[2]}}" {% endif %}>
+        <label for="{{ name }}_{{ item[0] }}"
+                {% if item|length > 2 %} title="{{item[2]}}" {% endif %}>
+        {{ item[1] }}</label>
          
     {% endfor %}
 {%- endmacro %}
@@ -298,7 +302,10 @@
     </legend>
     <p><input type="text" name="nodes" id="nodes" value="" style="width: 100%;" placeholder="2 V H.13">
     </p>
-    <p>Pfade dazwischen: {{ radiolist('central_paths', [('no', 'keine'), ('dag', 'nur positive'), ('all', 'alle')], 'all') }}</p>
+    <p>Pfade dazwischen: {{ radiolist('central_paths', [
+            ('no', 'keine', 'nur induzierte Kanten'),
+            ('dag', 'nur positive', 'keine Pfade über Konfliktkanten'),
+            ('all', 'alle', 'Pfade in Hin- und Rückrichtung für jedes mögliche Kernknotenpaar')], 'all') }}</p>
     <p>{{ checkbox('context', 'Nachbarknoten') }}</p>
     <p>{{ checkbox('inscriptions', 'Inskriptionen ↔ Zeugen') }}</p>
     <p>{{ checkbox('syn', 'ungefähr gleichzeitige Knoten') }}</p>
