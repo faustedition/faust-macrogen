@@ -3,8 +3,10 @@ from datetime import date
 import networkx as nx
 import pytest
 
-from macrogen.igraph_wrapper import _convert_attr_list, to_igraph, nx_edges
 
+@pytest.fixture(scope='session')
+def igraph_wrapper():
+    return pytest.importorskip('macrogen.igraph_wrapper')
 
 @pytest.fixture(scope='session')
 def base_graph():
@@ -21,15 +23,15 @@ def small_graph():
     return G
 
 
-def test_igraph_roundtrip(small_graph):
-    Gi = to_igraph(small_graph)
-    edges = list(nx_edges(Gi.es, True, True))
+def test_igraph_roundtrip(small_graph, igraph_wrapper):
+    Gi = igraph_wrapper.to_igraph(small_graph)
+    edges = list(igraph_wrapper.nx_edges(Gi.es, True, True))
     assert isinstance(edges[0][0], date)
     assert edges[0][3] == {'kind': 'timeline'}
 
 
-def test_convert_attr():
+def test_convert_attr(igraph_wrapper):
     source = [dict(a=23, b=42), dict(a=47, b=11), dict(a=5)]
-    target = _convert_attr_list(source, 'all')
+    target = igraph_wrapper._convert_attr_list(source, 'all')
     assert target['a'] == [23, 47, 5]
     assert target['b'] == [42, 11, None]
