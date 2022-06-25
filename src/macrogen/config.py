@@ -30,6 +30,7 @@ import argparse
 import csv
 import json
 import logging
+from logging import Logger
 import traceback
 from collections import namedtuple, defaultdict
 from functools import partial
@@ -316,18 +317,21 @@ class Configuration:
         logger.debug('Reconfigured logging')
         logger = logging.getLogger(__name__)
 
-    def getLogger(self, name):
+    def getLogger(self, name) -> Union[Logger, _Proxy]:
         return _Proxy(logging.getLogger, name)
 
     def progress(self, iterable, *args, **kwargs):
         if self.progressbar:
             try:
                 from tqdm import tqdm
-                return tqdm(iterable, *args, **kwargs)
+                from tqdm.contrib.logging import tqdm_logging_redirect
+                if 'dynamic_ncols' not in kwargs:
+                    kwargs['dynamic_ncols'] = True
+                with tqdm_logging_redirect():
+                    yield from tqdm(iterable, *args, **kwargs)
             except ImportError:
                 pass
         return iterable
-
 
     def relative_path(self, absolute_path):
         return Path(absolute_path).relative_to(self.path.data)
