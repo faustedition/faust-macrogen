@@ -3,9 +3,17 @@ Macrogenetic Analysis for the Faustedition
 
 These scripts analyze the macrogenetic data from the data/xml/macrogenesis folder. They create the macrogenesis lab area of the edition, i.e. everything below macrogenesis/, and an order of witnesses used in the bargraph and in the variant apparatus.
 
-### Installation and Usage
+We only support running this on Linux.
 
-Python ≥ 3.7 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separately.
+### What’s in the box
+
+- the macrogenesis python package contains all code to work with the data. Its main nentry point is the Macrogenesis class, which can either build an analysis structore from the XML data or load a graph structure from a previous run.
+- the `macrogen` command line script is the main script to run the analysis or the reporting or both.
+- the interactive subgraph viewer (graphviewer) is a FastAPI based service that can be used to interactively display parts of the graph.
+
+### Installation and Usage – Basic Steps
+
+Python ≥ 3.9 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separately.
 
 ```bash
 git submodules update --init --remote
@@ -15,9 +23,25 @@ macrogen
 
 will produce the output.
 
-### Using the Gradle build
+### Installation – Details
 
-The included Gradle script provides tasks to setup a suitable python version, install the macrogenesis library and all of its dependencies, and run the analysis. It still requires Graphviz to be installed.
+The main supported way of installation is to clone the repository and then run `pip install .` to install the package, potentially into a virtual environment. For development, install Poetry and run `poetry install .`. 
+
+There is one supported optional features (or 'extra'):
+
+* __fastapi__: run `pip install .[fastapi]` to get FastAPI, uvicorn, gunicorn and everything else needed to run the interactive graphviewer
+
+There are two additional historical extras, which may still work but are no longer supported:
+
+* `graphviewer` for the old, Flask-based interactive graphviewer
+* `igraph` for the old, igraph-based solver that can be optionally configured.
+
+#### The bootstrapped environment of the Gradle task
+
+It is possible to __bootstrap__ a Python environment with everything required to run macrogen. This is implemented in the installMacrogen gradle task of the build.gradle script. This is used by the global Gradle task in `faust-gen`, and it can be triggered by running `./gradlew installMacrogen`. 
+
+The bootstrapping process will download micromamba and then use that to build a python environment in `build/envs/macrogen/` using conda packages. This is controlled using the [environment.yml])(environment.yml) YAML file. Afterwards, `pip` is used to install the local package into that environment (to make sure we have everything from pyproject.toml). 
+
 
 ### Additional Configuration
 
