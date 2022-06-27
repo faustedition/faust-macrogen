@@ -1,6 +1,5 @@
 plugins {
     id "base"
-/*    id "com.jetbrains.python.envs" version "0.0.30" */
 }
 
 if (project != rootProject) {
@@ -21,10 +20,11 @@ if (!project.hasProperty('dataDir')) {
 
 repositories {
     ivy {
-        url "https://repo.anaconda.com/miniconda/"
-        patternLayout { artifact "[module]-[revision]-Linux-x86_64.[ext]" }
+        url "https://anaconda.org/conda-forge/"
+        // url "https://micro.mamba.pm/api/"  no HEAD support :(
+        patternLayout { artifact "[module]/[revision]/download/linux-64/[module]-[revision]-0.[ext]" }
         metadataSources { artifact() }
-        content { includeGroup "miniconda" }
+        content { includeGroup "micromamba" }
     }
 }
 
@@ -33,21 +33,9 @@ configurations {
 }
 
 dependencies {
-    python group: 'miniconda', name: 'Miniconda3', version: 'py39_4.9.2', ext: 'sh'
+    python group: 'micromamba', name: 'micromamba', version: '0.24.0', ext: 'tar.bz2'
 }
 
-/*
-envs {
-	bootstrapDirectory = new File(buildDir, 'tools')
-	envsDirectory = new File(buildDir, 'envs')
-
-	// python "python37", "3.7.4", []
-        conda "Miniconda3", "Miniconda3-py39_4.9.2", "64", []
-	// virtualenv "macrogen", "python37"
-        condaenv "macrogen", "3.9", "Miniconda3", [condaPackage("graphviz")]
-	project.ext.venv = "$buildDir/envs/macrogen"
-}
-*/
 
 task prepareMacrogenOptions {
     project.ext.macrogenArgs = []
@@ -75,52 +63,38 @@ task prepareMacrogenOptions {
 }
 
 
-task installMacrogenOld(type: Exec) {
-	description 'Installs the macrogenesis tool and its requirements'
-	group 'macrogen'
-	dependsOn 'build_envs'
 
-	executable "$venv/bin/pip"
-	workingDir projectDir
-	args "install", "-U", "."
-
-    inputs.file "pyproject.toml"
-	outputs.file "$venv/bin/macrogen"
-}
-
-task installAnaconda() {
-    description 'Installs Miniconda'
-    project.ext.anacondaDir = "$buildDir/tools/miniconda"
-    project.ext.conda = "$anacondaDir/bin/conda"
-    outputs.dir anacondaDir
-    outputs.file "$anacondaDir/bin/conda"
-
-    doLast {
-        File installer = configurations.python.getSingleFile()
-        exec {
-            executable "/bin/bash"
-            args installer, "-b", "-p", anacondaDir, "-u"
+task installMicromamba(type: Copy) {
+    description 'Installs MicroMamba to bootstrap Python'
+    project.ext.anacondaDir = "$buildDir/tools/mamba"
+    project.ext.conda = "$anacondaDir/bin/micromamba"
+    from {
+        configurations.python.collect {
+            logger.lifecycle("Extracting contrib: ${it.name}");
+            tarTree(resources.bzip2(it))
         }
     }
+    into anacondaDir
+    include "bin/micromamba"
 }
 
 task installMacrogen() {
     description 'Installs the macrogenesis tool and its requirements (conda)'
-    dependsOn 'installAnaconda'
+    dependsOn 'installMicromamba'
     group 'macrogen'
     inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
-    outputs.dir "$venv"
-    outputs.file "$venv/bin/macrogen"
+    // outputs.dir "$venv"
+    // outputs.file "$venv/bin/macrogen"
     doLast {
         if (new File("$venv").exists()) {
             exec {
                 executable conda
-                args "env", "update", "-p", venv, "-f", "$projectDir/environment.yml"
+                args "--no-rc", "-r", "$anacondaDir", "-p", "$venv", "create", "-f", "$projectDir/environment.yml", "-y"
             }
         } else {
             exec {
                 executable conda
-                args "env", "create", "-p", venv, "-f", "$projectDir/environment.yml"
+                args "--no-rc", "-r", "$anacondaDir", "-p", "$venv", "create", "-f", "$projectDir/environment.yml", "-y"
             }
         }
         exec {

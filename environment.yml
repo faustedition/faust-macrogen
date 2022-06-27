@@ -2,7 +2,7 @@ name: macrogen
 channels:
   - conda-forge
 dependencies:
-  - python>=3.7
+  - python>=3.9
   - graphviz>=2.4.0
   - numpy>=1.18.1,<2.0.0
   - more-itertools>=8.0.2,<9.0.0
@@ -10,7 +10,7 @@ dependencies:
   - pygraphviz>=1.5,<2.0
   - ruamel.yaml>=0.16.5,<0.17
   - pyyaml>=5.3,<6
-  - pandas>=0.25.3,<1.0.0
+  - pandas>=0.25.3
   - openpyxl>=3.0.2,<4.0.0
   - xlrd>=1.2.0,<2.0.0
   - lxml>=4.4.2,<5.0.0
