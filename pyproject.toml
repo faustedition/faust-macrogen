@@ -38,7 +38,7 @@ tqdm = "^4.41.1"
 cvxpy = "^1.0.25"
 cvxopt = "^1.2.3"
 flask = {version = "^1.1.1", optional = true}
-fastapi = {version = "^0.78.0", extras = ["all"]}
+fastapi = {version = "^0.78.0", optional = true, extras = ["all"]}
 gunicorn = {version = "^20.0.4", optional = true}
 Jinja2 = {version = "^3.1.2", optional = true}
 
