@@ -8,7 +8,7 @@
 {% macro radiolist(name, items, checked=None) -%} {# items = [(name, item, title?), (name, item, title?)] #}
     {% for item in items %}
         <input type="radio" name="{{ name }}" id="{{ name }}_{{ item[0] }}" value="{{ item[0] }}"
-               {% if (value == checked) %} checked {% endif %}
+               {% if (item[0] == checked) %} checked {% endif %}
                {% if item|length > 2 %} title="{{item[2]}}" {% endif %}>
         <label for="{{ name }}_{{ item[0] }}"
                 {% if item|length > 2 %} title="{{item[2]}}" {% endif %}>
