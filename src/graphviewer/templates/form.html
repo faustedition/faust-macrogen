@@ -306,7 +306,7 @@
             ('no', 'keine', 'nur induzierte Kanten'),
             ('dag', 'nur positive', 'keine Pfade über Konfliktkanten'),
             ('all', 'alle', 'Pfade in Hin- und Rückrichtung für jedes mögliche Kernknotenpaar')], 'all') }}</p>
-    <p>{{ checkbox('context', 'Nachbarknoten') }}</p>
+    <p class="pure-disabled">{{ checkbox('context', 'Nachbarknoten') }}</p>
     <p>{{ checkbox('inscriptions', 'Inskriptionen ↔ Zeugen') }}</p>
     <p>{{ checkbox('syn', 'ungefähr gleichzeitige Knoten') }}</p>
     </fieldset>
@@ -339,7 +339,7 @@
     <legend>Graphlayout</legend>
     <p>{{ checkbox('no_edge_labels', 'keine Kantenbeschriftung') }}</p>
     <p>{{ checkbox('collapse', 'Parallelkanten zusammenfassen') }}</p>
-    <p>{{ checkbox('order', 'Topologische Sortierung') }}</p>
+    <p>{{ checkbox('order', 'Referenzsortierung') }} (<a href="refs">vgl. Liste</a>)</p>
     <p style="vertical-align: middle">
         Richtung: {{ radiolist('dir', [('LR', '→'), ('TB', '↓'), ('RL', '←'), ('BT', '↑')], 'LR') }}
     </p>
