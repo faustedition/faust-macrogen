@@ -196,3 +196,5 @@ gradle-app.setting
 attic
 .vscode/launch.json
 .vscode/settings.json
+run-server.sh
+mamba
