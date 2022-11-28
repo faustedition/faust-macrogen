@@ -164,7 +164,11 @@ class LazyConfigLoader:
                     f"Cannot access property {self.name}: Neither configured source nor fallback resource available")
 
     def parse_data(self, file, instance):
-        instance._data[self.name] = self.parser(file) if callable(self.parser) else file.read()
+        try:
+            instance._data[self.name] = self.parser(file) if callable(self.parser) else file.read()
+        except ValueError as e:
+            logger.exception('%s parsing %s (for %s)', e, file, self.name)
+            instance._data[self.name] = {}
 
 
 _yaml = YAML(typ='rt')

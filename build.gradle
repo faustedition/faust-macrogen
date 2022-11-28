@@ -47,10 +47,12 @@ task prepareMacrogenOptions {
 		macrogenArgs.add(project.macrogenOptions)
 
 	if (project.rootProject != project) {
-		// project.macrogenArgs.add("--sigils=$buildDir/sigils.json")
-		// project.macrogenInputs.add("$buildDir/sigils.json")
+		project.macrogenArgs.add("--sigils=$buildDir/uris.json")
+		project.macrogenInputs.add("$buildDir/uris.json")
 		project.macrogenArgs.add("--paralipomena=$buildDir/www/data/paralipomena.js")
 		project.macrogenInputs.add("$buildDir/www/data/paralipomena.js")
+		project.macrogenArgs.add("--genetic-bar-graph=$buildDir/www/data/genetic_bar_graph.json")
+		project.macrogenInputs.add("$buildDir/www/data/genetic_bar_graph.json")
 		logger.info("Setup macrogen to use pregenerated data from $buildDir")
 		project.ext.macrogen_reports = "$buildDir/www/macrogenesis"
 	} else {
@@ -83,7 +85,7 @@ task installMacrogen() {
     dependsOn 'installMicromamba'
     group 'macrogen'
     inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
-    // outputs.dir "$venv"
+    outputs.dir "$buildDir/envs"
     // outputs.file "$venv/bin/macrogen"
     doLast {
         if (new File("$venv").exists()) {
