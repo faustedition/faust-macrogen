@@ -250,14 +250,11 @@ class Witness(Reference):
         return result
 
     @classmethod
-    def _load_paralipomena(cls,
-                           url='http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js'):
+    def _load_paralipomena(cls, url=None):
         if cls.paralipomena is None:
-            para_text = requests.get(url).text
-            json_str = '[' + ''.join(para_text.split('\n')[1:])
-            orig_para = json.loads(json_str)
-            cls.paralipomena = {p['n'].strip(): p for p in orig_para}
-
+            if url is not None:
+                logger.warning('The url parameter, %s, is deprecated and will be ignored', url)
+            cls.paralipomena = config.paralipomena
         return cls.paralipomena
 
     @classmethod

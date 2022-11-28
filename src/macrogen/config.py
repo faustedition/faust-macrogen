@@ -224,6 +224,11 @@ def parse_kvcsv(file: IO, default=None, value_type=None, **kwargs):
     else:
         return result
 
+def _parse_paralipomena(para_text: str):
+    json_str = '[' + ''.join(para_text.split('\n')[1:])
+    orig_para = json.loads(json_str)
+    return {p['n'].strip(): p for p in orig_para}
+
 
 class Configuration:
     """
@@ -237,7 +242,7 @@ class Configuration:
     # reference-normalization.csv
     # bibscores.tsv
     sigils = LazyConfigLoader('sigils', json.load)
-    paralipomena = LazyConfigLoader('paralipomena', json.load)
+    paralipomena = LazyConfigLoader('paralipomena', _parse_paralipomena)
     genetic_bar_graph = LazyConfigLoader('genetic_bar_graph', json.load)
     bibliography = LazyConfigLoader('bibliography', parse_bibliography)
     uri_corrections = LazyConfigLoader('uri_corrections', parse_kvcsv, (_config_package, 'etc/uri-corrections.csv'))
