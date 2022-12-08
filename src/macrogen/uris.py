@@ -17,6 +17,7 @@ import pandas as pd
 import requests
 from lxml import etree
 
+from macrogen.witnesses import all_documents
 from .config import config
 
 logger = config.getLogger(__name__)
@@ -240,7 +241,7 @@ class Witness(Reference):
     @classmethod
     def _load_database(cls):
         cls.corrections = cls._load_corrections()
-        sigil_data = config.sigils
+        sigil_data = [doc.to_record() for doc in all_documents()]
         cls.database = cls.build_database(sigil_data)
 
     @classmethod
@@ -254,7 +255,12 @@ class Witness(Reference):
         if cls.paralipomena is None:
             if url is not None:
                 logger.warning('The url parameter, %s, is deprecated and will be ignored', url)
-            cls.paralipomena = config.paralipomena
+            #cls.paralipomena = config.paralipomena
+            cls.paralipomena = {}
+            for doc in all_documents():
+                for para in doc.paralipomena():
+                    cls.paralipomena[para] = doc.to_record()
+
         return cls.paralipomena
 
     @classmethod

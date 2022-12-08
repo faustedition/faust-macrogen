@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict, Counter
+from functools import lru_cache
 from itertools import chain
 from pathlib import Path
 from typing import List, Optional, Dict, Union, Set
@@ -59,6 +60,9 @@ class BaseDocument:
 
 class Document(BaseDocument):
 
+    _verses = None
+    _paralipomena = None
+
     def __init__(self, source: Path):
         self.source = source
         tree: etree._ElementTree = etree.parse(fspath(source))
@@ -76,30 +80,46 @@ class Document(BaseDocument):
             self.text_transcript = None
             self.inscriptions = []
 
-    def _verses(self, text_transcript: Optional[etree._ElementTree] = None):
-        if text_transcript is None:
-            text_transcript = etree.parse(fspath(self.text_transcript))
+    def verses(self, text_transcript: Optional[etree._ElementTree] = None) -> Dict[str, List[int]]:
+        if not self._verses:
+            if text_transcript is None:
+                text_transcript = etree.parse(fspath(self.text_transcript))
 
-        lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
-                text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
-        insc_lines = defaultdict(list)
-        if self.inscriptions:
+            lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
+                    text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
+            insc_lines = defaultdict(list)
             for line in lines:
-                prec = line.xpath('preceding::tei:milestone[@unit="stage"][1]', namespaces=config.namespaces)
-                linenos = _ids(line.get('n'))
-                if prec:
+                precs = line.xpath('preceding::tei:milestone[@unit="stage"]', namespaces=config.namespaces)
+                linenos = [int(n) for n in _ids(line.get('n')) if n.isdigit()]
+                if precs:
+                    prec = precs[0]
                     for insc in _ids(prec.get('change')):
                         insc_lines[insc].extend(linenos)
                 else:
                     insc_lines[''].extend(linenos)
 
-                contained = line.xpath('descendant-or-self::*/@change')
-                if contained is not None:
-                    for change in contained:
-                        for insc in _ids(change):
-                            insc_lines[insc].extend(linenos)
+    #                 contained = line.xpath('descendant-or-self::*/@change')
+    #                 if contained is not None:
+    #                     for change in contained:
+    #                         for insc in _ids(change):
+    #                             insc_lines[insc].extend(linenos)
 
-        return insc_lines
+            self._verses = insc_lines
+        return self._verses
+
+    def paralipomena(self):
+        if self._paralipomena is None:
+            self._paralipomena = set()
+            if self.text_transcript:
+                text_transcript = etree.parse(fspath(self.text_transcript))
+                milestones = text_transcript.xpath('//tei:milestone[@unit="paralipomenon"][@n]', namespaces=config.namespaces)
+                for milestone in milestones:
+                    m = re.match(r'p([^_]+)', milestone.get('n'))
+                    if m:
+                        self._paralipomena.add(m.group(1))
+        return self._paralipomena
+
+
 
     @property
     def uri(self) -> str:
@@ -122,7 +142,22 @@ class Document(BaseDocument):
         return self.sigil
 
     def __repr__(self):
-        return f'<{self.__class__}: {self.sigil}, {len(self.inscriptions)} inscriptions>'
+        return f'<{self.__class__.__name__}: {self.sigil}, {len(self.inscriptions)} inscriptions>'
+
+    def to_record(self):
+        record = {
+            'sigil': self.sigil,
+            'sigil_t': encode_sigil(self.sigil),
+            'uri': self.uri,
+            'other_sigils': {faust_uri(sigil, kind): sigil for kind, sigil in self.idnos.items()},
+            'type': self.kind[self.kind.index('}') + 1:],
+        }
+        vss = [vs for vs in self.verses().values() if vs]
+        if vss:
+            record['min_verse'] = min(min(vs) for vs in vss)
+            record['max_verse'] = max(max(vs) for vs in vss)
+        return record
+
 
 
 class Scene:
@@ -271,8 +306,7 @@ class WitInscrInfo:
         return self.by_uri[uri]
 
 
-
-
+@lru_cache()
 def all_documents(path: Optional[Path] = None):
     logger.debug('Reading inscription info from sources ...')
     if path is None:

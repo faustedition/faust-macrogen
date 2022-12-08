@@ -6,8 +6,8 @@ logging:    # YAML file with logging configuration
 styles:     # YAML file with styling for the graphviz graphs
 references: # CSV file featuring manual normalizations for references
 bibscores:  # TSV file (FIXME) with scores by source
-sigils: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json # JSON file mapping URIs to sigils
-paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js # JSON file mapping paralipomena to sources
+sigils: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/uris.json # JSON file mapping URIs to sigils (OBSOLETE)
+paralipomena: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/paralipomena.js # JSON file mapping paralipomena to sources (OBSOLETE)
 genetic_bar_graph: http://dev.digital-humanities.de/ci/job/faust-gen-fast/lastSuccessfulBuild/artifact/target/www/data/genetic_bar_graph.json # JSON file
 report_dir: target/macrogenesis  # where to save reports and graphs
 save_config: target/config.yaml  # YAML file to save the config actually used
