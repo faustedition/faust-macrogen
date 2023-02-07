@@ -82,29 +82,33 @@ class Document(BaseDocument):
 
     def verses(self, text_transcript: Optional[etree._ElementTree] = None) -> Dict[str, List[int]]:
         if not self._verses:
-            if text_transcript is None:
-                text_transcript = etree.parse(fspath(self.text_transcript))
+            try:
+                if text_transcript is None:
+                    text_transcript = etree.parse(fspath(self.text_transcript))
 
-            lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
-                    text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
-            insc_lines = defaultdict(list)
-            for line in lines:
-                precs = line.xpath('preceding::tei:milestone[@unit="stage"]', namespaces=config.namespaces)
-                linenos = [int(n) for n in _ids(line.get('n')) if n.isdigit()]
-                if precs:
-                    prec = precs[0]
-                    for insc in _ids(prec.get('change')):
-                        insc_lines[insc].extend(linenos)
-                else:
-                    insc_lines[''].extend(linenos)
+                lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
+                        text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
+                insc_lines = defaultdict(list)
+                for line in lines:
+                    precs = line.xpath('preceding::tei:milestone[@unit="stage"]', namespaces=config.namespaces)
+                    linenos = [int(n) for n in _ids(line.get('n')) if n.isdigit()]
+                    if precs:
+                        prec = precs[0]
+                        for insc in _ids(prec.get('change')):
+                            insc_lines[insc].extend(linenos)
+                    else:
+                        insc_lines[''].extend(linenos)
 
-    #                 contained = line.xpath('descendant-or-self::*/@change')
-    #                 if contained is not None:
-    #                     for change in contained:
-    #                         for insc in _ids(change):
-    #                             insc_lines[insc].extend(linenos)
+        #                 contained = line.xpath('descendant-or-self::*/@change')
+        #                 if contained is not None:
+        #                     for change in contained:
+        #                         for insc in _ids(change):
+        #                             insc_lines[insc].extend(linenos)
 
-            self._verses = insc_lines
+                self._verses = insc_lines
+            except Exception as e:
+                logger.exception('Failed to read %s: %s', self, e) 
+                self._verses = defaultdict(list)
         return self._verses
 
     def paralipomena(self):
