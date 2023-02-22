@@ -312,7 +312,10 @@ class WitInscrInfo:
 
 @lru_cache()
 def all_documents(path: Optional[Path] = None):
-    logger.debug('Reading inscription info from sources ...')
     if path is None:
         path = config.path.data.joinpath('document')
-    return [Document(doc) for doc in config.progress(list(path.rglob('**/*.xml')))]
+    logger.debug('Reading inscription info from sources in %s...', path)
+    files = list(path.glob('**/*.xml'))
+    if not files:
+        raise ValueError(f'No XML files found in {path}!')
+    return [Document(doc) for doc in (config.progress(files))]

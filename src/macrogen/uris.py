@@ -241,7 +241,8 @@ class Witness(Reference):
     @classmethod
     def _load_database(cls):
         cls.corrections = cls._load_corrections()
-        sigil_data = [doc.to_record() for doc in all_documents()]
+        documents = all_documents()
+        sigil_data = [doc.to_record() for doc in documents]
         cls.database = cls.build_database(sigil_data)
 
     @classmethod
@@ -266,6 +267,8 @@ class Witness(Reference):
     @classmethod
     def build_database(cls, sigil_data):
         database = {}
+        if len(sigil_data) == 0:
+            raise ValueError('No sigil data!')
         for doc in sigil_data:
             wit = cls(doc)
             for uri in wit.uris():

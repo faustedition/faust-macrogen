@@ -328,9 +328,10 @@ class Configuration:
                     kwargs['dynamic_ncols'] = True
                 with tqdm_logging_redirect():
                     yield from tqdm(iterable, *args, **kwargs)
+                    return
             except ImportError:
-                pass
-        return iterable
+                logger.info('Could not import progress bar, working without progress info')
+        yield from iterable
 
     def relative_path(self, absolute_path):
         return Path(absolute_path).relative_to(self.path.data)
