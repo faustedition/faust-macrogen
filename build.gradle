@@ -109,6 +109,7 @@ task runMacrogenComplete {
 	doLast {
 		project.exec {
                         environment 'PATH', macrogenPath
+                        environment 'PYTHONDONTWRITEBYTECODE', 'true'
 			executable macrogenExecutable
 			args macrogenArgs
 			inputs.files(project.macrogenInputs)
@@ -125,6 +126,7 @@ task runMacrogenAnalysis {
 	doLast {
 		project.exec {
                         environment 'PATH', macrogenPath
+                        environment 'PYTHONDONTWRITEBYTECODE', 'true'
 			executable macrogenExecutable
 			args macrogenArgs
 			args "--skip-reports"
@@ -146,6 +148,7 @@ task runMacrogenReporting {
 	doLast {
 		project.exec {
                         environment 'PATH', macrogenPath
+                        environment 'PYTHONDONTWRITEBYTECODE', 'true'
 			args "-i", "$buildDir/macrogen-graphs.zip"
                         args macrogenArgs
 			executable macrogenExecutable
