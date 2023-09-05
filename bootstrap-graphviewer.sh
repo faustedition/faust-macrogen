@@ -64,7 +64,22 @@ fi
 exec $PRODUCTION_ENV/bin/gunicorn
 EOF
   chmod 755 ./run-server.sh
-  echob "You may now want to create an .env file to configure stuff"
-  echob "and run $PWD/run-server.sh to start the server."
 fi
+
+config=gunicorn.conf.py 
+if [[ -r "$config" ]]
+then
+  echob "You might now want to have a look at the existing config file, $config"
+else
+  cat > "$config" <<EOF
+worker_class = 'uvicorn.workers.UvicornWorker'
+proc_name = 'faust-macrogen-graphviewer'
+wsgi_app = 'graphviewer.gvfa:app'
+bind = '127.0.0.1:5000'
+EOF
+
+  echob "I have created a config file at $config. Edit it"
+fi
+
+echob "and run $PWD/run-server.sh to start the server."
 

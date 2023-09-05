@@ -90,7 +90,7 @@ def test_format_fun():
 
 
 def test_fmt_node_ref():
-    node = MagicMock(spec=Reference)
+    node = MagicMock(spec=Witness)
     node.__str__ = Mock(return_value='2 H')
     node.filename = Path('2_H.dot')
     assert _fmt_node(node) == '<a href="2_H">2 H</a>'
