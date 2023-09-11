@@ -31,7 +31,7 @@ if [[ -x "$micromamba" ]]; then
   echob "Micromamba environment present at $MAMBA_ROOT_PREFIX"
 else
   echob "Downloading micromamba to $MAMBA_ROOT_PREFIX ..."
-  mkdir "$MAMBA_ROOT_PREFIX" && wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C "$MAMBA_ROOT_PREFIX" -xj bin/micromamba
+  mkdir -p "$MAMBA_ROOT_PREFIX" && wget -qO- $WGET_ARGS https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C "$MAMBA_ROOT_PREFIX" -xj bin/micromamba
 fi
 
 if [[ -r ${ENVIRONMENT_FILE} ]]
@@ -61,7 +61,7 @@ if test -r .env
 then
     . ./.env
 fi
-exec $PRODUCTION_ENV/bin/gunicorn
+exec $PRODUCTION_ENV/bin/gunicorn "\$@"
 EOF
   chmod 755 ./run-server.sh
 fi
