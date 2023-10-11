@@ -199,3 +199,4 @@ gradle-app.setting
 /run-server.sh
 mamba
 /gunicorn.conf.py
+/faust-macrogen.service

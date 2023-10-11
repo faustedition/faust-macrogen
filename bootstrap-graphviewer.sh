@@ -66,6 +66,9 @@ EOF
   chmod 755 ./run-server.sh
 fi
 
+echo
+echo
+
 config=gunicorn.conf.py 
 if [[ -r "$config" ]]
 then
@@ -77,9 +80,31 @@ proc_name = 'faust-macrogen-graphviewer'
 wsgi_app = 'graphviewer.gvfa:app'
 bind = '127.0.0.1:5000'
 EOF
-
   echob "I have created a config file at $config. Edit it"
 fi
+echob "and run $PWD/run-server.sh to start the server for testing."
+echo 
 
-echob "and run $PWD/run-server.sh to start the server."
+unit=faust-macrogen.service
+if [[ -r "$unit" ]]
+then
+  echob "You might now want to have a look at the existing service file, $config"
+else
+  cat > "$unit" <<EOF
+[Unit]
+Description=gunicorn faust/macrogen
+After=network.target
 
+[Service]
+WorkingDirectory=$PWD
+User=$USER
+Group=nogroup
+ExecStart=$PWD/run-server.sh
+ExecReload=/bin/kill -s HUP \$MAINPID
+
+[Install]
+WantedBy=default.target
+EOF
+  echob "I have created a systemd unit file at $unit. Edit and install it"
+fi
+echob "and run sudo systemcfg enable --now `basename $unit` to enable the service."
