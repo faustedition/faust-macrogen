@@ -33,7 +33,7 @@ configurations {
 }
 
 dependencies {
-    python group: 'micromamba', name: 'micromamba', version: '0.24.0', ext: 'tar.bz2'
+    python group: 'micromamba', name: 'micromamba', version: '2.0.0', ext: 'tar.bz2'
 }
 
 
