@@ -1,12 +1,15 @@
+import logging
+from contextlib import asynccontextmanager
+
+from macrogen.config import config
 import asyncio
 import codecs
-import logging
 from asyncio import create_subprocess_exec, wait_for
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TypeVar, Callable, List, Dict, Optional, Iterable
+from typing import TypeVar, Callable, List, Dict, Optional, Iterable, MutableMapping
 
 import networkx as nx
 import pydantic
@@ -18,7 +21,6 @@ from fastapi.exceptions import HTTPException
 from macrogen import MacrogenesisInfo, write_dot
 from macrogen.graph import Node
 from macrogen.graphutils import remove_edges, expand_edges, simplify_timeline, collapse_parallel_edges
-from macrogen.config import config
 from starlette.responses import HTMLResponse
 
 logger = logging.getLogger(__name__)
@@ -34,8 +36,38 @@ class Settings(BaseSettings):
     class Config:
         env_file = '.env'
 
-settings = Settings()
-app = FastAPI(debug=True)
+models: MutableMapping[str, MacrogenesisInfo] = {}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = Settings()
+
+    by_key = {'default': settings.default_model}
+    if isinstance(settings.extra_models, dict):
+        by_key.update({k: Path(v) for (k, v) in settings.extra_models.items()})
+    else:
+        if isinstance(settings.extra_models, list):
+            model_files = [Path(entry) for entry in settings.extra_models]
+        else:
+            model_files = [entry for entry in Path().glob(settings.extra_models)]
+        by_key.update({p.parent.stem: p for p in model_files if p not in by_key.values()})
+
+    def load_model(key):
+        logger.info('Loading model %s ...', key)
+        try:
+            return MacrogenesisInfo(by_key[key])
+        except Exception as e:
+            logger.exception("%s while loading model %s from %s", e, key, by_key[key])
+            raise
+
+    logger.info('Found %d models: %s', len(by_key), by_key.keys())
+    models.update({key: load_model(key) for key in by_key})
+    logger.info("All models loaded.")
+    yield
+    logger.info('Removing models ...')
+    models.clear()
+
+app = FastAPI(debug=True, lifespan=lifespan)
 
 S = TypeVar('S')
 T = TypeVar('T')
@@ -71,7 +103,6 @@ class LazyLoader(Mapping):
         return len(self._loaded)
 
 
-models: Mapping[str, MacrogenesisInfo] = {}
 
 
 class NodeInput(BaseModel):
@@ -113,27 +144,6 @@ MIME_TYPES: Dict[ExportFormat, str] = {
     ExportFormat.JPEG: 'image/jpeg'
 }
 
-
-@app.on_event('startup')
-def load_models():
-    global models
-
-    by_key = {'default': settings.default_model}
-    if isinstance(settings.extra_models, dict):
-        by_key.update({k: Path(v) for (k, v) in settings.extra_models.items()})
-    else:
-        if isinstance(settings.extra_models, list):
-            model_files = [Path(entry) for entry in settings.extra_models]
-        else:
-            model_files = [entry for entry in Path().glob(settings.extra_models)]
-        by_key.update({p.parent.stem: p for p in model_files if p not in by_key.values()})
-
-    def load_model(key):
-        logger.info('Loading model %s ...', key)
-        return MacrogenesisInfo(by_key[key])
-
-    models = LazyLoader(load_model, by_key.keys())
-    logger.info('Found %d models: %s', len(by_key), by_key.keys())
 
 
 templates = Jinja2Templates(directory='src/graphviewer/templates')
