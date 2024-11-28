@@ -1,59 +1,58 @@
-[tool.poetry]
+[project]
 name = "faust-macrogen"
 version = "0.9.2"
 description = "Macrogenetic Analysis for the Faust edition"
-authors = ["Thorsten Vitt <thorsten.vitt@uni-wuerzburg.de>"]
-license = "GPL-3.0"
+authors = [{ name = "Thorsten Vitt", email = "thorsten.vitt@uni-wuerzburg.de" }]
+license = { text = "GPL-3.0" }
 readme = "README.md"
-packages = [
-	{ include = "macrogen", from = "src" },
-	{ include = "graphviewer", from = "src"},
-	{ include = "tests", format = "sdist" }
+requires-python = "<4.0,>=3.9"
+dependencies = [
+  "numpy<2.0.0,>=1.22.4",
+  "more-itertools<9.0.0,>=8.0.2",
+  "networkx<2.6,>=2.5",
+  "pygraphviz<2.0,>=1.5",
+  "ruamel-yaml<1.0.0,>=0.16.5",
+  "pyyaml>=6.0,<7.0",
+  "pandas<2.0.0,>=1.2.2",
+  "openpyxl<4.0.0,>=3.0.2",
+  "xlrd<3.0.0,>=2.0.1",
+  "lxml<5.0.0,>=4.9.1",
+  "requests<3.0.0,>=2.22.0",
+  "requests-cache<1.0.0,>=0.5.2",
+  "logging-tree<2.0,>=1.8",
+  "colorlog<5.0.0,>=4.1.0",
+  "tqdm<5.0.0,>=4.41.1",
+  "pydantic-settings>=2.6.1",
 ]
 
-[tool.poetry.scripts]
-witness-report = 'macrogen.uris:_witness_report'
-macrogen-diff = 'macrogen.diff:main'
-macrogen = 'macrogen.main:main'
-macrogen-viewer-dev = 'graphviewer.gvfa:run_dev_server'
+[project.scripts]
+witness-report = "macrogen.uris:_witness_report"
+macrogen-diff = "macrogen.diff:main"
+macrogen = "macrogen.main:main"
+macrogen-viewer-dev = "graphviewer.gvfa:run_dev_server"
 
+[project.optional-dependencies]
+igraph = ["python-igraph<1.0.0,>=0.8.3"]
+oldgraphviewer = ["flask<2.0.0,>=1.1.1"]
+production = [
+  "fastapi[all]<1.0.0,>=0.78.0",
+  "gunicorn<21.0.0,>=20.0.4",
+  "Jinja2<4.0.0,>=3.1.2",
+]
+solver = ["cvxpy<2.0.0,>=1.0.25", "cvxopt<2.0.0,>=1.2.3"]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-numpy = "^1.22.4"
-more-itertools = "^8.0.2"
-networkx = ">=2.5,<2.6"
-python-igraph = {version = "^0.8.3", optional = true}
-pygraphviz = "^1.5"
-"ruamel.yaml" = "^0.16.5"
-pyyaml = "^5.3"
-pandas = "^1.2.2"
-openpyxl = "^3.0.2"
-xlrd = "^2.0.1"
-lxml = "^4.9.1"
-requests = "^2.22.0"
-requests-cache = "^0.5.2"
-logging-tree = "^1.8"
-colorlog = "^4.1.0"
-tqdm = "^4.41.1"
-cvxpy = "^1.0.25"
-cvxopt = "^1.2.3"
-flask = {version = "^1.1.1", optional = true}
-fastapi = {version = "^0.78.0", optional = true, extras = ["all"]}
-gunicorn = {version = "^20.0.4", optional = true}
-Jinja2 = {version = "^3.1.2", optional = true}
+[dependency-groups]
+dev = ["pytest>=6.2.2", "coverage>=5.0.3", "watchdog>=0.10.3"]
 
-[tool.poetry.extras]
-graphviewer = ["flask"]
-igraph = ["python-igraph"]
-fastapi = ["fastapi", "gunicorn", "Jinja2"]
-production = ["fastapi", "gunicorn", "Jinja2"]
+[tool.hatch.build]
+skip-excluded-dirs = true
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2.2"
-coverage = "^5.0.3"
-watchdog = "^0.10.3"
+[tool.hatch.build.targets.wheel]
+packages = ["src/macrogen", "src/graphviewer"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/data"]
 
 [build-system]
-requires = ["poetry_core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

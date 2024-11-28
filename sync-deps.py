@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This script reads the dependencies from poetry's section in pyproject.toml and
+This script reads the dependencies from pyproject.toml and
 updates environment.yml accordingly.
 
 Dependencies missing from environment.yml will only be added if they are not
@@ -11,7 +11,7 @@ manually will be updated, however.
 
 from typing import Mapping
 
-import toml
+import tomllib
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedSeq
 
@@ -20,10 +20,13 @@ yaml.indent(mapping=2, sequence=4, offset=2)
 import re
 
 
-def load_poetry_deps():
-    with open("pyproject.toml") as f:
-        pyproject = toml.load(f)
-    return pyproject["tool"]["poetry"]["dependencies"]
+def load_pyproject_deps():
+    with open("pyproject.toml", "rb") as f:
+        pyproject = tomllib.load(f)
+    if "dependencies" in pyproject["project"]:
+        return pyproject["project"]["dependencies"]
+    else:
+        return pyproject["tool"]["poetry"]["dependencies"]
 
 
 def load_conda_deps():
@@ -60,30 +63,34 @@ def poetry2condaspec(ver):
 
 
 def main():
-    poetry_deps = load_poetry_deps()
+    poetry_deps = load_pyproject_deps()
     env, env_dep_list, env_deps = load_conda_deps()
 
-    for lib, ver in poetry_deps.items():
-        if isinstance(ver, Mapping):
-            optional = ver.get("optional", False)
-            ver = ver.get("version", "")
-        else:
-            optional = False
+    if hasattr(poetry_deps, "items"):
+        for lib, ver in poetry_deps.items():
+            if isinstance(ver, Mapping):
+                optional = ver.get("optional", False)
+                ver = ver.get("version", "")
+            else:
+                optional = False
 
-        new_env_ver = poetry2condaspec(ver)
+            new_env_ver = poetry2condaspec(ver)
 
-        if lib in env_deps:
-            idx, start, end, old_spec = env_deps[lib]
-            if old_spec != new_env_ver:
-                env_dep_list[idx] = lib + new_env_ver
-            if ver != new_env_ver:
-                env_dep_list.yaml_add_eol_comment(ver, idx, 40)
-            if old_spec != new_env_ver:
-                print(f"{lib:>30}: {old_spec:20} => {new_env_ver:20} ({ver})")
-        elif not optional:
-            env_dep_list.append(lib + new_env_ver)
-            env_dep_list.yaml_add_eol_comment("new", len(env_dep_list) - 1, 40)
-            print(f"{lib:>30}: new:                    {new_env_ver:20} ({ver})")
+            if lib in env_deps:
+                idx, start, end, old_spec = env_deps[lib]
+                if old_spec != new_env_ver:
+                    env_dep_list[idx] = lib + new_env_ver
+                if ver != new_env_ver:
+                    env_dep_list.yaml_add_eol_comment(ver, idx, 40)
+                if old_spec != new_env_ver:
+                    print(f"{lib:>30}: {old_spec:20} => {new_env_ver:20} ({ver})")
+            elif not optional:
+                env_dep_list.append(lib + new_env_ver)
+                env_dep_list.yaml_add_eol_comment("new", len(env_dep_list) - 1, 40)
+                print(f"{lib:>30}: new:                    {new_env_ver:20} ({ver})")
+    else:
+        env_dep_list.clear()
+        env_dep_list.extend(poetry_deps)
 
     with open("environment.yml", "w") as f:
         yaml.dump(env, f)

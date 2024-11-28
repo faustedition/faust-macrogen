@@ -10,7 +10,8 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable
+from sys import exc_info
+from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, TypeVar
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -26,7 +27,6 @@ from .bibliography import BiblSource
 from .config import config
 from .datings import build_datings_graph, parse_datestr
 from .graphutils import simplify_timeline
-from .fes import eades, FES_Baharev, V
 from .graphutils import expand_edges, collapse_edges_by_source, add_iweight
 from .uris import Reference, Inscription, Witness, AmbiguousRef
 from .splitgraph import references, SplitReference, Side
@@ -158,36 +158,42 @@ class MacrogenesisInfo:
             graph: NetworkX DiGraph
             method: 'eades', 'baharev', or 'ip'; if None, look at config
         """
-        if method is None:
-            method = config.fes_method
-        if light_timeline is None:
-            light_timeline = config.light_timeline
-        if isinstance(method, Sequence) and not isinstance(method, str):
-            try:
-                threshold = config.fes_threshold
-            except AttributeError:
-                threshold = 64
-            method = method[1] if len(graph.edges) > threshold else method[0]
+        try:
+            from .fes import eades, FES_Baharev
+            if method is None:
+                method = config.fes_method
+            if light_timeline is None:
+                light_timeline = config.light_timeline
+            if isinstance(method, Sequence) and not isinstance(method, str):
+                try:
+                    threshold = config.fes_threshold
+                except AttributeError:
+                    threshold = 64
+                method = method[1] if len(graph.edges) > threshold else method[0]
 
-        logger.info('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
-        if method == 'eades':
-            fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
-            return list(expand_edges(graph, fes))
-        elif method == 'baharev':
-            solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
-            fes = solver.solve()
-            self.simple_cycles |= solver.simple_cycles
-            return list(expand_edges(graph, fes))
-        else:
-            if light_timeline:
-                logger.warning('Method %s does not support lightweight timeline', method)
-            try:
-                from .igraph_wrapper import to_igraph, nx_edges
-                igraph = to_igraph(graph)
-                iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
-                return list(nx_edges(iedges, keys=True, data=True))
-            except ImportError as e:
-                logger.critical('The method %s requires python-igraph, but it is not available: %s', method, e, exc_info=True)
+            logger.info('Calculating MFAS for a %d-node graph using %s, may take a while', graph.number_of_nodes(), method)
+            if method == 'eades':
+                fes = eades(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
+                return list(expand_edges(graph, fes))
+            elif method == 'baharev':
+                solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
+                fes = solver.solve()
+                self.simple_cycles |= solver.simple_cycles
+                return list(expand_edges(graph, fes))
+            else:
+                if light_timeline:
+                    logger.warning('Method %s does not support lightweight timeline', method)
+                try:
+                    from .igraph_wrapper import to_igraph, nx_edges
+                    igraph = to_igraph(graph)
+                    iedges = igraph.es[igraph.feedback_arc_set(method=method, weights='weight')]
+                    return list(nx_edges(iedges, keys=True, data=True))
+                except ImportError as e:
+                    logger.critical('The method %s requires python-igraph, but it is not available: %s', method, e, exc_info=True)
+        except ImportError as e:
+            logger.critical("To solve the feedback arg problem, you need to install a solver: try the solver extra (%s)",
+                            e, exc_info=True)
+            raise
 
 
     def run_analysis(self):
@@ -839,6 +845,7 @@ def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
 #                 mark_edges_to_delete(subgraph, edges_to_remove)
 #     return [('List of conflicts', conflicts_file_name)]
 
+V = TypeVar("V")
 
 def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:
     result = []
