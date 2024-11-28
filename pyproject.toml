@@ -22,8 +22,6 @@ dependencies = [
   "logging-tree<2.0,>=1.8",
   "colorlog<5.0.0,>=4.1.0",
   "tqdm<5.0.0,>=4.41.1",
-  "cvxpy<2.0.0,>=1.0.25",
-  "cvxopt<2.0.0,>=1.2.3",
   "pydantic-settings>=2.6.1",
 ]
 
@@ -35,12 +33,13 @@ macrogen-viewer-dev = "graphviewer.gvfa:run_dev_server"
 
 [project.optional-dependencies]
 igraph = ["python-igraph<1.0.0,>=0.8.3"]
-graphviewer = ["flask<2.0.0,>=1.1.1"]
-fastapi = [
+oldgraphviewer = ["flask<2.0.0,>=1.1.1"]
+production = [
   "fastapi[all]<1.0.0,>=0.78.0",
   "gunicorn<21.0.0,>=20.0.4",
   "Jinja2<4.0.0,>=3.1.2",
 ]
+solver = ["cvxpy<2.0.0,>=1.0.25", "cvxopt<2.0.0,>=1.2.3"]
 
 [dependency-groups]
 dev = ["pytest>=6.2.2", "coverage>=5.0.3", "watchdog>=0.10.3"]

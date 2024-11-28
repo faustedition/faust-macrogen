@@ -98,7 +98,7 @@ task installMacrogen() {
         exec {
             executable "$venv/bin/pip"
             workingDir projectDir
-            args "install", "."
+            args "install", ".[solver]"
         }
     }
 }

@@ -460,8 +460,6 @@ version = "0.9.2"
 source = { editable = "." }
 dependencies = [
     { name = "colorlog" },
-    { name = "cvxopt" },
-    { name = "cvxpy" },
     { name = "logging-tree" },
     { name = "lxml" },
     { name = "more-itertools" },
@@ -480,16 +478,20 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-fastapi = [
+igraph = [
+    { name = "python-igraph" },
+]
+oldgraphviewer = [
+    { name = "flask" },
+]
+production = [
     { name = "fastapi", extra = ["all"] },
     { name = "gunicorn" },
     { name = "jinja2" },
 ]
-graphviewer = [
-    { name = "flask" },
-]
-igraph = [
-    { name = "python-igraph" },
+solver = [
+    { name = "cvxopt" },
+    { name = "cvxpy" },
 ]
 
 [package.dev-dependencies]
@@ -502,12 +504,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "colorlog", specifier = ">=4.1.0,<5.0.0" },
-    { name = "cvxopt", specifier = ">=1.2.3,<2.0.0" },
-    { name = "cvxpy", specifier = ">=1.0.25,<2.0.0" },
-    { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.78.0,<1.0.0" },
-    { name = "flask", marker = "extra == 'graphviewer'", specifier = ">=1.1.1,<2.0.0" },
-    { name = "gunicorn", marker = "extra == 'fastapi'", specifier = ">=20.0.4,<21.0.0" },
-    { name = "jinja2", marker = "extra == 'fastapi'", specifier = ">=3.1.2,<4.0.0" },
+    { name = "cvxopt", marker = "extra == 'solver'", specifier = ">=1.2.3,<2.0.0" },
+    { name = "cvxpy", marker = "extra == 'solver'", specifier = ">=1.0.25,<2.0.0" },
+    { name = "fastapi", extras = ["all"], marker = "extra == 'production'", specifier = ">=0.78.0,<1.0.0" },
+    { name = "flask", marker = "extra == 'oldgraphviewer'", specifier = ">=1.1.1,<2.0.0" },
+    { name = "gunicorn", marker = "extra == 'production'", specifier = ">=20.0.4,<21.0.0" },
+    { name = "jinja2", marker = "extra == 'production'", specifier = ">=3.1.2,<4.0.0" },
     { name = "logging-tree", specifier = ">=1.8,<2.0" },
     { name = "lxml", specifier = ">=4.9.1,<5.0.0" },
     { name = "more-itertools", specifier = ">=8.0.2,<9.0.0" },
