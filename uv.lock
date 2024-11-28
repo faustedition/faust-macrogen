@@ -469,6 +469,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "pandas" },
+    { name = "pydantic-settings" },
     { name = "pygraphviz" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -514,6 +515,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.4,<2.0.0" },
     { name = "openpyxl", specifier = ">=3.0.2,<4.0.0" },
     { name = "pandas", specifier = ">=1.2.2,<2.0.0" },
+    { name = "pydantic-settings", specifier = ">=2.6.1" },
     { name = "pygraphviz", specifier = ">=1.5,<2.0" },
     { name = "python-igraph", marker = "extra == 'igraph'", specifier = ">=0.8.3,<1.0.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
@@ -526,9 +528,9 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "coverage", specifier = ">=7.6.8" },
-    { name = "pytest", specifier = ">=8.3.3" },
-    { name = "watchdog", specifier = ">=6.0.0" },
+    { name = "coverage", specifier = ">=5.0.3" },
+    { name = "pytest", specifier = ">=6.2.2" },
+    { name = "watchdog", specifier = ">=0.10.3" },
 ]
 
 [[package]]

@@ -24,6 +24,7 @@ dependencies = [
   "tqdm<5.0.0,>=4.41.1",
   "cvxpy<2.0.0,>=1.0.25",
   "cvxopt<2.0.0,>=1.2.3",
+  "pydantic-settings>=2.6.1",
 ]
 
 [project.scripts]
@@ -41,23 +42,18 @@ fastapi = [
   "Jinja2<4.0.0,>=3.1.2",
 ]
 
-[tool.pdm.dev-dependencies]
-dev = [
-  "pytest<7.0.0,>=6.2.2",
-  "coverage<6.0.0,>=5.0.3",
-  "watchdog<1.0.0,>=0.10.3",
-]
+[dependency-groups]
+dev = ["pytest>=6.2.2", "coverage>=5.0.3", "watchdog>=0.10.3"]
+
+[tool.hatch.build]
+skip-excluded-dirs = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/macrogen", "src/graphviewer"]
 
+[tool.hatch.build.targets.sdist]
+exclude = ["/data"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[dependency-groups]
-dev = [
-    "coverage>=7.6.8",
-    "pytest>=8.3.3",
-    "watchdog>=6.0.0",
-]

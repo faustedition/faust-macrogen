@@ -23,7 +23,8 @@ from starlette.responses import HTMLResponse
 
 logger = logging.getLogger(__name__)
 
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 from pygraphviz import AGraph
 
 
