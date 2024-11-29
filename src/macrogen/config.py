@@ -29,6 +29,7 @@ import csv
 import json
 import logging
 from logging import Logger
+from sys import exc_info
 import traceback
 from collections import namedtuple, defaultdict
 from functools import partial
@@ -264,7 +265,7 @@ class Configuration:
     @config_override.setter
     def config_override(self, value):
         if hasattr(self, 'config'):
-            logger.warning('Configuration has already been loaded. Some override values may not have any effect.')
+            logger.debug('Configuration has already been loaded. Some override values may not have any effect. (%s)\n%s', value, "".join(traceback.format_stack(limit=5)))
             self._apply_override(value)
         self._config_override = value
 
@@ -289,7 +290,7 @@ class Configuration:
     def _load_config(self):
         self.config_loaded = True
         # First, load the default config
-        logger.debug("Loading default configuration.\n%s", "".join(traceback.format_stack()))
+        logger.debug("Loading default configuration.")
         with pkg_resources.resource_stream(_config_package, 'etc/default.yaml') as f:
             config: Mapping = _yaml.load(f)
             self.config = config
@@ -302,6 +303,8 @@ class Configuration:
                     logger.info('Loading configuration file %s', p)
                     with p.open() as f:
                         config.update(_yaml.load(f))
+                else:
+                    logger.info('Configuration file at %s does not exist', p)
         # now update using command line options etc.
         self.config.update(self._config_override)
 
