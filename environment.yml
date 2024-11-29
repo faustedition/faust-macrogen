@@ -1,4 +1,4 @@
-# You should sync the dependencies from pyproject.toml using 
+# You should sync the dependencies from pyproject.toml using
 # sync-deps.py rather than manually adjusting them in this file.
 # Don't forget to test afterwards since the script doesn't check
 # whether a new package has a conda version ...
@@ -10,7 +10,6 @@ dependencies:
   - more-itertools<9.0.0,>=8.0.2
   - networkx<2.6,>=2.5
   - pygraphviz<2.0,>=1.5
-  - ruamel-yaml<1.0.0,>=0.16.5
   - pyyaml>=6.0,<7.0
   - pandas<2.0.0,>=1.2.2
   - openpyxl<4.0.0,>=3.0.2
@@ -18,7 +17,6 @@ dependencies:
   - lxml<5.0.0,>=4.9.1
   - requests<3.0.0,>=2.22.0
   - requests-cache<1.0.0,>=0.5.2
-  - logging-tree<2.0,>=1.8
   - colorlog<5.0.0,>=4.1.0
   - tqdm<5.0.0,>=4.41.1
   - cvxpy<2.0.0,>=1.0.25
