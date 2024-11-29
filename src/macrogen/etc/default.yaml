@@ -1,6 +1,10 @@
 ## Default configuration for the macrogenesis software
 
 # configuration and data files, either paths or URIs. missing data: included files
+config_files: 
+  - macrogen.yaml
+  - ~/.config/macrogen/config.yaml
+  - /etc/macrogen/config.yaml
 data:       data/xml  # XML Data, this is a folder
 logging:    # YAML file with logging configuration
 styles:     # YAML file with styling for the graphviz graphs
