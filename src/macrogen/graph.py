@@ -498,11 +498,18 @@ class MacrogenesisInfo:
             with zip.open('base.yaml', 'w') as base_entry:
                 text = TextIOWrapper(base_entry, encoding='utf-8')
                 nx.write_yaml(self.base, text)
+            with zip.open('witnesses.pickle', 'w') as wit:
+                pickle.dump((Witness.database, Witness.paralipomena), wit)
 
     def _load_from(self, load_from: Path):
         # Load base graph and simple cycles:
         logger.info('Loading macrogenesis graphs from %s', load_from)
         with ZipFile(load_from, mode='r') as zip:
+            try:
+                with zip.open('witnesses.pickle') as wit:
+                    Witness.database, Witness.paralipomena = pickle.load(wit)
+            except Exception as e:
+                logger.error('Could not load witnesses from %s: %s. Will need XML data.', load_from, e)
             with zip.open('base.gpickle', 'r') as base_entry:
                 self.base = nx.read_gpickle(base_entry)
             with zip.open('simple_cycles.pickle', 'r') as sc_entry:
@@ -686,7 +693,7 @@ class MacrogenesisInfo:
 
         Returns:
             The constructed subgraph
-        """
+       """
         if any(isinstance(node, SplitReference) for node in self.base.nodes):
             central_nodes = set()
             for graph_node in self.base:
