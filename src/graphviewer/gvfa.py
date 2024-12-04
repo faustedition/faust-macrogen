@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
+from jinja2 import Environment, PackageLoader
+
 from macrogen.config import config
 import asyncio
 import codecs
@@ -146,7 +148,10 @@ MIME_TYPES: Dict[ExportFormat, str] = {
 
 
 
-templates = Jinja2Templates(directory='src/graphviewer/templates')
+environment = Environment(loader=PackageLoader("graphviewer"))
+templates = Jinja2Templates(env=environment)
+
+
 
 
 @app.get('/macrogenesis/subgraph', response_class=HTMLResponse)
