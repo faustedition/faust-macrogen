@@ -73,13 +73,13 @@ class Reference(metaclass=ABCMeta):
         """
         A human-readable label for the object
         """
-        if self.uri.startswith('faust://inscription'):
-            kind, sigil, inscription = self.uri.split('/')[-3:]
+        if self.uri.startswith("faust://inscription"):
+            kind, sigil, inscription = self.uri.split("/")[-3:]
             return f"{kind}: {sigil} {inscription}"
-        elif self.uri.startswith('faust://document'):
-            kind, sigil = self.uri.split('/')[-2:]
+        elif self.uri.startswith("faust://document"):
+            kind, sigil = self.uri.split("/")[-2:]
             return f"{kind}: {sigil}"
-        elif self.uri.startswith('faust://bibliography'):
+        elif self.uri.startswith("faust://bibliography"):
             bibentry = config.bibliography.get(self.uri)
             if bibentry:
                 return bibentry.citation
@@ -89,7 +89,7 @@ class Reference(metaclass=ABCMeta):
         """
         Creates a tuple that can be used as a sort key
         """
-        match = re.match('faust://(document|inscription)/(.+?)/(.+?)', self.uri)
+        match = re.match("faust://(document|inscription)/(.+?)/(.+?)", self.uri)
         if match:
             return (0, match.group(3), 99999, match.group(2))
         else:
@@ -106,7 +106,7 @@ class Reference(metaclass=ABCMeta):
             return self.uri == other.uri
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.uri)})'
+        return f"{self.__class__.__name__}({repr(self.uri)})"
 
     @property
     def filename(self) -> Path:
@@ -116,14 +116,16 @@ class Reference(metaclass=ABCMeta):
         Returns:
             Path, with extension `.dot`
         """
-        match = re.match(r'faust://(inscription|document)/(.*?)/(.*?)(/(.*))?(#\S+?)$', self.uri)
+        match = re.match(
+            r"faust://(inscription|document)/(.*?)/(.*?)(/(.*))?(#\S+?)$", self.uri
+        )
         if match:
-            result = f'{match.group(2)}.{match.group(3)}'
+            result = f"{match.group(2)}.{match.group(3)}"
             if match.group(5):
-                result += '.' + re.sub(r'\W+', '_', match.group(5))
+                result += "." + re.sub(r"\W+", "_", match.group(5))
         else:
-            result = re.sub(r'\W+', '_', self.uri)
-        return Path(result + '.dot')
+            result = re.sub(r"\W+", "_", self.uri)
+        return Path(result + ".dot")
 
 
 class Inscription(Reference):
@@ -137,19 +139,24 @@ class Inscription(Reference):
     """
 
     def __init__(self, witness, inscription):
-        uri = "/".join([witness.uri.replace('faust://document/', 'faust://inscription/'), inscription])
+        uri = "/".join(
+            [
+                witness.uri.replace("faust://document/", "faust://inscription/"),
+                inscription,
+            ]
+        )
         super().__init__(uri)
         self.witness = witness
         self.inscription = inscription
         self.known_witness = isinstance(witness, Witness)
         if self.known_witness:
-            self.known_inscription = inscription in getattr(witness, 'inscriptions', {})
+            self.known_inscription = inscription in getattr(witness, "inscriptions", {})
             if self.known_inscription:
-                self.status = '(ok)'
+                self.status = "(ok)"
             else:
-                self.status = 'unknown-inscription'
+                self.status = "unknown-inscription"
         else:
-            self.status = 'unknown'
+            self.status = "unknown"
 
     @property
     def label(self):
@@ -181,9 +188,11 @@ class AmbiguousRef(Reference):
     def __init__(self, uri, wits):
         super().__init__(uri)
         self.witnesses = frozenset(wits)
-        self.status = 'ambiguous: ' + ", ".join(str(wit) for wit in sorted(self.witnesses))
+        self.status = "ambiguous: " + ", ".join(
+            str(wit) for wit in sorted(self.witnesses)
+        )
 
-    def first(self) -> 'Witness':
+    def first(self) -> "Witness":
         return sorted(self.witnesses, key=str)[0]
 
     def __add__(self, other):
@@ -207,35 +216,41 @@ class Witness(Reference):
     Todo:
         move the database stuff out of here
     """
+
     database = {}
     paralipomena = None
+    corrections = {}
 
     def __init__(self, doc_record):
         self.sigil_t = None
         if isinstance(doc_record, dict):
-            super().__init__(doc_record.get('uri', '?'))
+            super().__init__(doc_record.get("uri", "?"))
             self.__dict__.update(doc_record)
-            self.status = '(ok)'
+            self.status = "(ok)"
         else:
-            raise TypeError('doc_record must be a mapping, not a ' + str(type(doc_record)))
+            raise TypeError(
+                "doc_record must be a mapping, not a " + str(type(doc_record))
+            )
 
     def uris(self):
         """
         Returns a set of all uris that can point to the current witness (i.e., faust://…)
         """
         result = {self.uri}
-        if hasattr(self, 'other_sigils'):
+        if hasattr(self, "other_sigils"):
             for uri in self.other_sigils:
-                if self.other_sigils[uri] in {'none', 'n.s.', ''}:
+                if self.other_sigils[uri] in {"none", "n.s.", ""}:
                     continue
-                uri = uri.replace('-', '_')
+                uri = uri.replace("-", "_")
                 result.add(uri)
-                if '/wa_faust/' in uri:
-                    result.add(uri.replace('/wa_faust/', '/wa/'))
-        if getattr(self, 'type', '') == 'print':
-            result.update([uri.replace('faust://document/', 'faust://print/') for uri in result])
+                if "/wa_faust/" in uri:
+                    result.add(uri.replace("/wa_faust/", "/wa/"))
+        if getattr(self, "type", "") == "print":
+            result.update(
+                [uri.replace("faust://document/", "faust://print/") for uri in result]
+            )
 
-        result.update({re.sub('[._]{2,}', '_', uri) for uri in result})
+        result.update({re.sub("[._]{2,}", "_", uri) for uri in result})
         return result
 
     @classmethod
@@ -248,15 +263,17 @@ class Witness(Reference):
     @classmethod
     def _load_corrections(cls):
         result = config.uri_corrections
-        logger.info('Loaded %d corrections', len(result))
+        logger.info("Loaded %d corrections", len(result))
         return result
 
     @classmethod
     def _load_paralipomena(cls, url=None):
         if cls.paralipomena is None:
             if url is not None:
-                logger.warning('The url parameter, %s, is deprecated and will be ignored', url)
-            #cls.paralipomena = config.paralipomena
+                logger.warning(
+                    "The url parameter, %s, is deprecated and will be ignored", url
+                )
+            # cls.paralipomena = config.paralipomena
             cls.paralipomena = {}
             for doc in all_documents():
                 for para in doc.paralipomena():
@@ -268,13 +285,15 @@ class Witness(Reference):
     def build_database(cls, sigil_data):
         database = {}
         if len(sigil_data) == 0:
-            raise ValueError('No sigil data!')
+            raise ValueError("No sigil data!")
         for doc in sigil_data:
             wit = cls(doc)
             for uri in wit.uris():
                 if uri in database:
                     old_entry = database[uri]
-                    logger.debug("URI %s is already in db for %s, adding %s", uri, old_entry, wit)
+                    logger.debug(
+                        "URI %s is already in db for %s, adding %s", uri, old_entry, wit
+                    )
                     if isinstance(old_entry, AmbiguousRef):
                         database[uri] = old_entry + wit
                     else:
@@ -303,19 +322,24 @@ class Witness(Reference):
             cls._load_paralipomena()
 
         orig_uri = uri
-        if '#' in uri:
-            uri = uri[:uri.index('#')]
-        uri = uri.replace('-', '_')
+        if "#" in uri:
+            uri = uri[: uri.index("#")]
+        uri = uri.replace("-", "_")
 
         if uri in cls.corrections:
             correction = cls.corrections[uri]
             if correction in cls.database:
-                logger.info('Corrected %s to %s -> %s', uri, correction, cls.database[correction])
+                logger.info(
+                    "Corrected %s to %s -> %s",
+                    uri,
+                    correction,
+                    cls.database[correction],
+                )
             else:
-                logger.warning('Corrected %s to %s, but it is not in the database', uri, correction)
+                logger.warning(
+                    "Corrected %s to %s, but it is not in the database", uri, correction
+                )
             uri = correction
-
-
 
         if uri in cls.database:
             result = cls.database[uri]
@@ -324,49 +348,66 @@ class Witness(Reference):
             else:
                 return result
 
-        wa_h = re.match(r'faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$', uri)
+        wa_h = re.match(
+            r"faust://(inscription|document)/(wa|wa_faust)/2_(I|II|III|IV|V)_H(/(.+))?$",
+            uri,
+        )
         if wa_h is not None:
-            wit = cls.get('faust://document/faustedition/2_H')
+            wit = cls.get("faust://document/faustedition/2_H")
             if wa_h.group(4):
                 return Inscription(wit, wa_h.group(5))
             else:
                 return Inscription(wit, wa_h.group(3))
 
-        wa_pseudo_inscr = re.match(r'faust://(inscription|document)/wa/(\S+?)\.?alpha$', uri)
+        wa_pseudo_inscr = re.match(
+            r"faust://(inscription|document)/wa/(\S+?)\.?alpha$", uri
+        )
         if wa_pseudo_inscr is not None:
-            docuri = 'faust://document/wa_faust/' + wa_pseudo_inscr.group(2)
+            docuri = "faust://document/wa_faust/" + wa_pseudo_inscr.group(2)
             wit = cls.get(docuri)
             if isinstance(wit, Witness):
-                return Inscription(wit, 'alpha')
+                return Inscription(wit, "alpha")
             else:
-                logger.warning('Could not fix WA pseudo inscription candidate %s (%s)', uri, wit)
+                logger.warning(
+                    "Could not fix WA pseudo inscription candidate %s (%s)", uri, wit
+                )
 
-        space_inscr = re.match(r'faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)', uri)
+        space_inscr = re.match(
+            r"faust://(inscription|document)/(.*?)/(.*?)\s+(.*?)", uri
+        )
         if space_inscr is not None:
-            uri = 'faust://inscription/' + space_inscr.group(2) + '/' + space_inscr.group(3) + '/' + space_inscr.group(
-                    4)
+            uri = (
+                "faust://inscription/"
+                + space_inscr.group(2)
+                + "/"
+                + space_inscr.group(3)
+                + "/"
+                + space_inscr.group(4)
+            )
 
-        wa_para = re.match(r'faust://(inscription|document)/wa/P(.+?)(/(.+?))$', uri)
+        wa_para = re.match(r"faust://(inscription|document)/wa/P(.+?)(/(.+?))$", uri)
         if wa_para and wa_para.group(2) in cls.paralipomena:
-            sigil = cls.paralipomena[wa_para.group(2)]['sigil']
+            sigil = cls.paralipomena[wa_para.group(2)]["sigil"]
             para_n = wa_para.group(2)
-            inscription = wa_para.group(4) if wa_para.group(4) else ('P' + para_n)
-            witness = \
-                [witness for witness in list(cls.database.values()) if
-                 isinstance(witness, Witness) and witness.sigil == sigil][0]
+            inscription = wa_para.group(4) if wa_para.group(4) else ("P" + para_n)
+            witness = [
+                witness
+                for witness in list(cls.database.values())
+                if isinstance(witness, Witness) and witness.sigil == sigil
+            ][0]
             result = Inscription(witness, inscription)
-            logger.debug('Recognized WA paralipomenon: %s -> %s', uri, result)
+            logger.debug("Recognized WA paralipomenon: %s -> %s", uri, result)
             return result
 
-        if uri.startswith('faust://inscription'):
-            match = re.match('faust://inscription/(.*)/(.*)/(.*)', uri)
+        if uri.startswith("faust://inscription"):
+            match = re.match("faust://inscription/(.*)/(.*)/(.*)", uri)
             if match is not None:
                 system, sigil, inscription = match.groups()
-                base = "/".join(['faust://document', system, sigil])
+                base = "/".join(["faust://document", system, sigil])
                 wit = cls.get(base)
                 return Inscription(wit, inscription)
 
-        logger.debug('Unknown reference: %s', uri)
+        logger.debug("Unknown reference: %s", uri)
         return UnknownRef(uri)
 
     @property
@@ -376,7 +417,7 @@ class Witness(Reference):
     def sort_tuple(self):
         p, n, s = self.sigil_sort_key()
         v = 0
-        if hasattr(self, 'first_verse'):
+        if hasattr(self, "first_verse"):
             v = self.first_verse
         return v, p, n, s
 
@@ -390,7 +431,7 @@ class Witness(Reference):
 
         This method converts this sigil's
         """
-        match = re.match(r'^([12]?\s*[IV]{0,3}\s*[^0-9]+)(\d*)(.*)$', self.sigil)
+        match = re.match(r"^([12]?\s*[IV]{0,3}\s*[^0-9]+)(\d*)(.*)$", self.sigil)
         if match is None:
             logger.warning("Failed to split sigil %s", self.sigil)
             return (self.sigil, 99999, "")
@@ -410,53 +451,82 @@ class Witness(Reference):
 
     @property
     def filename(self):
-        return Path(self.sigil_t + '.dot')
+        return Path(self.sigil_t + ".dot")
 
 
 ### The rest of this module is intended for producing tables about uri use in order to help with disambiguation
 
 
 def _collect_wits():
-    items = defaultdict(list)  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
-    macrogenesis_files = list(Path(config.path.data, 'macrogenesis').glob('**/*.xml'))
+    items = defaultdict(
+        list
+    )  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
+    macrogenesis_files = list(Path(config.path.data, "macrogenesis").glob("**/*.xml"))
     for macrogenetic_file in macrogenesis_files:
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
-        for element in tree.xpath('//f:item', namespaces=config.namespaces):  # type: etree._Element
-            uri = element.get('uri')
+        for element in tree.xpath(
+            "//f:item", namespaces=config.namespaces
+        ):  # type: etree._Element
+            uri = element.get("uri")
             wit = Witness.get(uri, allow_duplicate=True)
-            items[wit].append((macrogenetic_file.split('macrogenesis/')[-1], element.sourceline))
-    logger.info('Collected %d references in %d macrogenesis files', len(items), len(macrogenesis_files))
+            items[wit].append(
+                (macrogenetic_file.split("macrogenesis/")[-1], element.sourceline)
+            )
+    logger.info(
+        "Collected %d references in %d macrogenesis files",
+        len(items),
+        len(macrogenesis_files),
+    )
     return items
 
 
 def _assemble_report(wits):
-    referenced = [(wit.uri, Witness.corrections.get(wit.uri, ''), wit.status, ", ".join([file + ":" + str(line) for file, line in wits[wit]]))
-                  for wit in sorted(wits, key=lambda wit: wit.uri)]
+    referenced = [
+        (
+            wit.uri,
+            Witness.corrections.get(wit.uri, ""),
+            wit.status,
+            ", ".join([file + ":" + str(line) for file, line in wits[wit]]),
+        )
+        for wit in sorted(wits, key=lambda wit: wit.uri)
+    ]
 
-    unused = [(str(wit), "", "no macrogenesis data", "")
-              for wit in sorted(set(Witness.database.values()), key=str)
-              if wit not in wits and isinstance(wit, Witness)]
+    unused = [
+        (str(wit), "", "no macrogenesis data", "")
+        for wit in sorted(set(Witness.database.values()), key=str)
+        if wit not in wits and isinstance(wit, Witness)
+    ]
 
-    return [row for row in sorted(referenced, key=lambda r: (r[1], r[0])) if row[1] != '(ok)'] \
-           + [row for row in sorted(referenced, key=itemgetter(0)) if row[1] == '(ok)'] \
-           + unused
+    return (
+        [
+            row
+            for row in sorted(referenced, key=lambda r: (r[1], r[0]))
+            if row[1] != "(ok)"
+        ]
+        + [row for row in sorted(referenced, key=itemgetter(0)) if row[1] == "(ok)"]
+        + unused
+    )
 
 
-def _report_wits(wits, output_csv='witness-usage.csv'):
-    with open(output_csv, "wt", encoding='utf-8') as reportfile:
+def _report_wits(wits, output_csv="witness-usage.csv"):
+    with open(output_csv, "wt", encoding="utf-8") as reportfile:
         table = csv.writer(reportfile)
         rows = _assemble_report(wits)
-        table.writerow(('Zeuge / Referenz', 'korrigierte URI (oder leer)' ,'Status', 'Vorkommen'))
+        table.writerow(
+            ("Zeuge / Referenz", "korrigierte URI (oder leer)", "Status", "Vorkommen")
+        )
         for row in rows:
             table.writerow(row)
-        stats = Counter([row[1].split(':')[0] for row in rows])
-        report = "\n".join('%5d: %s' % (count, status) for status, count in stats.most_common())
-        logger.info('Analyzed references in data:\n%s', report)
+        stats = Counter([row[1].split(":")[0] for row in rows])
+        report = "\n".join(
+            "%5d: %s" % (count, status) for status, count in stats.most_common()
+        )
+        logger.info("Analyzed references in data:\n%s", report)
 
 
 def _witness_report():
-#    logging.basicConfig(level=logger.WARNING)
-#    logger.setLevel(logging.INFO)
+    #    logging.basicConfig(level=logger.WARNING)
+    #    logger.setLevel(logging.INFO)
     wits = _collect_wits()
 
     resolutions = defaultdict(set)
@@ -465,7 +535,7 @@ def _witness_report():
 
     with open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:
         table = csv.writer(resfile)
-        table.writerow(('in macrogenesis', 'normalisiert'))
+        table.writerow(("in macrogenesis", "normalisiert"))
 
         for uri in sorted(resolutions):
             for ref in sorted(resolutions[uri]):
@@ -478,14 +548,15 @@ def _witness_report():
     for w in [w for w in list(Witness.database.values()) if isinstance(w, Witness)]:
         sigils = dict()
         for uri, sigil in list(w.other_sigils.items()):
-            parts = uri.split('/')
+            parts = uri.split("/")
             type_, ascii = parts[3:5]
             sigils[type_] = sigil
-            sigils[type_ + ' (norm.)'] = ascii
+            sigils[type_ + " (norm.)"] = ascii
         wit_sigils[w] = sigils
 
     wit_report = pd.DataFrame(wit_sigils).T
-    wit_report.to_excel('witness-sigils.xlsx')
+    wit_report.to_excel("witness-sigils.xlsx")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     _witness_report()
