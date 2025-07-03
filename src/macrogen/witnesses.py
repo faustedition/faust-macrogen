@@ -84,7 +84,9 @@ class Document(BaseDocument):
         if not self._verses:
             try:
                 if text_transcript is None:
-                    text_transcript = etree.parse(fspath(self.text_transcript))
+                    if self.text_transcript is None:
+                        raise ValueError(f'There is no textual transcript for {self.sigil}, cannot determine verse coverage')
+                text_transcript = etree.parse(fspath(self.text_transcript))
 
                 lines = text_transcript.xpath('//tei:l[@n]', namespaces=config.namespaces) + \
                         text_transcript.xpath('//tei:milestone[@unit="reflines"]', namespaces=config.namespaces)
@@ -107,7 +109,7 @@ class Document(BaseDocument):
 
                 self._verses = insc_lines
             except Exception as e:
-                logger.exception('Failed to read %s: %s', self, e) 
+                logger.error('Failed to read %s: %s', self, e) 
                 self._verses = defaultdict(list)
         return self._verses
 

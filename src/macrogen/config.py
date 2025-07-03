@@ -165,8 +165,8 @@ class LazyConfigLoader:
     def parse_data(self, file, instance):
         try:
             instance._data[self.name] = self.parser(file) if callable(self.parser) else file.read()
-        except ValueError as e:
-            logger.exception('%s parsing %s (for %s)', e, file, self.name)
+        except Exception as e:
+            logger.error('%s parsing %s (for %s)', e, file, self.name)
             instance._data[self.name] = {}
 
 
