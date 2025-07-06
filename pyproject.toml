@@ -42,7 +42,13 @@ production = [
 solver = ["cvxpy<2.0.0,>=1.0.25", "cvxopt<2.0.0,>=1.2.3"]
 
 [dependency-groups]
-dev = ["pytest>=6.2.2", "coverage>=5.0.3", "watchdog>=0.10.3"]
+dev = [
+    "pytest>=6.2.2",
+    "coverage>=5.0.3",
+    "watchdog>=0.10.3",
+    "lxml-stubs>=0.5.1",
+    "networkx-stubs>=0.0.1",
+]
 
 [tool.hatch.build]
 skip-excluded-dirs = true
@@ -52,6 +58,11 @@ packages = ["src/macrogen", "src/graphviewer"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["/data"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = "slow: tests that take more than a second (deselect with '-m \"not slow\"')"
 
 [build-system]
 requires = ["hatchling"]
