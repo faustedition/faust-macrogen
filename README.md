@@ -17,15 +17,14 @@ Python ≥ 3.9 and GraphViz ≤ 2.38 or ≥ 2.41 need to be installed separate
 
 ```bash
 git submodules update --init --remote
-pip install -e .
-macrogen
+uv run macrogen
 ```
 
-will produce the output.
+will produce the output. You might want to use something like `--render-timeout=10` (which will cancel any graph rendering task that takes longer than 10 seconds): Most graphs are rendered almost instantly, but there are a few larger ones that take up to an hour.
 
 ### Installation – Details
 
-The main supported way of installation is to clone the repository and then run `pip install .` to install the package, potentially into a virtual environment. For development, install Poetry and run `poetry install .`. 
+The main supported way of installation is to clone the repository and then run `pip install .` to install the package, potentially into a virtual environment. For development, install uv and run `uv sync`
 
 There is one supported optional features (or 'extra'):
 

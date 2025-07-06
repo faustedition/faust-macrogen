@@ -278,7 +278,7 @@ class FES_Baharev:
         self.solution = None
         self.objective = None
         self.iterations = None
-        self.simple_cycles = []
+        self.simple_cycles: list[list[tuple]] = []
         self._load_solver_args()
 
     def _load_solver_args(self):

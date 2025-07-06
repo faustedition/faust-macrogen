@@ -2,8 +2,8 @@
 """
 Handle URIs and the objects they point to
 """
+
 import csv
-import json
 import re
 from abc import ABCMeta
 from collections import defaultdict, Counter
@@ -11,10 +11,11 @@ from functools import wraps, total_ordering
 from operator import itemgetter
 from os.path import commonprefix
 from pathlib import Path
-from typing import Tuple
+from typing import ClassVar, Tuple, Type, TypeVar, cast
+from datetime import date
 
+from networkx import is_matching
 import pandas as pd
-import requests
 from lxml import etree
 
 from macrogen.witnesses import all_documents
@@ -22,8 +23,12 @@ from .config import config
 
 logger = config.getLogger(__name__)
 
+F = TypeVar("F")
 
-def call_recorder(function=None, argument_picker=None):
+
+def call_recorder(
+    function: F | None = None, argument_picker=None
+) -> F:  # TODO: type hints when Python >= 3.12
     """
     Decorator that records call / result counts.
 
@@ -41,13 +46,13 @@ def call_recorder(function=None, argument_picker=None):
             recorder.update([(relevant_args, result)])
             return result
 
-        wrapper.recorder = recorder
+        wrapper.recorder = recorder  # type: ignore
         return wrapper
 
     if callable(function) and argument_picker is None:
         return decorator(function)
     else:
-        return decorator
+        return decorator  # type: ignore
 
 
 @total_ordering
@@ -56,11 +61,14 @@ class Reference(metaclass=ABCMeta):
     Some kind of datable object in the data.
     """
 
+    uri: str
+    rank: int = -1
+    index: int = -1
+    earliest: date | None = None
+    latest: date | None = None
+
     def __init__(self, uri):
         self.uri = uri
-        self.rank = -1
-        self.earliest = None
-        self.latest = None
 
     def __lt__(self, other):
         if isinstance(other, Reference):
@@ -85,7 +93,7 @@ class Reference(metaclass=ABCMeta):
                 return bibentry.citation
         return self.uri
 
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple[int, str, int, str]:
         """
         Creates a tuple that can be used as a sort key
         """
@@ -101,9 +109,11 @@ class Reference(metaclass=ABCMeta):
     def __hash__(self):
         return hash(self.uri)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, Reference):
             return self.uri == other.uri
+        else:
+            return False
 
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.uri)})"
@@ -138,7 +148,13 @@ class Inscription(Reference):
         maybe support multiple witnesses?
     """
 
-    def __init__(self, witness, inscription):
+    witness: "Witness"
+    inscription: str
+    known_witness: bool
+    known_inscription: bool
+    status: str
+
+    def __init__(self, witness: "Witness", inscription: str):
         uri = "/".join(
             [
                 witness.uri.replace("faust://document/", "faust://inscription/"),
@@ -217,12 +233,15 @@ class Witness(Reference):
         move the database stuff out of here
     """
 
-    database = {}
-    paralipomena = None
-    corrections = {}
+    database: ClassVar[dict[str, Reference]] = {}
+    paralipomena: ClassVar[dict[str, dict]] = {}
+    corrections: ClassVar[dict[str, str]] = {}
+    sigil: str
+    sigil_t: str
+    other_sigils: dict[str, str] = {}
 
     def __init__(self, doc_record):
-        self.sigil_t = None
+        # self.sigil_t = None
         if isinstance(doc_record, dict):
             super().__init__(doc_record.get("uri", "?"))
             self.__dict__.update(doc_record)
@@ -237,14 +256,13 @@ class Witness(Reference):
         Returns a set of all uris that can point to the current witness (i.e., faust://…)
         """
         result = {self.uri}
-        if hasattr(self, "other_sigils"):
-            for uri in self.other_sigils:
-                if self.other_sigils[uri] in {"none", "n.s.", ""}:
-                    continue
-                uri = uri.replace("-", "_")
-                result.add(uri)
-                if "/wa_faust/" in uri:
-                    result.add(uri.replace("/wa_faust/", "/wa/"))
+        for uri in self.other_sigils:
+            if self.other_sigils[uri] in {"none", "n.s.", ""}:  # type: ignore
+                continue
+            uri = uri.replace("-", "_")
+            result.add(uri)
+            if "/wa_faust/" in uri:
+                result.add(uri.replace("/wa_faust/", "/wa/"))
         if getattr(self, "type", "") == "print":
             result.update(
                 [uri.replace("faust://document/", "faust://print/") for uri in result]
@@ -302,9 +320,9 @@ class Witness(Reference):
                     database[uri] = wit
         return database
 
-    @classmethod
+    @classmethod  # type: ignore   # call_recorder is too complex for typing in Python 3.9
     @call_recorder(argument_picker=itemgetter(1))
-    def get(cls, uri, allow_duplicate=True):
+    def get(cls: Type["Witness"], uri, allow_duplicate=True):
         """
         Returns the reference for the given URI.
 
@@ -321,7 +339,6 @@ class Witness(Reference):
             cls._load_database()
             cls._load_paralipomena()
 
-        orig_uri = uri
         if "#" in uri:
             uri = uri[: uri.index("#")]
         uri = uri.replace("-", "_")
@@ -418,7 +435,7 @@ class Witness(Reference):
         p, n, s = self.sigil_sort_key()
         v = 0
         if hasattr(self, "first_verse"):
-            v = self.first_verse
+            v = self.first_verse  # # pyright: ignore
         return v, p, n, s
 
     def sigil_sort_key(self) -> Tuple[str, int, str]:
@@ -444,10 +461,10 @@ class Witness(Reference):
         elif split[1].isdigit():
             split[1] = int(split[1])
         else:
-            split[1] = -1
             split[2] = split[1] + split[2]
+            split[1] = -1
 
-        return tuple(split)
+        return tuple(split)  # type: ignore
 
     @property
     def filename(self):
@@ -458,19 +475,22 @@ class Witness(Reference):
 
 
 def _collect_wits():
-    items = defaultdict(
-        list
-    )  # type: Dict[Union[Witness, Inscription, UnknownRef], List[Tuple[str, int]]]
-    macrogenesis_files = list(Path(config.path.data, "macrogenesis").glob("**/*.xml"))
+    items = defaultdict(list)  # type: dict[Witness | Inscription | UnknownRef, list[tuple[str, int]]]
+    macrogenesis_root = config.path.data / "macrogenesis"
+    macrogenesis_files = list(macrogenesis_root.glob("**/*.xml"))
     for macrogenetic_file in macrogenesis_files:
         tree = etree.parse(macrogenetic_file)  # type: etree._ElementTree
-        for element in tree.xpath(
-            "//f:item", namespaces=config.namespaces
-        ):  # type: etree._Element
+        for element in cast(
+            list[etree.ElementBase],
+            tree.xpath("//f:item", namespaces=config.namespaces),
+        ):
             uri = element.get("uri")
             wit = Witness.get(uri, allow_duplicate=True)
             items[wit].append(
-                (macrogenetic_file.split("macrogenesis/")[-1], element.sourceline)
+                (
+                    str(macrogenetic_file.relative_to(macrogenesis_root)),
+                    element.sourceline,
+                )
             )
     logger.info(
         "Collected %d references in %d macrogenesis files",
@@ -530,7 +550,7 @@ def _witness_report():
     wits = _collect_wits()
 
     resolutions = defaultdict(set)
-    for uri, result in list(Witness.get.recorder.keys()):
+    for uri, result in list(Witness.get.recorder.keys()):  # pyright: ignore
         resolutions[result].add(uri)
 
     with open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:

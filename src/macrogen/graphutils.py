@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional, Set
+from typing import List, Iterable, Literal, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional, Set, overload
 
 import networkx as nx
 
@@ -62,7 +62,7 @@ def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]], filte
         try:
             atlas = graph[u][v]
             for key in atlas:
-                yield u, v, key, atlas[key]
+                yield u, v, key, atlas[key]   # type: ignore
         except KeyError as e:
             if filter:
                 logger.warning('Edge %s→%s from edge list not in graph', u, v)
@@ -143,7 +143,13 @@ def collapse_edges_by_source(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return result
 
 
-def first(sequence: Iterable[T], default: S = None, checked: bool = False) -> Union[T, S]:
+@overload
+def first(sequence: Iterable[T], default: None = None, checked: Literal[True] = True) -> T: ...
+
+@overload
+def first(sequence: Iterable[T], default: None = None, checked: Literal[False] = False) -> T | None: ...
+
+def first(sequence: Iterable[T], default: S = None, checked: bool = False) -> T | S:
     """
     Returns the first item in the given iterable.
 
@@ -177,7 +183,7 @@ def collapse_timeline(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
         succ = first(g.successors(node))
         if g.in_degree(node) == 1 and g.out_degree(node) == 1 \
                 and isinstance(pred, date) and isinstance(succ, date):
-            g.add_edge(pred, succ, **g[pred][node][0])
+            g.add_edge(pred, succ, **g[pred][node][0])   # type: ignore  # maybe networkx’ type annotations are wrong?
             g.remove_node(node)
     return g
 
@@ -221,7 +227,7 @@ def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[st
     """
     to_keep = [(u, v, k) for u, v, k, attr in source.edges(data=True, keys=True)
                if not predicate(u, v, attr)]
-    return source.edge_subgraph(to_keep)
+    return source.edge_subgraph(to_keep)  # type: ignore
     # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
@@ -262,7 +268,7 @@ def simplify_timeline(graph: nx.MultiDiGraph):
                     1798-01-01  ->  1798-02-01
                        `-----> H.x -----^
     """
-    graph = remove_edges(graph, lambda u, v, attr: attr.get('kind') == 'timeline').copy()
+    graph = remove_edges(graph, lambda u, v, attr: attr.get('kind') == 'timeline').copy() # type: ignore
     add_timeline_edges(graph)
     return graph
     # date_nodes = sorted(node for node in graph.nodes if isinstance(node, date))
@@ -289,12 +295,12 @@ def base_n(number: int, base: int = 10, neg: Optional[str] = '-') -> str:
     """
     if not (isinstance(number, int)):
         raise TypeError(f"Number must be an integer, not a {type(number)}")
-    if neg is None and int < 0:
+    if neg is None and number < 0:
         raise ValueError("number must not be negative if no neg character is given")
     if base < 2 or base > 64:
         raise ValueError("Base must be between 2 and 62")
     alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    if neg in alphabet:
+    if neg is not None and neg in alphabet:
         raise ValueError(f"neg char, '{neg}', must not be from alphabet '{alphabet}")
 
     digits = []

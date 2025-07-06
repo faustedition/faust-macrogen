@@ -10,14 +10,15 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from sys import exc_info
-from typing import List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, TypeVar
+from typing import TYPE_CHECKING, List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, TypeVar, cast
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import networkx as nx
 import pandas as pd
 from dataclasses import dataclass
+
+from pandas._config.config import is_instance_factory
 
 from macrogen.graphutils import is_orphan, find_reachable_by_edge, path2str
 from more_itertools import windowed
@@ -101,10 +102,10 @@ def inscriptions_inline(base):
         split_inscrs = [ref for ref in split_refs if isinstance(ref.reference, Inscription)]
         # add potentially missing nodes
         for inscr in split_inscrs:
-            base.add_nodes_from(SplitReference.both(inscr.reference.witness).values())
+            base.add_nodes_from(SplitReference.both(cast(Inscription, inscr.reference).witness).values())
 
         for split_inscr in split_inscrs:
-            wit_half = SplitReference(split_inscr.reference.witness, split_inscr.side)
+            wit_half = SplitReference(cast(Inscription, split_inscr.reference).witness, split_inscr.side)
             if split_inscr.side == Side.START:
                 base.add_edge(wit_half, split_inscr, kind='temp-pre',
                               source=BiblSource('faust://model/inscription/inline'))
@@ -116,7 +117,7 @@ def inscriptions_inline(base):
                 f"Ignoring inscription method 'inline' for global model '{config.model}', it is only supported for split models")
 
 
-def yearlabel(max_date_before: date, min_date_after: date) -> str:
+def yearlabel(max_date_before: date | None, min_date_after: date | None) -> str:
     earliest_year = max_date_before and (max_date_before + DAY).year
     latest_year = min_date_after and (min_date_after - DAY).year
     if earliest_year == latest_year:
@@ -129,23 +130,24 @@ class MacrogenesisInfo:
     Results of the analysis.
     """
 
-    def __init__(self, load_from: Optional[Path] = None):
-        self.base: nx.MultiDiGraph = None
-        self.working: nx.MultiDiGraph = None
-        self.dag: nx.MultiDiGraph = None
-        self.closure: nx.MultiDiGraph = None
-        self.conflicts: List[MultiEdge] = []
-        self.simple_cycles: Set[Sequence[Tuple[Node, Node]]] = set()
-        self.order: List[Reference] = None
-        self.index: Dict[Reference, int] = None
-        self.details: pd.DataFrame = None
+    base: nx.MultiDiGraph
+    working: nx.MultiDiGraph
+    dag: nx.MultiDiGraph
+    closure: nx.MultiDiGraph
+    conflicts: list[MultiEdge] = []
+    simple_cycles: set[Sequence[tuple[Node, Node]]] = set()
+    order: list[Reference] = []
+    index: dict[Reference, int] = {}
+    details: pd.DataFrame
 
+
+    def __init__(self, load_from: Optional[Path] = None):
         if load_from:
             self._load_from(load_from)
         else:
             self.run_analysis()
 
-    def feedback_arcs(self, graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None):
+    def feedback_arcs(self, graph: nx.MultiDiGraph, method=None, light_timeline: Optional[bool] = None) -> list[tuple[Any, Any, int, dict]]:
         """
         Calculates the feedback arc set using the given method and returns a
         list of edges in the form (u, v, key, data)
@@ -178,7 +180,7 @@ class MacrogenesisInfo:
             elif method == 'baharev':
                 solver = FES_Baharev(graph, prepare_timeline_for_keeping(graph) if light_timeline else None)
                 fes = solver.solve()
-                self.simple_cycles |= solver.simple_cycles
+                self.simple_cycles.update(solver.simple_cycles)
                 return list(expand_edges(graph, fes))
             else:
                 if light_timeline:
@@ -190,6 +192,7 @@ class MacrogenesisInfo:
                     return list(nx_edges(iedges, keys=True, data=True))
                 except ImportError as e:
                     logger.critical('The method %s requires python-igraph, but it is not available: %s', method, e, exc_info=True)
+                    raise
         except ImportError as e:
             logger.critical("To solve the feedback arg problem, you need to install a solver: try the solver extra (%s)",
                             e, exc_info=True)
@@ -355,7 +358,7 @@ class MacrogenesisInfo:
             known_wits = {wit for wit in working.nodes if isinstance(wit, Witness)}
             mentioned_refs = {ref for ref in self.base.nodes if isinstance(ref, Reference)}
             inscription_bases = {inscr.witness for inscr in mentioned_refs if isinstance(inscr, Inscription)}
-            missing_wits = (all_wits | mentioned_refs | inscription_bases) - known_wits
+            missing_wits: set[Reference] = (all_wits | mentioned_refs | inscription_bases) - known_wits
             working.add_nodes_from(sorted(missing_wits, key=lambda ref: ref.sort_tuple()))
         logger.info('Adding %d otherwise unmentioned references to the working graph', len(missing_wits))
 
@@ -375,10 +378,10 @@ class MacrogenesisInfo:
             ref.index = index
         return refs
 
-    def order_refs_post_model(self) -> List[Reference]:
+    def order_refs_post_model(self) -> list[Reference] | list[SplitReference]:
         refs = self.order_refs()
         if config.model in ['split', 'split-reverse']:
-            refs = [ref for ref in refs if ref.side == Side.END]
+            refs = [ref for ref in refs if isinstance(ref, SplitReference) and ref.side == Side.END]
         return refs
 
     def _build_index(self):
@@ -396,6 +399,8 @@ class MacrogenesisInfo:
         is_split = any(isinstance(node, SplitReference) for node in ordered_ref_nodes)
         self.is_split = is_split
         if is_split:
+            if TYPE_CHECKING:
+                ordered_ref_nodes = cast(list[SplitReference], ordered_ref_nodes)
             refs_from_graphs = [ref for ref in ordered_ref_nodes if ref.side == Side.END]  # FIXME Configurable?
             refs_from_data = [ref.reference for ref in refs_from_graphs]
             total_positions = {ref: pos for pos, ref in enumerate(ordered_ref_nodes, start=1)}
@@ -404,6 +409,7 @@ class MacrogenesisInfo:
         else:
             refs_from_graphs = ordered_ref_nodes
             refs_from_data = ordered_ref_nodes
+            start_positions = end_positions = []
 
         table = pd.DataFrame(data=dict(uri=[ref.uri for ref in refs_from_data],
                                        label=[ref.label for ref in refs_from_data],
@@ -497,7 +503,8 @@ class MacrogenesisInfo:
                 config.save_config(config_entry)
             with zip.open('base.yaml', 'w') as base_entry:
                 text = TextIOWrapper(base_entry, encoding='utf-8')
-                nx.write_yaml(self.base, text)
+                if nx.write_yaml is not None:
+                    nx.write_yaml(self.base, text)
             with zip.open('witnesses.pickle', 'w') as wit:
                 pickle.dump((Witness.database, Witness.paralipomena), wit)
 
@@ -547,7 +554,7 @@ class MacrogenesisInfo:
         self._infer_details()
         logger.info('Finished loading model from %s: %d nodes, %d conflicts', load_from, len(self.order), len(self.conflicts))
 
-    def node(self, spec: Union[Reference, date, str], default=KeyError):
+    def node(self, spec: Union[Reference, date, str], default=KeyError) -> Node:
         """
         Returns a node from the graph.
         Args:
@@ -588,7 +595,7 @@ class MacrogenesisInfo:
             if default is KeyError:
                 raise KeyError("No node matching {!r} in the base graph.".format(spec))
             else:
-                return default
+                return default # type: ignore
 
     def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[
         List[Node], Tuple[List[Node], List[str]]]:
@@ -612,8 +619,8 @@ class MacrogenesisInfo:
         errors: List[str] = []
         if node_str:
             for node_spec in node_str.split(','):
+                stripped = node_spec.strip()
                 try:
-                    stripped = node_spec.strip()
                     nodes.append(self.node(stripped))
                 except KeyError:
                     if report_errors:
@@ -741,7 +748,7 @@ class MacrogenesisInfo:
                     next_ = min((d for d in self.closure.succ[node] if isinstance(d, date)), default=None)
                     if next_ is not None and next not in central_nodes:
                         self.add_path(subgraph, node, next_, edges_from=self.dag)
-                except KeyError as e:
+                except KeyError:
                     logger.warning('%s is not in closure, so no date justification', node)
 
             for source in sources:
@@ -1020,7 +1027,7 @@ def add_syn_nodes(source_graph: nx.MultiDiGraph, mode: Optional[str] = None) -> 
     logger.info('Adding temp-syn nodes in mode %s for %d clusters', mode, len(syn_groups))
     result = source_graph.copy()
     for component in syn_groups:
-        syn_group: Set[Reference] = frozenset(component)
+        syn_group: frozenset[Reference] = frozenset(component)
         in_edge_view = source_graph.in_edges(nbunch=syn_group, keys=True, data=True)
         out_edge_view = source_graph.out_edges(nbunch=syn_group, keys=True, data=True)
         in_edges = [(u, v, k, attr) for u, v, k, attr in in_edge_view if u not in syn_group]
@@ -1082,7 +1089,6 @@ class _ConflictInfo:
         return dict(
                 u=self.u,
                 v=self.v,
-                edges=len(self.removed_edges),
                 conflict_weight=self.conflict_weight,
                 sp_weight=self.sp_weight,
                 involved_cycles=len(self.involved_cycles),

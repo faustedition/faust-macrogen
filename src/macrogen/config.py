@@ -24,19 +24,19 @@ Additional stuff to configure:
 - Render / Render graphs up to ...
 - algorithm / threshold
 """
+
 import argparse
 import csv
 import json
 import logging
 from logging import Logger
-from sys import exc_info
 import traceback
 from collections import namedtuple, defaultdict
 from functools import partial
 from io import BytesIO, StringIO, TextIOWrapper
 from os.path import expanduser, expandvars
 from pathlib import Path
-from typing import Optional, IO, Callable, Any, Tuple, Mapping, Union, Dict
+from typing import Optional, IO, Callable, Any, Tuple, Union, Dict, cast
 from urllib.parse import urlparse
 
 import pkg_resources
@@ -45,9 +45,9 @@ from lxml import etree
 from ruamel.yaml import YAML
 
 # logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__ + '.preliminary')
+logger = logging.getLogger(__name__ + ".preliminary")
 
-BibEntry = namedtuple('BibEntry', ['uri', 'citation', 'reference', 'weight'])
+BibEntry = namedtuple("BibEntry", ["uri", "citation", "reference", "weight"])
 
 
 def parse_bibliography(bibxml: Union[str, IO]) -> Dict[str, BibEntry]:
@@ -55,10 +55,10 @@ def parse_bibliography(bibxml: Union[str, IO]) -> Dict[str, BibEntry]:
     db: Dict[str, BibEntry] = {}
     scores = config.bibscores
     et = etree.parse(bibxml)
-    for bib in et.xpath('//f:bib', namespaces=config.namespaces):
-        uri = bib.get('uri')
-        citation = bib.find('f:citation', namespaces=config.namespaces).text
-        reference = bib.find('f:reference', namespaces=config.namespaces).text
+    for bib in cast(list, et.xpath("//f:bib", namespaces=config.namespaces)):
+        uri = bib.get("uri")
+        citation = bib.find("f:citation", namespaces=config.namespaces).text
+        reference = bib.find("f:reference", namespaces=config.namespaces).text
         db[uri] = BibEntry(uri, citation, reference, scores[uri])
     return db
 
@@ -102,21 +102,21 @@ class CachedFile:
         Returns:
             open IO, either to the cached file or to the remotely fetched content
         """
-        if self.is_url and not offline:
+        if self.is_url and self.url and not offline:
             # fetch remote to cache
-            logger.debug('fetching %s', self.url)
+            logger.debug("fetching %s", self.url)
             response = requests.get(self.url)
 
             if self.path:
                 # dump to cache and serve from cache file
-                logger.debug('saving as %s', self.path)
+                logger.debug("saving as %s", self.path)
                 if not self.path.parent.exists():
                     self.path.parent.mkdir(parents=True, exist_ok=True)
                 if "b" in mode:
                     with self.path.open("wb") as cache_file:
                         cache_file.write(response.content)
                 else:
-                    with self.path.open("wt", encoding='utf-8') as cache_file:
+                    with self.path.open("wt", encoding="utf-8") as cache_file:
                         cache_file.write(response.text)
             else:
                 if "b" in mode:
@@ -124,7 +124,10 @@ class CachedFile:
                 else:
                     return StringIO(response.text)
 
-        return self.path.open(mode=mode, encoding='utf-8-sig')
+        assert (
+            self.path is not None
+        )  # otherwise, we would have encountered one of the return statements above
+        return self.path.open(mode=mode, encoding="utf-8-sig")
 
 
 class LazyConfigLoader:
@@ -132,14 +135,18 @@ class LazyConfigLoader:
     Descriptor that lazily loads stuff from configured paths.
     """
 
-    def __init__(self, name: str, parser: Optional[Callable[[IO], Any]] = None,
-                 fallback_resource: Optional[Tuple[str, str]] = None):
+    def __init__(
+        self,
+        name: str,
+        parser: Optional[Callable[[IO], Any]] = None,
+        fallback_resource: Optional[Tuple[str, str]] = None,
+    ):
         self.name = name
         self.parser = parser
         self.resource = fallback_resource
 
     def __get__(self, instance, owner):
-        if not hasattr(instance, '_data'):
+        if not hasattr(instance, "_data"):
             instance._data = {}
         if self.name not in instance._data:
             self.load_data(instance)
@@ -148,43 +155,45 @@ class LazyConfigLoader:
     def load_data(self, instance):
         source = instance.config.get(self.name, None)
         if source:
-            logger.info('Loading %s from %s', self.name, source)
-            cache = Path(instance.config.get('cache', '.cache'))
-            offline = instance.config.get('offline', False)
+            logger.info("Loading %s from %s", self.name, source)
+            cache = Path(instance.config.get("cache", ".cache"))
+            offline = instance.config.get("offline", False)
             cached_file = CachedFile(source, cache)
             with cached_file.open(offline) as file:
                 self.parse_data(file, instance)
         elif self.resource:
-            logger.debug('Loading %s from internal configuration %s', self.name, self.resource)
+            logger.debug(
+                "Loading %s from internal configuration %s", self.name, self.resource
+            )
             with pkg_resources.resource_stream(*self.resource) as file:
                 self.parse_data(file, instance)
         else:
             raise ValueError(
-                    f"Cannot access property {self.name}: Neither configured source nor fallback resource available")
+                f"Cannot access property {self.name}: Neither configured source nor fallback resource available"
+            )
 
     def parse_data(self, file, instance):
         try:
-            instance._data[self.name] = self.parser(file) if callable(self.parser) else file.read()
+            instance._data[self.name] = (
+                self.parser(file) if callable(self.parser) else file.read()
+            )
         except Exception as e:
-            logger.error('%s parsing %s (for %s)', e, file, self.name)
+            logger.error("%s parsing %s (for %s)", e, file, self.name)
             instance._data[self.name] = {}
 
 
-_yaml = YAML(typ='rt')
-_config_package = 'macrogen'
+_yaml = YAML(typ="rt")
+_config_package = "macrogen"
 
 
 class _Proxy:
-
     def __init__(self, constructor, *args, **kwargs):
-        self.__dict__.update(dict(
-                _constructor=constructor,
-                _args=args,
-                _kwargs=kwargs,
-                _target=None))
+        self.__dict__.update(
+            dict(_constructor=constructor, _args=args, _kwargs=kwargs, _target=None)
+        )
 
     def _init_proxy(self):
-        if self.__dict__['_target'] is None:
+        if self.__dict__["_target"] is None:
             self._target = self._constructor(*self._args, **self._kwargs)
 
     def __getattr__(self, item):
@@ -204,7 +213,6 @@ class _Proxy:
 
 
 class _Accessor:
-
     def __init__(self, accessor_function: Callable[[Any], Any]):
         self._accessor = accessor_function
 
@@ -216,7 +224,7 @@ def parse_kvcsv(file: IO, default=None, value_type=None, **kwargs):
     """
     Parses a two-column key-value csv file to a key: value dictionary
     """
-    text = TextIOWrapper(file, encoding='utf-8')
+    text = TextIOWrapper(file, encoding="utf-8")
     reader = csv.reader(text, **kwargs)
     next(reader)  # skip header
     result = {row[0]: row[1] for row in reader if row[1]}
@@ -227,6 +235,7 @@ def parse_kvcsv(file: IO, default=None, value_type=None, **kwargs):
     else:
         return result
 
+
 class Configuration:
     """
     Ready to use configuration data for the application.
@@ -234,17 +243,30 @@ class Configuration:
     Data that is coming from files can be loaded lazily.
     """
 
-    logging = LazyConfigLoader('logging', _yaml.load, (_config_package, 'etc/logging.yaml'))
-    styles = LazyConfigLoader('styles', _yaml.load, (_config_package, 'etc/styles.yaml'))
+    logging = LazyConfigLoader(
+        "logging", _yaml.load, (_config_package, "etc/logging.yaml")
+    )
+    styles = LazyConfigLoader(
+        "styles", _yaml.load, (_config_package, "etc/styles.yaml")
+    )
     # reference-normalization.csv
     # bibscores.tsv
-    genetic_bar_graph = LazyConfigLoader('genetic_bar_graph', json.load)
-    bibliography = LazyConfigLoader('bibliography', parse_bibliography)
-    uri_corrections = LazyConfigLoader('uri_corrections', parse_kvcsv, (_config_package, 'etc/uri-corrections.csv'))
-    bibscores = LazyConfigLoader('bibscores', partial(parse_kvcsv, default=1, value_type=int, delimiter='\t'),
-                                 (_config_package, 'etc/bibscores.tsv'))
-    scenes_xml = LazyConfigLoader('scenes_xml', etree.parse, (_config_package, 'etc/scenes.xml'))
-    graphviz_attrs = LazyConfigLoader('graphviz_attrs', _yaml.load, (_config_package, 'etc/graphviz_attrs.yaml'))
+    genetic_bar_graph = LazyConfigLoader("genetic_bar_graph", json.load)
+    bibliography = LazyConfigLoader("bibliography", parse_bibliography)
+    uri_corrections = LazyConfigLoader(
+        "uri_corrections", parse_kvcsv, (_config_package, "etc/uri-corrections.csv")
+    )
+    bibscores = LazyConfigLoader(
+        "bibscores",
+        partial(parse_kvcsv, default=1, value_type=int, delimiter="\t"),
+        (_config_package, "etc/bibscores.tsv"),
+    )
+    scenes_xml = LazyConfigLoader(
+        "scenes_xml", etree.parse, (_config_package, "etc/scenes.xml")
+    )
+    graphviz_attrs = LazyConfigLoader(
+        "graphviz_attrs", _yaml.load, (_config_package, "etc/graphviz_attrs.yaml")
+    )
 
     def __init__(self, config_override=None):
         self._config_override = {}
@@ -264,8 +286,12 @@ class Configuration:
 
     @config_override.setter
     def config_override(self, value):
-        if hasattr(self, 'config'):
-            logger.debug('Configuration has already been loaded. Some override values may not have any effect. (%s)\n%s', value, "".join(traceback.format_stack(limit=5)))
+        if hasattr(self, "config"):
+            logger.debug(
+                "Configuration has already been loaded. Some override values may not have any effect. (%s)\n%s",
+                value,
+                "".join(traceback.format_stack(limit=5)),
+            )
             self._apply_override(value)
         self._config_override = value
 
@@ -275,36 +301,38 @@ class Configuration:
         for key, value in override.items():
             if value is not None:
                 if key in self.config:
-                    logger.info('Overriding %s=%s with %s', key, self.config[key], value)
+                    logger.info(
+                        "Overriding %s=%s with %s", key, self.config[key], value
+                    )
                     self.config[key] = value
 
     def __getattr__(self, item):
-        if item == 'config' and not self.config_loaded:
+        if item == "config" and not self.config_loaded:
             self._load_config()
-            return self.__dict__['config']
+            return self.__dict__["config"]
         if item in self.config:
-            logger.debug('Config %s -> %s', item, self.config[item])
+            logger.debug("Config %s -> %s", item, self.config[item])
             return self.config[item]
-        raise AttributeError(f'No configuration item {item}')
+        raise AttributeError(f"No configuration item {item}")
 
     def _load_config(self):
         self.config_loaded = True
         # First, load the default config
         logger.debug("Loading default configuration.")
-        with pkg_resources.resource_stream(_config_package, 'etc/default.yaml') as f:
-            config: Mapping = _yaml.load(f)
+        with pkg_resources.resource_stream(_config_package, "etc/default.yaml") as f:
+            config = _yaml.load(f)
             self.config = config
         # now work through all config files configured in the default config
         # if they exist
-        if 'config_files' in config:
-            for fn in config['config_files']:
+        if "config_files" in config:
+            for fn in config["config_files"]:
                 p = Path(expanduser(expandvars(fn)))
                 if p.exists():
-                    logger.info('Loading configuration file %s', p)
+                    logger.info("Loading configuration file %s", p)
                     with p.open() as f:
                         config.update(_yaml.load(f))
                 else:
-                    logger.info('Configuration file at %s does not exist', p)
+                    logger.info("Configuration file at %s does not exist", p)
         # now update using command line options etc.
         self.config.update(self._config_override)
 
@@ -314,26 +342,30 @@ class Configuration:
     def _init_logging(self):
         global logger
         from logging.config import dictConfig
-        logger.debug('Reconfiguring logging')
+
+        logger.debug("Reconfiguring logging")
         dictConfig(self.logging)
-        logger.debug('Reconfigured logging')
+        logger.debug("Reconfigured logging")
         logger = logging.getLogger(__name__)
 
-    def getLogger(self, name) -> Union[Logger, _Proxy]:
-        return _Proxy(logging.getLogger, name)
+    def getLogger(self, name) -> Logger:
+        return cast(Logger, _Proxy(logging.getLogger, name))
 
     def progress(self, iterable, *args, **kwargs):
         if self.progressbar:
             try:
                 from tqdm import tqdm
                 from tqdm.contrib.logging import tqdm_logging_redirect
-                if 'dynamic_ncols' not in kwargs:
-                    kwargs['dynamic_ncols'] = True
+
+                if "dynamic_ncols" not in kwargs:
+                    kwargs["dynamic_ncols"] = True
                 with tqdm_logging_redirect():
                     yield from tqdm(iterable, *args, **kwargs)
                     return
             except ImportError:
-                logger.info('Could not import progress bar, working without progress info')
+                logger.info(
+                    "Could not import progress bar, working without progress info"
+                )
         yield from iterable
 
     def relative_path(self, absolute_path):
@@ -354,26 +386,38 @@ class Configuration:
             value = self.config[key]
             try:
                 comment = self.config.ca.items[key][2].value
-                desc = comment.strip('# ')
-                option_name='--' + key.replace('_','-')
+                desc = comment.strip("# ")
+                option_name = "--" + key.replace("_", "-")
 
                 if isinstance(value, list):
-                    argparser.add_argument(option_name, nargs="*", dest=key,
-                                           help=f"{desc} ({' '.join(value)}")
+                    argparser.add_argument(
+                        option_name,
+                        nargs="*",
+                        dest=key,
+                        help=f"{desc} ({' '.join(value)}",
+                    )
                 elif value is not None:
-                    argparser.add_argument(option_name, dest=key, action='store', type=_yaml_from_string,
-                                           help=f"{desc} ({str(value)})")
+                    argparser.add_argument(
+                        option_name,
+                        dest=key,
+                        action="store",
+                        type=_yaml_from_string,
+                        help=f"{desc} ({str(value)})",
+                    )
                 else:
-                    argparser.add_argument(option_name, dest=key, action='store', type=_yaml_from_string,
-                                           help=desc)
+                    argparser.add_argument(
+                        option_name,
+                        dest=key,
+                        action="store",
+                        type=_yaml_from_string,
+                        help=desc,
+                    )
             except KeyError:
-                logger.debug('No argument for uncommented config option %s', key)
+                logger.debug("No argument for uncommented config option %s", key)
             except AttributeError:
-                logger.debug('Could not extract comment from config option %s', key)
+                logger.debug("Could not extract comment from config option %s", key)
 
-
-
-    def save_config(self, output: Optional[Union[Path, str, BytesIO]]):
+    def save_config(self, output: Optional[Union[Path, str, BytesIO, IO[bytes]]]):
         """
         Dumps the current configuration.
 
@@ -384,27 +428,33 @@ class Configuration:
         """
         if output is None:
             target = StringIO()
-        elif hasattr(output, 'write'):
+        elif hasattr(output, "write"):
             target = output
         else:
-            if not isinstance(output, Path):
+            if isinstance(output, str):
                 output = Path(output)
-            target = output.open('wb')
+            target = output.open("wb")
 
         try:
-            with YAML(typ='rt', output=target) as y:
+            with YAML(typ="rt", output=target) as y:
                 y.dump(self.config, output)
 
-            if output is None:
-                logger.info('Configuration:\n%s', target.getvalue())
+            if (
+                output is None
+                and isinstance(target, StringIO)
+                or isinstance(target, BytesIO)
+            ):
+                logger.info("Configuration:\n%s", target.getvalue())
             else:
-                logger.debug('Saved effective configuration to %s', target)
+                logger.debug("Saved effective configuration to %s", target)
         finally:
             if target is not output:
                 target.close()
 
+
 def _yaml_from_string(arg):
-    yaml = YAML(typ='safe')
+    yaml = YAML(typ="safe")
     return yaml.load(StringIO(arg))
+
 
 config = Configuration()

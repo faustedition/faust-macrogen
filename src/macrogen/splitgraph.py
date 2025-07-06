@@ -16,8 +16,8 @@ def _logger() -> Logger:
 
 
 class Side(Enum):
-    START = 'start'
-    END = 'end'
+    START = "start"
+    END = "end"
 
     @property
     def label(self):
@@ -29,21 +29,29 @@ class SplitReference(Reference):
     Represents either the start or the end of the process of working on a reference.
     """
 
-    def __init__(self, reference: Reference, side: Side, other: Optional['SplitReference'] = None):
+    # TODO: Improve type hinting. `reference` is accessed as Inscription sometimes (when it is!)
+
+    def __init__(
+        self, reference: Reference, side: Side, other: Optional["SplitReference"] = None
+    ):
         if isinstance(reference, SplitReference):
-            raise TypeError(f'Cannot create a SplitReference from SplitReference {reference}')
-        super().__init__(reference.uri + '#' + side.value)
+            raise TypeError(
+                f"Cannot create a SplitReference from SplitReference {reference}"
+            )
+        super().__init__(reference.uri + "#" + side.value)
         self.reference = reference
         self.side = side
         self._other = other
 
     def __getattr__(self, item):
-        if 'reference' not in self.__dict__:
+        if "reference" not in self.__dict__:
             raise AttributeError("Reference not associated yet!")
         if hasattr(self.reference, item):
             return getattr(self.reference, item)
         else:
-            raise AttributeError(f"Neither the split reference nor the base object has attribute {item}")
+            raise AttributeError(
+                f"Neither the split reference nor the base object has attribute {item}"
+            )
 
     @property
     def filename(self) -> Path:
@@ -55,10 +63,10 @@ class SplitReference(Reference):
 
     @property
     def other(self):
-        if False and self._other is None:
+        if False and self._other is None:  # FIXME: What’s the reason for disabling this code?
             side = Side.START if self.side == Side.END else Side.END
             self._other = SplitReference(self.reference, side, self)
-            _logger().warning('Created artifical other for %s', self)
+            _logger().warning("Created artifical other for %s", self)
         return self._other
 
     @other.setter
@@ -79,7 +87,7 @@ class SplitReference(Reference):
         return {Side.START: start, Side.END: end}
 
 
-def start_end_graph(orig: nx.MultiDiGraph, mode='split') -> nx.MultiDiGraph:
+def start_end_graph(orig: nx.MultiDiGraph, mode="split") -> nx.MultiDiGraph:
     """
     Converts a graph containing References into a graph that represents start and end of the writing process for
     each reference by separate nodes.
@@ -92,31 +100,47 @@ def start_end_graph(orig: nx.MultiDiGraph, mode='split') -> nx.MultiDiGraph:
         if it is a `Reference`, and v replaced by SplitReference(v, Sides.START) if it is a reference. Additionally,
         edges ref.start → ref.end with kind='progress' are added for all references.
     """
-    refs = {node: SplitReference.both(node) for node in orig.nodes if isinstance(node, Reference)}
+    refs = {
+        node: SplitReference.both(node)
+        for node in orig.nodes
+        if isinstance(node, Reference)
+    }
     assert not any(isinstance(node, SplitReference) for node in refs)
     result = nx.MultiDiGraph()
-    if mode == 'split':
+    if mode == "split":
         for u, v, k, attr in orig.edges(keys=True, data=True):
-            if u in refs: u = refs[u][Side.END]
-            if v in refs: v = refs[v][Side.START]
+            if u in refs:
+                u = refs[u][Side.END]
+            if v in refs:
+                v = refs[v][Side.START]
             result.add_edge(u, v, k, **attr)
-        result.graph['model'] = mode
-    elif mode == 'split-reverse':
+        result.graph["model"] = mode
+    elif mode == "split-reverse":
         for u, v, k, attr in orig.edges(keys=True, data=True):
-            if u in refs: u = refs[u][Side.START]
-            if v in refs: v = refs[v][Side.END]
+            if u in refs:
+                u = refs[u][Side.START]
+            if v in refs:
+                v = refs[v][Side.END]
             result.add_edge(u, v, k, **attr)
-        result.graph['model'] = 'split-reverse'
+        result.graph["model"] = "split-reverse"
 
     for ref, sides in refs.items():
-        result.add_edge(sides[Side.START], sides[Side.END], kind="progress", source=BiblSource('faust://progress'))
+        result.add_edge(
+            sides[Side.START],
+            sides[Side.END],
+            kind="progress",
+            source=BiblSource("faust://progress"),
+        )
 
     return result
 
 
 def references(graph: nx.MultiDiGraph) -> Set[Reference]:
-    return {node.reference if isinstance(node, SplitReference) else node
-            for node in graph.nodes if isinstance(node, Reference)}
+    return {
+        node.reference if isinstance(node, SplitReference) else node
+        for node in graph.nodes
+        if isinstance(node, Reference)
+    }
 
 
 def side_node(graph: nx.MultiDiGraph, ref: Reference, side: Side) -> SplitReference:
@@ -127,4 +151,8 @@ def side_node(graph: nx.MultiDiGraph, ref: Reference, side: Side) -> SplitRefere
 
 
 def side_nodes(graph: nx.MultiDiGraph, side: Side) -> Set[SplitReference]:
-    return {node for node in graph.nodes if isinstance(node, SplitReference) and node.side == side}
+    return {
+        node
+        for node in graph.nodes
+        if isinstance(node, SplitReference) and node.side == side
+    }
