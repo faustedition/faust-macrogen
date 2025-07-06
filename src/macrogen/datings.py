@@ -4,7 +4,7 @@ Functions to parse the XML datings and build a graph out of them
 from abc import ABCMeta, abstractmethod
 from os import fspath
 from pathlib import Path
-from typing import List, Tuple, Optional, Any, Union
+from typing import Optional, Any, Union
 from collections.abc import Generator
 
 import networkx as nx

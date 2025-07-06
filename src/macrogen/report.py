@@ -11,9 +11,8 @@ from itertools import chain, groupby, zip_longest
 from operator import itemgetter
 from os import fspath
 from pathlib import Path
-from typing import List, Dict, Tuple, Union, Optional, Callable, Any
+from typing import Union, Optional, Callable, Any
 from collections.abc import Iterable, Mapping, Sequence, Generator
-from urllib.parse import urlencode
 
 import networkx as nx
 import pandas as pd
@@ -26,7 +25,7 @@ from pandas import DataFrame
 from .bibliography import BiblSource
 from .config import config
 from .datings import get_datings, AbsoluteDating
-from .graph import MacrogenesisInfo, EARLIEST, LATEST, DAY, Node, temp_syn_groups
+from .graph import MacrogenesisInfo, DAY, Node, temp_syn_groups
 from .graphutils import pathlink, collapse_timeline, expand_edges, in_path, remove_edges
 from .uris import Reference, Witness, Inscription, UnknownRef, AmbiguousRef
 from .splitgraph import Side, SplitReference, side_node
@@ -1287,7 +1286,7 @@ def report_stats(graphs: MacrogenesisInfo):
                     auto_len=auto_post - auto_pre if auto_pre and auto_post else None
             )
             stat.loc[ref, :] = row
-        except Exception as e:
+        except Exception:
             logger.error("Could not record %s in stats", ref, exc_info=True)
 
     def _dating_table():

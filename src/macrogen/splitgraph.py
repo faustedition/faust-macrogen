@@ -1,7 +1,7 @@
 from enum import Enum
 from logging import Logger
 from pathlib import Path
-from typing import Set, Optional
+from typing import Optional
 
 import networkx as nx
 from .uris import Reference

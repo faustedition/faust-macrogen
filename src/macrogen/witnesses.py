@@ -3,8 +3,7 @@ from collections import defaultdict, Counter
 from functools import lru_cache
 from itertools import chain
 from pathlib import Path
-from typing import List, Optional, Dict, Union, Set
-import reprlib
+from typing import Optional, Union
 
 from .config import config
 from lxml import etree

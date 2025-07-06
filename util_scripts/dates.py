@@ -8,7 +8,6 @@ import argparse
 import codecs
 import logging
 import os
-import sys
 from collections import namedtuple
 from datetime import date
 import re

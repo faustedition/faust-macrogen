@@ -1,9 +1,8 @@
 from argparse import ArgumentParser
-from collections import Counter, defaultdict
+from collections import defaultdict
 from difflib import SequenceMatcher
 from itertools import zip_longest, combinations
-from operator import sub
-from typing import Union, Tuple, List, Any
+from typing import Union, Any
 from collections.abc import Mapping
 
 from macrogen import Reference, config
@@ -86,7 +85,7 @@ class MacrogenDiff:
         try:
             left, right = left_side.info.details.loc[ref], right_side.info.details.loc[ref]
             return [attrdiff(attr, left, right) for attr in ('max_before_date', 'min_after_date', 'rank')]
-        except KeyError as e:
+        except KeyError:
             return ['', '', ''] # ['KeyError', e]
 
     def diff_order_table(self) -> HtmlTable:

@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from jinja2 import Environment, PackageLoader
 
-from macrogen.config import config
 import asyncio
 import codecs
 from asyncio import create_subprocess_exec, wait_for
@@ -11,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TypeVar, Callable, List, Dict, Optional
+from typing import TypeVar, Callable, Optional
 from collections.abc import Iterable, MutableMapping
 
 import networkx as nx

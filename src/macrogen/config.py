@@ -36,7 +36,7 @@ from functools import partial
 from io import BytesIO, StringIO, TextIOWrapper
 from os.path import expanduser, expandvars
 from pathlib import Path
-from typing import Optional, IO, Callable, Any, Tuple, Union, Dict, cast
+from typing import Optional, IO, Callable, Any, Union, cast
 from urllib.parse import urlparse
 
 import pkg_resources

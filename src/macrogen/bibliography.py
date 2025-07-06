@@ -1,7 +1,7 @@
 import csv
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 
-from .config import config, BibEntry
+from .config import config
 
 _bib_labels = {
     'faust://self': 'Faustedition',

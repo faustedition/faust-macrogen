@@ -11,10 +11,9 @@ from functools import wraps, total_ordering
 from operator import itemgetter
 from os.path import commonprefix
 from pathlib import Path
-from typing import ClassVar, Tuple, Type, TypeVar, cast
+from typing import ClassVar, TypeVar, cast
 from datetime import date
 
-from networkx import is_matching
 import pandas as pd
 from lxml import etree
 

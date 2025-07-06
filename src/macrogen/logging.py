@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union
+from typing import Union
 
 
 class LevelFilter(logging.Filter):

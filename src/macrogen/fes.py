@@ -1,6 +1,6 @@
 import itertools
 from collections import defaultdict
-from typing import Tuple, List, TypeVar, Optional, Dict
+from typing import TypeVar, Optional
 from collections.abc import Generator, Iterable, Sequence
 
 from more_itertools import first

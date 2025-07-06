@@ -1,6 +1,5 @@
 import pytest
 
-import macrogen.datings
 from lxml import etree
 
 

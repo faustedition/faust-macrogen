@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from functools import partial
 from os import PathLike
-from typing import Optional, Union, Tuple, Dict
+from typing import Optional, Union
 from collections.abc import Sequence
 from datetime import date, timedelta
 from time import perf_counter
@@ -55,7 +55,7 @@ def simplify_graph(original_graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     nx.relabel_nodes(graph, translation, copy=False)
 
     for u, v, attrs in graph.edges(data=True):
-        if 'source' in attrs and not 'label' in attrs:
+        if 'source' in attrs and 'label' not in attrs:
             source_ = attrs['source']
             if isinstance(source_, Sequence) and not isinstance(source_, str):
                 attrs['label'] = '\n'.join(f"{s.citation}: {s.detail}" if s.detail else s.citation for s in source_)

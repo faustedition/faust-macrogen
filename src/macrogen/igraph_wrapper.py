@@ -1,5 +1,5 @@
 from operator import itemgetter
-from typing import List, Dict, Any, Union, Tuple
+from typing import Any, Union
 from collections.abc import Iterable
 
 import igraph as ig

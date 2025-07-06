@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from macrogen import Reference, Witness
+from macrogen import Witness
 from macrogen.report import HtmlTable, _build_attrs, _fmt_node, _edition_link, _invert_mapping, _flatten
 
 

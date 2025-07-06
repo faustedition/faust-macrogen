@@ -1,6 +1,6 @@
 import pytest
 
-from macrogen.uris import Witness, Inscription, UnknownRef, AmbiguousRef
+from macrogen.uris import Witness, Inscription, AmbiguousRef
 
 
 @pytest.fixture

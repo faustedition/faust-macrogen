@@ -10,7 +10,7 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Any, Dict, Tuple, Union, Optional, Set, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Union, Optional, TypeVar, cast
 from collections.abc import Sequence, Iterable
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -19,7 +19,6 @@ import networkx as nx
 import pandas as pd
 from dataclasses import dataclass
 
-from pandas._config.config import is_instance_factory
 
 from macrogen.graphutils import is_orphan, find_reachable_by_edge, path2str
 from more_itertools import windowed

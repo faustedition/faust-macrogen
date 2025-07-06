@@ -5,10 +5,9 @@ from pathlib import Path
 import networkx as nx
 from flask import Flask, render_template, request, Response, flash, jsonify
 from markupsafe import Markup
-from networkx import DiGraph
 
 from macrogen import MacrogenesisInfo, write_dot
-from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_edges, collapse_parallel_edges
+from macrogen.graphutils import remove_edges, simplify_timeline, expand_edges, collapse_parallel_edges
 
 app = Flask(__name__)
 
@@ -130,7 +129,7 @@ def render_dot():
         response = Response(agraph.to_string(), mimetype='text/vnd.graphviz')
         response.headers['Content-Disposition'] = f'attachment; filename="{agraph.graph_attr["basename"]}.dot"'
         return response
-    except NoNodes as e:
+    except NoNodes:
         return Response(Markup('<strong>Keine Knoten im Graphen.</strong> Bitte mindestens einen Knoten im Feld <em>Zentrale Knoten</em> eingeben.'), status=404)
 
 @app.route('/macrogenesis/subgraph/svg')
