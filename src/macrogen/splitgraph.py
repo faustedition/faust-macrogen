@@ -135,7 +135,7 @@ def start_end_graph(orig: nx.MultiDiGraph, mode="split") -> nx.MultiDiGraph:
     return result
 
 
-def references(graph: nx.MultiDiGraph) -> Set[Reference]:
+def references(graph: nx.MultiDiGraph) -> set[Reference]:
     return {
         node.reference if isinstance(node, SplitReference) else node
         for node in graph.nodes
@@ -150,7 +150,7 @@ def side_node(graph: nx.MultiDiGraph, ref: Reference, side: Side) -> SplitRefere
     return first(node for node in graph.nodes if node == match)
 
 
-def side_nodes(graph: nx.MultiDiGraph, side: Side) -> Set[SplitReference]:
+def side_nodes(graph: nx.MultiDiGraph, side: Side) -> set[SplitReference]:
     return {
         node
         for node in graph.nodes

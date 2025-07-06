@@ -67,7 +67,7 @@ class Document(BaseDocument):
         self.source = source
         tree: etree._ElementTree = etree.parse(fspath(source))
         self.kind = tree.getroot().tag
-        idno_els: List[etree.ElementBase] = tree.findall('//f:idno', config.namespaces)
+        idno_els: list[etree.ElementBase] = tree.findall('//f:idno', config.namespaces)
         self.idnos = {el.get('type'): el.text for el in idno_els}
         self.sigil = self.idnos['faustedition']
         tt_el: etree._Element = tree.find('//f:textTranscript', config.namespaces)
@@ -80,7 +80,7 @@ class Document(BaseDocument):
             self.text_transcript = None
             self.inscriptions = []
 
-    def verses(self, text_transcript: Optional[etree._ElementTree] = None) -> Dict[str, List[int]]:
+    def verses(self, text_transcript: Optional[etree._ElementTree] = None) -> dict[str, list[int]]:
         if not self._verses:
             try:
                 if text_transcript is None:
@@ -132,15 +132,15 @@ class Document(BaseDocument):
         return faust_uri(self.sigil)
 
     @property
-    def inscription_uris(self) -> List[str]:
+    def inscription_uris(self) -> list[str]:
         return [faust_uri(self.sigil, inscription=inscr) for inscr in self.inscriptions]
 
     @property
-    def doc_uris(self) -> List[str]:
+    def doc_uris(self) -> list[str]:
         return [faust_uri(sigil, idno_type) for idno_type, sigil in self.idnos.items()]
 
     @property
-    def all_inscription_uris(self) -> List[str]:
+    def all_inscription_uris(self) -> list[str]:
         return [faust_uri(sigil, idno_type, inscription) for idno_type, sigil in self.idnos.items()
                 for inscription in self.inscriptions]
 
@@ -206,7 +206,7 @@ class SceneInfo:
         self.toplevel = [Scene(el) for el in et.xpath('/*/*')]
         config.getLogger(__name__).debug('Loading scene info ...')
 
-        def _add_recursive(target: List, items: List, predicate):
+        def _add_recursive(target: list, items: list, predicate):
             for item in items:
                 if predicate(item):
                     target.append(item)
@@ -240,7 +240,7 @@ class IntervalsMixin:
         self.group = Counter(self.groups).most_common(1)[0][0] if self.relevant_scenes else None
 
     @staticmethod
-    def _reduce_scenes(scenes: Set[Scene]) -> Set[Scene]:
+    def _reduce_scenes(scenes: set[Scene]) -> set[Scene]:
         result = set(scenes)
         while len(result) > 1 and any(scene.parent for scene in result):
             result = {scene.parent if scene.parent else scene for scene in result}
@@ -259,7 +259,7 @@ class InscriptionCoverage(IntervalsMixin):
         self._init_relevant_scenes()
 
     def covered_lines(self):
-        return len(set(chain.from_iterable((range(i['start'], i['end']+1) for i in self.intervals))))
+        return len(set(chain.from_iterable(range(i['start'], i['end']+1) for i in self.intervals)))
 
 
 class DocumentCoverage(BaseDocument, IntervalsMixin):
@@ -281,9 +281,9 @@ class WitInscrInfo:
         logger.debug('Loading document and witness coverage from bargraph ...')
         bargraph = config.genetic_bar_graph
         self.documents = [DocumentCoverage(doc) for doc in bargraph]
-        self.by_scene: Dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
-        self.by_uri: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
-        self.by_group: Dict[str, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
+        self.by_scene: dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
+        self.by_uri: dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
+        self.by_group: dict[str, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         for doc in config.progress(self.documents, desc='Analyzing documents', unit=' docs'):
             self.by_uri[doc.uri] = doc
             for inscription in doc.inscriptions:
@@ -312,7 +312,7 @@ class WitInscrInfo:
         return self.by_uri[uri]
 
 
-@lru_cache()
+@lru_cache
 def all_documents(path: Optional[Path] = None):
     if path is None:
         path = config.path.data.joinpath('document')

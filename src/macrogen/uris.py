@@ -322,7 +322,7 @@ class Witness(Reference):
 
     @classmethod  # type: ignore   # call_recorder is too complex for typing in Python 3.9
     @call_recorder(argument_picker=itemgetter(1))
-    def get(cls: Type["Witness"], uri, allow_duplicate=True):
+    def get(cls: type["Witness"], uri, allow_duplicate=True):
         """
         Returns the reference for the given URI.
 
@@ -438,7 +438,7 @@ class Witness(Reference):
             v = self.first_verse  # # pyright: ignore
         return v, p, n, s
 
-    def sigil_sort_key(self) -> Tuple[str, int, str]:
+    def sigil_sort_key(self) -> tuple[str, int, str]:
         """
         A sigil like 2 III H.159:1 currently consists of three parts, basically:
 
@@ -529,7 +529,7 @@ def _assemble_report(wits):
 
 
 def _report_wits(wits, output_csv="witness-usage.csv"):
-    with open(output_csv, "wt", encoding="utf-8") as reportfile:
+    with open(output_csv, "w", encoding="utf-8") as reportfile:
         table = csv.writer(reportfile)
         rows = _assemble_report(wits)
         table.writerow(
@@ -553,7 +553,7 @@ def _witness_report():
     for uri, result in list(Witness.get.recorder.keys()):  # pyright: ignore
         resolutions[result].add(uri)
 
-    with open("reference-normalizations.csv", "wt", encoding="utf-8") as resfile:
+    with open("reference-normalizations.csv", "w", encoding="utf-8") as resfile:
         table = csv.writer(resfile)
         table.writerow(("in macrogenesis", "normalisiert"))
 

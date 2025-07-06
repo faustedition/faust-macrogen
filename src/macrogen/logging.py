@@ -4,7 +4,7 @@ from typing import Dict, Union
 
 class LevelFilter(logging.Filter):
 
-    def __init__(self, levels: Dict[str, Union[str, int]], default=logging.WARNING):
+    def __init__(self, levels: dict[str, Union[str, int]], default=logging.WARNING):
         """
         Provides a per-logger level limit.
 

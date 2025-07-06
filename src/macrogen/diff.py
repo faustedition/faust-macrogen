@@ -3,7 +3,8 @@ from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 from itertools import zip_longest, combinations
 from operator import sub
-from typing import Union, Tuple, List, Mapping, Any
+from typing import Union, Tuple, List, Any
+from collections.abc import Mapping
 
 from macrogen import Reference, config
 from macrogen.splitgraph import SplitReference, Side
@@ -40,7 +41,7 @@ class DiffSide:
         self.order = self.normalize_order(self.info.order)
 
     @staticmethod
-    def normalize_order(order: List[Reference]) -> List[Reference]:
+    def normalize_order(order: list[Reference]) -> list[Reference]:
         if any(isinstance(ref, SplitReference) for ref in order):
             return [ref.reference for ref in order if ref.side == Side.END]
         return order

@@ -4,7 +4,8 @@ Functions to parse the XML datings and build a graph out of them
 from abc import ABCMeta, abstractmethod
 from os import fspath
 from pathlib import Path
-from typing import List, Tuple, Optional, Any, Generator, Union
+from typing import List, Tuple, Optional, Any, Union
+from collections.abc import Generator
 
 import networkx as nx
 from datetime import date, timedelta, datetime
@@ -60,12 +61,12 @@ class _AbstractDating(metaclass=ABCMeta):
         Args:
             el: The basic assertion element. This will usually be <relation> or <date>.
         """
-        self.items: List[Reference] = [Witness.get(uri) for uri in
+        self.items: list[Reference] = [Witness.get(uri) for uri in
                                        el.xpath('f:item/@uri', namespaces=config.namespaces)]
         self.sources = tuple(BiblSource(source.get('uri'), source.text)
                              for source in el.xpath('f:source', namespaces=config.namespaces))
         self.comments = tuple(comment.text for comment in el.xpath('f:comment', namespaces=config.namespaces))
-        self.xmlsource: Tuple[str, int] = (config.relative_path(el.getroottree().docinfo.URL), el.sourceline)
+        self.xmlsource: tuple[str, int] = (config.relative_path(el.getroottree().docinfo.URL), el.sourceline)
         self.ignore = el.get('ignore', 'no') == 'yes'
 
     @abstractmethod
@@ -81,7 +82,7 @@ class _AbstractDating(metaclass=ABCMeta):
         ...
 
 
-def _firstattr(object: Any, *args: str) -> Tuple[Optional[str], Optional[Any]]:
+def _firstattr(object: Any, *args: str) -> tuple[Optional[str], Optional[Any]]:
     """
     Returns the first of the given attributes together with its value. E.g., when an object o has the attributes bar=1
     and baz=2 and none else and you call ``_firstattr(o, 'foo', 'bar', 'baz')`` it will return ``'bar', 1``
@@ -121,7 +122,7 @@ class AbsoluteDating(_AbstractDating):
             raise InvalidDatingError('Backwards dating (%s), this would have caused a conflict' % self, el)
 
     @property
-    def start_attr(self) -> Tuple[str, date]:
+    def start_attr(self) -> tuple[str, date]:
         """
         The attribute representing the start of the interval.
 
@@ -131,7 +132,7 @@ class AbsoluteDating(_AbstractDating):
         return _firstattr(self, 'from_', 'when', 'not_before')
 
     @property
-    def end_attr(self) -> Tuple[str, date]:
+    def end_attr(self) -> tuple[str, date]:
         """
         The attribute representing the end of the interval.
 
@@ -309,7 +310,7 @@ def strongly_connected_subgraphs(graph: nx.Graph):
     return [graph.subgraph(scc) for scc in sorted_sccs]
 
 
-_datings: Optional[List[Union[RelativeDating, AbsoluteDating]]] = None
+_datings: Optional[list[Union[RelativeDating, AbsoluteDating]]] = None
 
 
 def get_datings():

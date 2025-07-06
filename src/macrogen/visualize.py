@@ -3,7 +3,8 @@ import shutil
 import subprocess
 from functools import partial
 from os import PathLike
-from typing import Sequence, Optional, Union, Tuple, Dict
+from typing import Optional, Union, Tuple, Dict
+from collections.abc import Sequence
 from datetime import date, timedelta
 from time import perf_counter
 from multiprocessing.pool import Pool
@@ -85,7 +86,7 @@ def remove_nondot_keys(graph: nx.MultiDiGraph, inplace=False) -> nx.MultiDiGraph
         graph = graph.copy()
     allowed = set(config.graphviz_attrs)
 
-    def clean_attr(attrs: Dict):
+    def clean_attr(attrs: dict):
         for key in attrs.keys() - allowed:
             del attrs[key]
 
@@ -98,9 +99,9 @@ def remove_nondot_keys(graph: nx.MultiDiGraph, inplace=False) -> nx.MultiDiGraph
 
 
 def write_dot(graph: nx.MultiDiGraph, target: Optional[Union[PathLike, str]] = 'base_graph.dot',
-              style: Optional[Dict] = None,
+              style: Optional[dict] = None,
               highlight: Optional[Union[Node, Sequence[Node]]] = None,
-              highlight_path: Optional[Tuple[Node, Node]] = None,
+              highlight_path: Optional[tuple[Node, Node]] = None,
               record: Union[bool, str] = 'auto', edge_labels: bool = True) -> AGraph:
     """
     Writes a properly styled graphviz file for the given graph.
@@ -252,7 +253,7 @@ def render_file(filename):
 
 
 def render_file_alt(filename: PathLike, timeout: Optional[float] = None) -> \
-        Union[Path, Tuple[Path, Union[subprocess.CalledProcessError, subprocess.TimeoutExpired]]]:
+        Union[Path, tuple[Path, Union[subprocess.CalledProcessError, subprocess.TimeoutExpired]]]:
     """
     Calls GraphViz' dot to render the given file to svg, at least if it does not take more than timeout seconds.
 

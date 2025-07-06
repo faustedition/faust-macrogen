@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 import itertools
 from collections import defaultdict
-from typing import Tuple, List, Generator, TypeVar, Iterable, Sequence, Optional, Dict
+from typing import Tuple, List, TypeVar, Optional, Dict
+from collections.abc import Generator, Iterable, Sequence
 
 from more_itertools import first
 from .config import config
@@ -75,7 +75,7 @@ class Eades:
         return self._exhaust_sinks(False)
 
     def __init__(self, graph: nx.DiGraph, edges_to_keep=None):
-        """
+        r"""
         Fast heuristic for the minimum feedback arc set.
 
         Eades’ heuristic creates an ordering of all nodes of the given graph,
@@ -114,16 +114,16 @@ class Eades:
         self.start = self.end = None
         self.feedback_edges = None
 
-    def _register_keep_edges(self, edges_to_keep: Iterable[Tuple[V, V]]):
+    def _register_keep_edges(self, edges_to_keep: Iterable[tuple[V, V]]):
         # first check we don’t get served a cycle ...
         test_graph = nx.DiGraph()
         test_graph.add_edges_from(edges_to_keep)
         if not nx.is_directed_acyclic_graph(test_graph):
             counter_example = first(nx.simple_cycles(test_graph))
-            raise ValueError('There is a cycle in the edges to keep: {}'.format(counter_example))
+            raise ValueError(f'There is a cycle in the edges to keep: {counter_example}')
 
-        forward_index: Dict[V, List[V]] = defaultdict(list)
-        backward_index: Dict[V, List[V]] = defaultdict(list)
+        forward_index: dict[V, list[V]] = defaultdict(list)
+        backward_index: dict[V, list[V]] = defaultdict(list)
         for u, v in edges_to_keep:
             forward_index[u].append(v)
             backward_index[v].append(u)
@@ -131,7 +131,7 @@ class Eades:
         self.keep_index_backward = backward_index
         logger.debug('keep: %s -> fi = %s | bi = %s', edges_to_keep, dict(forward_index), dict(backward_index))
 
-    def solve(self) -> List[Tuple[V, V]]:
+    def solve(self) -> list[tuple[V, V]]:
         self.start = []
         self.end = []
         self.graph.remove_edges_from(list(nx.selfloop_edges(self.graph)))
@@ -165,7 +165,7 @@ class Eades:
             logger.error('Counterexample cycle: %s', counter_example)
 
 
-def induced_cycles(graph: nx.DiGraph, fes: Iterable[Tuple[V, V]]) -> Generator[Iterable[V], None, None]:
+def induced_cycles(graph: nx.DiGraph, fes: Iterable[tuple[V, V]]) -> Generator[Iterable[V], None, None]:
     """
     Produce a simple cycle from the graph for every edge in the given feedback edge set (if it is an actual feedback
     edge). For edge `u` → `v`, the cycle is formed by the shorted path from `v` to `u` plus the edge `u`→`v` to
@@ -243,7 +243,7 @@ class FES_Baharev:
         http://www.mat.univie.ac.at/~neum/ms/minimum_feedback_arc_set.pdf.
     """
 
-    def __init__(self, graph: nx.DiGraph, force_forward_edges: Optional[List[Tuple[V, V]]] = None):
+    def __init__(self, graph: nx.DiGraph, force_forward_edges: Optional[list[tuple[V, V]]] = None):
         self.original_graph = graph
         self.logger = config.getLogger(__name__ + '.' + self.__class__.__name__)
 
@@ -285,7 +285,7 @@ class FES_Baharev:
         """
         Loads the configuration
         """
-        solvers: List[str] = config.solvers
+        solvers: list[str] = config.solvers
         installed = cp.installed_solvers()
         index = 0
         while index < len(solvers):
@@ -308,14 +308,14 @@ class FES_Baharev:
         self.logger.info('configured solver: %s, options: %s (installed solvers: %s)',
                          solver, options, ', '.join(installed))
 
-    def edge_vector(self, edges: Iterable[Tuple[V, V]]) -> np.ndarray:
+    def edge_vector(self, edges: Iterable[tuple[V, V]]) -> np.ndarray:
         """
         Converts a list of edges to a boolean vector which is True if the corresponding edge is contained in the edge list.
         """
         edge_set = frozenset(edges)
         return np.array([(edge in edge_set) for edge in self.edges])
 
-    def edges_for_vector(self, edge_vector: Sequence[bool]) -> List[Tuple[V, V]]:
+    def edges_for_vector(self, edge_vector: Sequence[bool]) -> list[tuple[V, V]]:
         """
         Translates an edge vector back to a list of edges.
 

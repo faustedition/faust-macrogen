@@ -11,7 +11,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TypeVar, Callable, List, Dict, Optional, Iterable, MutableMapping
+from typing import TypeVar, Callable, List, Dict, Optional
+from collections.abc import Iterable, MutableMapping
 
 import networkx as nx
 import pydantic
@@ -82,8 +83,8 @@ async def logging_exception_handler(request, exc):
 
 
 class LazyLoader(Mapping):
-    _items: Dict[S, T]
-    _loaded: Dict[S, bool]
+    _items: dict[S, T]
+    _loaded: dict[S, bool]
 
     def __init__(self, loader: Callable[[S], T], keys: Optional[Iterable[S]] = None):
         self._load = loader
@@ -113,9 +114,9 @@ class NodeInput(BaseModel):
 
 
 class NodeReport(BaseModel):
-    nodes: List[str]
+    nodes: list[str]
     normalized: str
-    not_found: Optional[List[str]]
+    not_found: Optional[list[str]]
 
 
 class Direction(str, Enum):
@@ -139,7 +140,7 @@ class ExportFormat(str, Enum):
     JPEG = 'jpg'
 
 
-MIME_TYPES: Dict[ExportFormat, str] = {
+MIME_TYPES: dict[ExportFormat, str] = {
     ExportFormat.SVG: 'image/svg+xml',
     ExportFormat.PDF: 'application/pdf',
     ExportFormat.PNG: 'image/png',
@@ -185,18 +186,18 @@ def check_nodes(nodeinfo: NodeInput = Depends()) -> NodeReport:
 @dataclass
 class _AGraphInfo:
     graph: AGraph
-    nodes: List[Node]
-    extra_nodes: List[Node]
-    unknown_nodes: List[str]
+    nodes: list[Node]
+    extra_nodes: list[Node]
+    unknown_nodes: list[str]
     basename: str
 
 
 @pydantic.dataclasses.dataclass
 class AGraphInfo:
     dot: str
-    nodes: List[str]
-    extra_nodes: List[str]
-    unknown_nodes: List[str]
+    nodes: list[str]
+    extra_nodes: list[str]
+    unknown_nodes: list[str]
 
 
 def agraph(nodeinfo: NodeInput = Depends(),

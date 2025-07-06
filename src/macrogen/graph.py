@@ -10,7 +10,8 @@ from datetime import date, timedelta
 from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Any, Dict, Tuple, Union, Sequence, Optional, Set, Iterable, TypeVar, cast
+from typing import TYPE_CHECKING, List, Any, Dict, Tuple, Union, Optional, Set, TypeVar, cast
+from collections.abc import Sequence, Iterable
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -39,7 +40,7 @@ LATEST = date.today()
 DAY = timedelta(days=1)
 
 Node = Union[date, Reference]
-MultiEdge = Tuple[Node, Node, int, Dict[str, Any]]
+MultiEdge = tuple[Node, Node, int, dict[str, Any]]
 
 
 class NotAcyclic(ValueError):
@@ -63,7 +64,7 @@ def check_acyclic(result_graph: nx.DiGraph, message='Graph is not acyclic'):
         cycles = nx.simple_cycles(result_graph)
         counterexample = next(cycles)
         cyc = " → ".join(map(str, counterexample))
-        msg = "{!s}\nCounterexample cycle: {!s}".format(message, cyc)
+        msg = f"{message!s}\nCounterexample cycle: {cyc!s}"
         raise NotAcyclic(msg)
     else:
         return True
@@ -362,7 +363,7 @@ class MacrogenesisInfo:
             working.add_nodes_from(sorted(missing_wits, key=lambda ref: ref.sort_tuple()))
         logger.info('Adding %d otherwise unmentioned references to the working graph', len(missing_wits))
 
-    def order_refs(self) -> List[Reference]:
+    def order_refs(self) -> list[Reference]:
         if self.order:
             return self.order
 
@@ -457,7 +458,7 @@ class MacrogenesisInfo:
         table['baseline_position'] = self.baseline_order()
         self.details = table
 
-    def find_conflicts(self, from_: Node, to_: Node) -> List[Tuple[Node, Node, int, dict]]:
+    def find_conflicts(self, from_: Node, to_: Node) -> list[tuple[Node, Node, int, dict]]:
         """
         Finds conflict edges from a from_ node to a to_ node
 
@@ -593,12 +594,12 @@ class MacrogenesisInfo:
 
         except IndexError:
             if default is KeyError:
-                raise KeyError("No node matching {!r} in the base graph.".format(spec))
+                raise KeyError(f"No node matching {spec!r} in the base graph.")
             else:
                 return default # type: ignore
 
     def nodes(self, node_str: str, check: bool = False, report_errors: bool = False) -> Union[
-        List[Node], Tuple[List[Node], List[str]]]:
+        list[Node], tuple[list[Node], list[str]]]:
         """
         Find nodes for a comma-separated list of node strings.
 
@@ -615,8 +616,8 @@ class MacrogenesisInfo:
             Otherwise, a pair: first a list of Nodes, then a list of strings which could not be resolved; both possibly empty.
 
         """
-        nodes: List[Node] = []
-        errors: List[str] = []
+        nodes: list[Node] = []
+        errors: list[str] = []
         if node_str:
             for node_spec in node_str.split(','):
                 stripped = node_spec.strip()
@@ -807,7 +808,7 @@ def macrogenesis_graphs() -> MacrogenesisInfo:
     return MacrogenesisInfo()
 
 
-def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
+def scc_subgraphs(graph: nx.MultiDiGraph) -> list[nx.MultiDiGraph]:
     """
     Extracts the smallest conflicted subgraphs of the given graph, i.e. the
     non-trivial (more than one node) strongly connected components.
@@ -861,7 +862,7 @@ def scc_subgraphs(graph: nx.MultiDiGraph) -> List[nx.MultiDiGraph]:
 
 V = TypeVar("V")
 
-def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> List[Tuple[V, V]]:
+def prepare_timeline_for_keeping(graph: nx.MultiDiGraph, weight=0.1) -> list[tuple[V, V]]:
     result = []
     for u, v, k, attr in graph.edges(keys=True, data=True):
         if attr['kind'] == 'timeline':
@@ -916,7 +917,7 @@ def datings_from_inscriptions(base: nx.MultiDiGraph, orphans_only=False):
 
     """
     logger.info('Copying datings from inscriptions to witnesses')
-    inscriptions_by_wit: Dict[Witness, List[Inscription]] = defaultdict(list)
+    inscriptions_by_wit: dict[Witness, list[Inscription]] = defaultdict(list)
     for inscription in [node for node in base.nodes if isinstance(node, Inscription)]:
         if inscription.witness in base.nodes:
             inscriptions_by_wit[inscription.witness].append(inscription)

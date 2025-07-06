@@ -50,9 +50,9 @@ logger = logging.getLogger(__name__ + ".preliminary")
 BibEntry = namedtuple("BibEntry", ["uri", "citation", "reference", "weight"])
 
 
-def parse_bibliography(bibxml: Union[str, IO]) -> Dict[str, BibEntry]:
+def parse_bibliography(bibxml: Union[str, IO]) -> dict[str, BibEntry]:
     """Parses the bibliography file at url. Returns a dictionary mapping an URI to a corresponding bibliography entry."""
-    db: Dict[str, BibEntry] = {}
+    db: dict[str, BibEntry] = {}
     scores = config.bibscores
     et = etree.parse(bibxml)
     for bib in cast(list, et.xpath("//f:bib", namespaces=config.namespaces)):
@@ -139,7 +139,7 @@ class LazyConfigLoader:
         self,
         name: str,
         parser: Optional[Callable[[IO], Any]] = None,
-        fallback_resource: Optional[Tuple[str, str]] = None,
+        fallback_resource: Optional[tuple[str, str]] = None,
     ):
         self.name = name
         self.parser = parser

@@ -1,5 +1,6 @@
 from operator import itemgetter
-from typing import List, Dict, Any, Iterable, Union, Tuple
+from typing import List, Dict, Any, Union, Tuple
+from collections.abc import Iterable
 
 import igraph as ig
 import networkx as nx
@@ -16,7 +17,7 @@ incorporated in the original NetworkX graph.
 """
 
 
-def _convert_attr_list(attr_list: List[Dict[Any, Any]], keep_attrs: Union[None, str, Iterable]) -> Dict[Any, List[Any]]:
+def _convert_attr_list(attr_list: list[dict[Any, Any]], keep_attrs: Union[None, str, Iterable]) -> dict[Any, list[Any]]:
     """
     Convert the attribute list from nx to igraph.Graph format.
 
@@ -90,7 +91,7 @@ def to_igraph(nx_graph: nx.MultiDiGraph, keep_node_attrs='all', keep_edge_attrs=
     return igraph
 
 
-def nx_edges(edges: ig.EdgeSeq, keys=False, data=False) -> List[Tuple]:
+def nx_edges(edges: ig.EdgeSeq, keys=False, data=False) -> list[tuple]:
     """
     Converts an igraph edge list to a representation similar to :method:`nx.MultiDiGraph.edges`
 

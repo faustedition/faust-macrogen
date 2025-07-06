@@ -1,7 +1,8 @@
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
-from typing import List, Iterable, Literal, Tuple, Any, Generator, Union, TypeVar, Callable, Dict, Sequence, Optional, Set, overload
+from typing import List, Literal, Tuple, Any, Union, TypeVar, Callable, Dict, Optional, Set, overload
+from collections.abc import Iterable, Generator, Sequence
 
 import networkx as nx
 
@@ -22,7 +23,7 @@ def pathlink(*nodes) -> Path:
 
     The file name consists of the file names for the given nodes, in order, joined by `--`
     """
-    node_names: List[str] = []
+    node_names: list[str] = []
     for node in nodes:
         if isinstance(node, str):
             if node.startswith('faust://'):
@@ -45,8 +46,8 @@ def pathlink(*nodes) -> Path:
     return Path("--".join(node_names) + '.php')
 
 
-def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[Tuple[Any, Any]], filter: bool = False) \
-        -> Generator[Tuple[Any, Any, int, dict], None, None]:
+def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[tuple[Any, Any]], filter: bool = False) \
+        -> Generator[tuple[Any, Any, int, dict], None, None]:
     """
     Expands a 'simple' edge list (of node pairs) to the corresponding full edge list, including keys and data.
     Args:
@@ -202,18 +203,18 @@ def add_iweight(graph: nx.MultiDiGraph):
                 attr['iweight'] = 2_000_000
 
 
-def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]]):
+def mark_edges_to_delete(graph: nx.MultiDiGraph, edges: list[tuple[Any, Any, int, Any]]):
     """Marks edges to delete by setting their 'delete' attribute to True. Modifies the given graph."""
     mark_edges(graph, edges, delete=True)
 
 
-def mark_edges(graph: nx.MultiDiGraph, edges: List[Tuple[Any, Any, int, Any]], **new_attrs):
+def mark_edges(graph: nx.MultiDiGraph, edges: list[tuple[Any, Any, int, Any]], **new_attrs):
     """Mark all edges in the given graph by updating their attributes with the keyword arguments. """
     for u, v, k, *_ in edges:
         graph.edges[u, v, k].update(new_attrs)
 
 
-def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[str, Any]], bool]):
+def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, dict[str, Any]], bool]):
     """
     Returns a subgraph of source that does not contain the edges for which the predicate returns true.
     Args:
@@ -231,7 +232,7 @@ def remove_edges(source: nx.MultiDiGraph, predicate: Callable[[Any, Any, Dict[st
     # return nx.restricted_view(source, source.nodes, [(u,v,k) for u,v,k,attr in source.edges if predicate(u,v,attr)])
 
 
-def in_path(edge: Tuple[T, T], path: Sequence[T], cycle=False) -> bool:
+def in_path(edge: tuple[T, T], path: Sequence[T], cycle=False) -> bool:
     """
     Whether edge is part of the given path.
 
@@ -321,7 +322,7 @@ def is_orphan(node, graph: nx.DiGraph):
     return node not in graph.nodes or graph.in_degree[node] == 0 and graph.out_degree[node] == 0
 
 
-def find_reachable_by_edge(graph: nx.MultiDiGraph, source: T, key, value, symmetric=True) -> Set[T]:
+def find_reachable_by_edge(graph: nx.MultiDiGraph, source: T, key, value, symmetric=True) -> set[T]:
     """
     Finds all nodes that are reachable via edges with a certain attribute/value combination.
 

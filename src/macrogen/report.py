@@ -11,7 +11,8 @@ from itertools import chain, groupby, zip_longest
 from operator import itemgetter
 from os import fspath
 from pathlib import Path
-from typing import Iterable, List, Dict, Mapping, Tuple, Sequence, Union, Generator, Optional, Callable, Any
+from typing import List, Dict, Tuple, Union, Optional, Callable, Any
+from collections.abc import Iterable, Mapping, Sequence, Generator
 from urllib.parse import urlencode
 
 import networkx as nx
@@ -88,7 +89,7 @@ class HtmlTable:
         self.row_attrs = []
 
     def column(self, title: str = '', format_spec: Optional[Union[str, Callable[[Any], str]]] = None,
-               attrs: Dict[str, Any] = None, **header_attrs) -> 'HtmlTable':
+               attrs: dict[str, Any] = None, **header_attrs) -> 'HtmlTable':
         """
         Adds a column to this table.
 
@@ -144,7 +145,7 @@ class HtmlTable:
         return len(self.rows)
 
     @staticmethod
-    def _build_attrs(attrdict: Dict):
+    def _build_attrs(attrdict: dict):
         """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
         return ''.join(
                 ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
@@ -202,7 +203,7 @@ class HtmlTable:
         """
         Formats the table header.
         """
-        column_headers = ''.join(['<th{1}>{0}</th>'.format(title, _build_attrs(attrs))
+        column_headers = ''.join([f'<th{_build_attrs(attrs)}>{title}</th>'
                                   for title, attrs in zip(self.titles, self.header_attrs)])
         return '<table class="pure-table"{1}><thead>{0}</thead><tbody>'.format(column_headers,
                                                                                _build_attrs(self.table_attrs))
@@ -241,7 +242,7 @@ class HtmlTable:
         return self._format_header() + '\n' + '\n'.join(formatted_rows) + '\n' + self._format_footer()
 
 
-def _build_attrs(attrdict: Dict):
+def _build_attrs(attrdict: dict):
     """Converts a dictionary of attributes to a string that may be pasted into an HTML start tag."""
     return ''.join(
             ' {}="{!s}"'.format(attr.strip('_').replace('_', '-'), escape(value)) for attr, value in
@@ -294,7 +295,7 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
         }});
     </script>
     <?php include "../includes/footer.php"?>"""
-    with open(fspath(filename), 'wt', encoding='utf-8') as f:
+    with open(fspath(filename), 'w', encoding='utf-8') as f:
         f.write(prefix)
         f.write(content)
         f.write(suffix)
@@ -355,7 +356,7 @@ def write_bibliography_stats(graph: nx.MultiDiGraph):
             bibls[attr['source'].uri][attr['kind']] += 1
     kinds = sorted({str(kind) for bibl in bibls.values() for kind in bibl.keys()})
     totals = Counter({ref: sum(types.values()) for ref, types in bibls.items()})
-    with open('sources.tsv', 'wt', encoding='utf-8') as out:
+    with open('sources.tsv', 'w', encoding='utf-8') as out:
         writer = csv.writer(out, delimiter='\t')
         writer.writerow(['Reference', 'Weight', 'Total'] + kinds)
         for bibl, total in totals.most_common():
@@ -393,7 +394,7 @@ def _edition_link(ref: Reference):
         return format(ref)
 
 
-def _subgraph_link(*nodes: List[Node], html_content: Optional[str] = None, **options) -> str:
+def _subgraph_link(*nodes: list[Node], html_content: Optional[str] = None, **options) -> str:
     """
     Creates a link to the dynamic subgraph page for the given nodes.
 
@@ -572,7 +573,7 @@ class AssertionTable(HtmlTable):
          .column('Kommentare', _fmt_comments, data_sortable_type="alpha")
          .column('XML', _fmt_xml, data_sortable_type="alpha"))
 
-    def edge(self, u: Reference, v: Reference, attr: Dict[str, object]):
+    def edge(self, u: Reference, v: Reference, attr: dict[str, object]):
         classes = [attr['kind']] if 'kind' in attr and attr['kind'] is not None else ['unknown-kind']
         if attr.get('ignore', False): classes.append('ignore')
         if attr.get('delete', False): classes.append('delete')
@@ -610,7 +611,7 @@ def _source_link(file: Path, line: Optional[Union[int, str]] = None, text: Optio
     return f'<a href="{href}">{text}</a>'
 
 
-def _fmt_xml(xml: Union[Tuple[Path, int], Sequence[Tuple[str, int]]]):
+def _fmt_xml(xml: Union[tuple[Path, int], Sequence[tuple[str, int]]]):
     if not xml:
         return ""
 
@@ -747,14 +748,14 @@ def report_refs(graphs: MacrogenesisInfo):
     # write_dot(simplify_graph(graphs.dag), str(target / 'dag.dot'), record=False)
 
 
-def _invert_mapping(mapping: Mapping) -> Dict:
+def _invert_mapping(mapping: Mapping) -> dict:
     result = defaultdict(set)
     for key, value in mapping.items():
         result[value].add(key)
     return result
 
 
-def _flatten(items: List) -> List:
+def _flatten(items: list) -> list:
     """
     Flattens and cleans a potentially nested list by removing intermediate list layers and
     contained Nones as well as removing duplicates.
@@ -816,7 +817,7 @@ def report_missing(graphs: MacrogenesisInfo):
                    head=format(ref))
 
 
-def _format_collapsed_path(path: List[Node]):
+def _format_collapsed_path(path: list[Node]):
     collapsed = []
     for i in range(len(path)):
         if 0 < i < len(path) - 1 and isinstance(path[i], date) and isinstance(path[i - 1], date) and isinstance(
@@ -993,8 +994,8 @@ def report_index(graphs):
              ('downloads', 'Downloads', 'Graphen zum Download'),
              ]
     links = "\n".join(
-            ('<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page
-             in pages))
+            '<tr><td><a href="{}" class="pure-button pure-button-tile">{}</td><td>{}</td></tr>'.format(*page) for page
+             in pages)
     report = f"""
       <p>
         Dieser Bereich der Edition enthält experimentelle Informationen zur Makrogenese, er wurde zuletzt
@@ -1186,7 +1187,7 @@ def report_syngroups(graphs: MacrogenesisInfo):
 
 
 def report_unused(graphs: MacrogenesisInfo):
-    unused_nodes = set(node for node in graphs.base.nodes if isinstance(node, Reference)) - set(graphs.dag.nodes)
+    unused_nodes = {node for node in graphs.base.nodes if isinstance(node, Reference)} - set(graphs.dag.nodes)
     not_in_dag_table = RefTable(graphs)
     for node in unused_nodes:
         not_in_dag_table.reference(node)
