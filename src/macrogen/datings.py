@@ -10,6 +10,7 @@ from collections.abc import Generator
 import networkx as nx
 from datetime import date, timedelta, datetime
 from lxml import etree
+from rich.progress import Progress
 from macrogen.splitgraph import start_end_graph
 from more_itertools import pairwise
 
@@ -227,9 +228,9 @@ def _parse_file(filename: Union[Path, str]) -> Generator[_AbstractDating, None, 
 
     """
     tree = etree.parse(fspath(filename))
-    for element in tree.xpath('//f:relation', namespaces=config.namespaces):
+    for element in config.progress(tree.xpath('//f:relation', namespaces=config.namespaces), desc=f"{filename} relations", transient=True):
         yield RelativeDating(element)
-    for element in tree.xpath('//f:date', namespaces=config.namespaces):
+    for element in config.progress(tree.xpath('//f:date', namespaces=config.namespaces), desc=f"{filename} datings", transient=True):
         try:
             yield AbsoluteDating(element)
         except InvalidDatingError as e:
@@ -244,8 +245,9 @@ def _parse_files() -> Generator[_AbstractDating, None, None]:
     """
 
     path = Path(config.data, 'macrogenesis')
+    files = list(path.rglob('**/*.xml'))
     logger.info('Looking for macrogenesis files below %s', path.absolute())
-    for file in path.rglob('**/*.xml'):
+    for file in config.progress(files, desc="Parsing macrogenesis files", transient=True):
         yield from _parse_file(file)
 
 

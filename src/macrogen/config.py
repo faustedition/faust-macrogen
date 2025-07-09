@@ -26,12 +26,13 @@ Additional stuff to configure:
 """
 
 import argparse
+import atexit
 import csv
 import json
 import logging
 import traceback
 from collections import defaultdict, namedtuple
-from functools import partial
+from functools import partial, lru_cache
 from io import BytesIO, StringIO, TextIOWrapper
 from logging import Logger, captureWarnings
 from multiprocessing_logging import install_mp_handler
@@ -40,9 +41,18 @@ from pathlib import Path
 from typing import IO, Any, Callable, Optional, Union, cast
 from urllib.parse import urlparse
 
+from pandas.core.base import NoNewAttributesMixin
 import pkg_resources
 import requests
 from lxml import etree
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from ruamel.yaml import YAML
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -354,17 +364,33 @@ class Configuration:
     def getLogger(self, name) -> Logger:
         return cast(Logger, _Proxy(logging.getLogger, name))
 
-    def progress(self, iterable, *args, desc="Working ...", unit=None, **kwargs):
-        if self.progressbar:
-            try:
-                from rich.progress import track
+    @property
+    @lru_cache()
+    def progress_table(self) -> Progress:
+        progress = Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(60),
+            TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            disable=not self.progressbar,
+        )
+        progress.start()
+        atexit.register(lambda: progress.stop())
+        return progress
 
-                yield from track(iterable, description=desc, *args, **kwargs)
-            except ImportError:
-                logger.info(
-                    "Could not import progress bar, working without progress info"
-                )
-        yield from iterable
+    def progress(
+        self, iterable, *args, desc="Working ...", transient=False, unit=None, **kwargs
+    ):
+        if transient:
+            task_id = self.progress_table.add_task(desc, total=None)
+        else:
+            task_id = None
+        yield from self.progress_table.track(
+            iterable, task_id=task_id, description=desc, **kwargs
+        )
+        if task_id is not None:
+            self.progress_table.remove_task(task_id)
 
     def relative_path(self, absolute_path):
         return Path(absolute_path).relative_to(self.path.data)

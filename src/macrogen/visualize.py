@@ -319,7 +319,7 @@ def render_all_pool(timeout=None):
         global _render_queue
         dots, _render_queue = _render_queue, []
         result = list(config.progress(pool.imap_unordered(partial(render_file_alt, timeout=timeout), dots),
-                                      desc='Rendering', total=len(dots), unit=' SVGs'))
+                                      desc='Rendering graphs', total=len(dots), unit=' SVGs'))
         not_rendered = [entry for entry in result if isinstance(entry, tuple)]
         timeout = [path for path, err in not_rendered if isinstance(err, subprocess.TimeoutExpired)]
         failed = [path for path, err in not_rendered if isinstance(err, subprocess.CalledProcessError)]

@@ -12,6 +12,7 @@ filters:
     default: WARNING
     levels:
       macrogen.graph: INFO
+      macrogen.fes: INFO
       macrogen.witnesses: DEBUG
       "__main__": INFO
   file:
@@ -30,7 +31,8 @@ handlers:
   #     - display
   console:
     class: rich.logging.RichHandler
-    show_time: false
+    log_time_format: "%T"
+    rich_tracebacks: true
     formatter: rich
     filters:
       - display

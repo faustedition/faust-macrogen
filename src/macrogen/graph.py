@@ -230,22 +230,34 @@ class MacrogenesisInfo:
 
 
         """
+        progress = config.progress_table
+        total_progress = progress.add_task("Running analysis", total=18)
         base = build_datings_graph()
+        progress.advance(total_progress)
         if base.number_of_edges() == 0:
             raise ValueError("Loading macrogenesis data resulted in an empty graph. Is there data at {}?".format(
                     config.path.data.absolute()))
         handle_inscriptions(base)
+        progress.advance(total_progress)
         add_edge_weights(base)
+        progress.advance(total_progress)
         resolve_ambiguities(base)
+        progress.advance(total_progress)
         base = collapse_edges_by_source(base)
+        progress.advance(total_progress)
         if config.temp_syn and config.temp_syn != 'ignore':
             base = add_syn_nodes(base)
+        progress.advance(total_progress)
         self.base = base
         add_iweight(base)
+        progress.advance(total_progress)
         working = cleanup_graph(base).copy()
         self.working = working
+        progress.advance(total_progress)
         self.add_missing_wits(working)
+        progress.advance(total_progress)
         sccs = scc_subgraphs(working)
+        progress.advance(total_progress)
 
         logger.info('Calculating minimum feedback arc set for %d strongly connected components', len(sccs))
 
@@ -255,18 +267,22 @@ class MacrogenesisInfo:
             mark_edges_to_delete(scc, feedback_edges)
             all_feedback_edges.extend(feedback_edges)
 
+        progress.advance(total_progress)
         selfloops = list(nx.selfloop_edges(working, data=True, keys=True))
         if selfloops:
             logger.warning('Found %d self loops, will also remove those. Affected nodes: %s',
                            len(selfloops), ", ".join(str(u) for u, v, k, attr in selfloops))
             all_feedback_edges.extend(selfloops)
 
+        progress.advance(total_progress)
         logger.info('Building DAG from remaining data')
         result_graph = working.copy()
         result_graph.remove_edges_from(all_feedback_edges)
+        progress.advance(total_progress)
 
         check_acyclic(result_graph, 'After removing %d conflicting edges, the graph is still not a DAG!' %
                       len(all_feedback_edges))
+        progress.advance(total_progress)
 
         logger.info('Double-checking %d removed edges ...', len(all_feedback_edges))
         for u, v, k, attr in sorted(all_feedback_edges, key=lambda edge: edge[3].get('weight', 1), reverse=True):
@@ -279,16 +295,21 @@ class MacrogenesisInfo:
                 result_graph.remove_edge(u, v)
 
         self.dag = result_graph
+        progress.advance(total_progress)
 
         logger.info('Marking %d conflicting edges for deletion', len(all_feedback_edges))
         mark_edges_to_delete(base, all_feedback_edges)
+        progress.advance(total_progress)
 
         logger.info('Removed %d of the original %d edges', len(all_feedback_edges), len(working.edges))
         self.conflicts = all_feedback_edges
 
         self.closure = nx.transitive_closure_dag(nx.DiGraph(result_graph))
+        progress.advance(total_progress)
         add_inscription_links(base)
+        progress.advance(total_progress)
         self._infer_details()
+        progress.update(total_progress, completed=18)
 
     @staticmethod
     def _secondary_key(node):

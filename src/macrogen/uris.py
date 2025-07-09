@@ -16,6 +16,7 @@ from datetime import date
 
 import pandas as pd
 from lxml import etree
+from pandas.core.frame import treat_as_nested
 
 from macrogen.witnesses import all_documents
 from .config import config
@@ -274,7 +275,7 @@ class Witness(Reference):
     def _load_database(cls):
         cls.corrections = cls._load_corrections()
         documents = all_documents()
-        sigil_data = [doc.to_record() for doc in documents]
+        sigil_data = [doc.to_record() for doc in config.progress(documents, desc="Extracting document and verse info", transient=True)]
         cls.database = cls.build_database(sigil_data)
 
     @classmethod

@@ -283,7 +283,7 @@ class WitInscrInfo:
         self.by_scene: dict[Scene, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
         self.by_uri: dict[str, Union[InscriptionCoverage, DocumentCoverage]] = dict()
         self.by_group: dict[str, Union[InscriptionCoverage, DocumentCoverage]] = defaultdict(list)
-        for doc in config.progress(self.documents, desc='Analyzing documents', unit=' docs'):
+        for doc in config.progress(self.documents, desc='Analyzing documents', unit=' docs', transient=True):
             self.by_uri[doc.uri] = doc
             for inscription in doc.inscriptions:
                 self.by_uri[inscription.uri] = inscription
@@ -319,4 +319,4 @@ def all_documents(path: Optional[Path] = None):
     files = list(path.glob('**/*.xml'))
     if not files:
         raise ValueError(f'No XML files found in {path}!')
-    return [Document(doc) for doc in (config.progress(files))]
+    return [Document(doc) for doc in files]

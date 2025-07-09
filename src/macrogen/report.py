@@ -1611,6 +1611,6 @@ def report_config(info: MacrogenesisInfo):
 
 def generate_reports(info: MacrogenesisInfo):
     report_functions = [fn for name, fn in globals().items() if name.startswith('report_')]
-    for report in report_functions:
+    for report in config.progress(report_functions, desc="Generating reports"):
         logger.info('Running %s', report.__name__)
         report(info)
