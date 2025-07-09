@@ -1,11 +1,10 @@
 version: 1
 
 formatters:
-  colored:
-    '()': colorlog.ColoredFormatter
-    format: '%(log_color)s%(levelname)-8s %(name)-8s %(message)s'
+  rich:
+    format: "%(message)s"
   tabbed:
-    format: '%(asctime)s  %(levelname)-8s %(name)s  %(message)s'
+    format: "%(asctime)s  %(levelname)-8s %(name)s  %(message)s"
 
 filters:
   display:
@@ -14,18 +13,23 @@ filters:
     levels:
       macrogen.graph: INFO
       macrogen.witnesses: DEBUG
-      '__main__': INFO
+      "__main__": INFO
   file:
     (): macrogen.logging.LevelFilter
     default: INFO
     levels:
       macrogen.fes: DEBUG
 
-
 handlers:
+  # console:
+  #   class: logging.StreamHandler
+  #   formatter: colored
+  #   filters:
+  #     - display
   console:
-    class: logging.StreamHandler
-    formatter: colored
+    class: rich.logging.RichHandler
+    show_time: false
+    formatter: rich
     filters:
       - display
   file:

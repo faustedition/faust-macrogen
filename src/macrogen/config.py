@@ -29,14 +29,15 @@ import argparse
 import csv
 import json
 import logging
-from logging import Logger
 import traceback
-from collections import namedtuple, defaultdict
+from collections import defaultdict, namedtuple
 from functools import partial
 from io import BytesIO, StringIO, TextIOWrapper
+from logging import Logger, captureWarnings
+from multiprocessing_logging import install_mp_handler
 from os.path import expanduser, expandvars
 from pathlib import Path
-from typing import Optional, IO, Callable, Any, Union, cast
+from typing import IO, Any, Callable, Optional, Union, cast
 from urllib.parse import urlparse
 
 import pkg_resources
@@ -345,23 +346,20 @@ class Configuration:
 
         logger.debug("Reconfiguring logging")
         dictConfig(self.logging)
+        captureWarnings(True)
+        install_mp_handler()
         logger.debug("Reconfigured logging")
         logger = logging.getLogger(__name__)
 
     def getLogger(self, name) -> Logger:
         return cast(Logger, _Proxy(logging.getLogger, name))
 
-    def progress(self, iterable, *args, **kwargs):
+    def progress(self, iterable, *args, desc="Working ...", unit=None, **kwargs):
         if self.progressbar:
             try:
-                from tqdm import tqdm
-                from tqdm.contrib.logging import tqdm_logging_redirect
+                from rich.progress import track
 
-                if "dynamic_ncols" not in kwargs:
-                    kwargs["dynamic_ncols"] = True
-                with tqdm_logging_redirect():
-                    yield from tqdm(iterable, *args, **kwargs)
-                    return
+                yield from track(iterable, description=desc, *args, **kwargs)
             except ImportError:
                 logger.info(
                     "Could not import progress bar, working without progress info"

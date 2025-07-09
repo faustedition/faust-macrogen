@@ -197,18 +197,6 @@ wheels = [
 ]
 
 [[package]]
-name = "colorlog"
-version = "4.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/75/32/cdfba08674d72fe7895a8ec7be8f171e8502274999cae9497e4545404873/colorlog-4.8.0.tar.gz", hash = "sha256:59b53160c60902c405cdec28d38356e09d40686659048893e026ecbd589516b1", size = 28770, upload-time = "2021-03-22T11:26:32.319Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/62/61449c6bb74c2a3953c415b2cdb488e4f0518ac67b35e2b03a6d543035ca/colorlog-4.8.0-py2.py3-none-any.whl", hash = "sha256:3dd15cb27e8119a24c1a7b5c93f9f3b455855e0f73993b1c25921b2f646f1dcd", size = 10023, upload-time = "2021-03-22T11:26:31.281Z" },
-]
-
-[[package]]
 name = "coverage"
 version = "7.6.8"
 source = { registry = "https://pypi.org/simple" }
@@ -460,10 +448,10 @@ name = "faust-macrogen"
 version = "0.9.2"
 source = { editable = "." }
 dependencies = [
-    { name = "colorlog" },
     { name = "logging-tree" },
     { name = "lxml" },
     { name = "more-itertools" },
+    { name = "multiprocessing-logging" },
     { name = "networkx" },
     { name = "numpy" },
     { name = "openpyxl" },
@@ -473,8 +461,8 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-cache" },
+    { name = "rich" },
     { name = "ruamel-yaml" },
-    { name = "tqdm" },
     { name = "xlrd" },
 ]
 
@@ -506,7 +494,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "colorlog", specifier = ">=4.1.0,<5.0.0" },
     { name = "cvxopt", marker = "extra == 'solver'", specifier = ">=1.2.3,<2.0.0" },
     { name = "cvxpy", marker = "extra == 'solver'", specifier = ">=1.0.25,<2.0.0" },
     { name = "fastapi", extras = ["all"], marker = "extra == 'production'", specifier = ">=0.78.0,<1.0.0" },
@@ -516,6 +503,7 @@ requires-dist = [
     { name = "logging-tree", specifier = ">=1.8,<2.0" },
     { name = "lxml", specifier = ">=4.9.1,<5.0.0" },
     { name = "more-itertools", specifier = ">=8.0.2,<9.0.0" },
+    { name = "multiprocessing-logging", specifier = ">=0.3.4" },
     { name = "networkx", specifier = ">=2.5,<2.6" },
     { name = "numpy", specifier = ">=1.22.4,<2.0.0" },
     { name = "openpyxl", specifier = ">=3.0.2,<4.0.0" },
@@ -526,8 +514,8 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
     { name = "requests", specifier = ">=2.22.0,<3.0.0" },
     { name = "requests-cache", specifier = ">=0.5.2,<1.0.0" },
+    { name = "rich", specifier = ">=13.9.4" },
     { name = "ruamel-yaml", specifier = ">=0.16.5,<1.0.0" },
-    { name = "tqdm", specifier = ">=4.41.1,<5.0.0" },
     { name = "xlrd", specifier = ">=2.0.1,<3.0.0" },
 ]
 provides-extras = ["igraph", "oldgraphviewer", "production", "solver"]
@@ -888,6 +876,14 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c7/0c/fad24ca2c9283abc45a32b3bfc2a247376795683449f595ff1280c171396/more-itertools-8.14.0.tar.gz", hash = "sha256:c09443cd3d5438b8dafccd867a6bc1cb0894389e90cb53d227456b0b0bccb750", size = 102642, upload-time = "2022-08-09T14:04:04.966Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/ff/1ad78678bee731ae5414ea5e97396b3f91de32186028daa614d322ac5a8b/more_itertools-8.14.0-py3-none-any.whl", hash = "sha256:1bc4f91ee5b1b31ac7ceacc17c09befe6a40a503907baf9c839c229b5095cfd2", size = 52193, upload-time = "2022-08-09T14:04:02.452Z" },
+]
+
+[[package]]
+name = "multiprocessing-logging"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/fe/32bd864bcb604b0607924a4cf618ed267a0ef21ac9c3e255109256046e1f/multiprocessing_logging-0.3.4-py2.py3-none-any.whl", hash = "sha256:8a5be02b02edbd6fa6e3e89499af7680db69db9e2d8707fcd28d445fa248f23e", size = 8770, upload-time = "2023-02-05T17:06:20.632Z" },
 ]
 
 [[package]]
@@ -1715,18 +1711,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/b9/1ed31d167be802da0fc95020d04cd27b7d7065cc6fbefdd2f9186f60d7bd/tomli-2.2.1-cp313-cp313-win32.whl", hash = "sha256:d3f5614314d758649ab2ab3a62d4f2004c825922f9e370b29416484086b264ec", size = 98724, upload-time = "2024-11-27T22:38:32.837Z" },
     { url = "https://files.pythonhosted.org/packages/c7/32/b0963458706accd9afcfeb867c0f9175a741bf7b19cd424230714d722198/tomli-2.2.1-cp313-cp313-win_amd64.whl", hash = "sha256:a38aa0308e754b0e3c67e344754dff64999ff9b513e691d0e786265c93583c69", size = 109383, upload-time = "2024-11-27T22:38:34.455Z" },
     { url = "https://files.pythonhosted.org/packages/6e/c2/61d3e0f47e2b74ef40a68b9e6ad5984f6241a942f7cd3bbfbdbd03861ea9/tomli-2.2.1-py3-none-any.whl", hash = "sha256:cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc", size = 14257, upload-time = "2024-11-27T22:38:35.385Z" },
-]
-
-[[package]]
-name = "tqdm"
-version = "4.67.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
 
 [[package]]

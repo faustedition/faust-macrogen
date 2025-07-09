@@ -20,9 +20,9 @@ dependencies = [
   "requests<3.0.0,>=2.22.0",
   "requests-cache<1.0.0,>=0.5.2",
   "logging-tree<2.0,>=1.8",
-  "colorlog<5.0.0,>=4.1.0",
-  "tqdm<5.0.0,>=4.41.1",
   "pydantic-settings>=2.6.1",
+  "rich>=13.9.4",
+  "multiprocessing-logging>=0.3.4",
 ]
 
 [project.scripts]
