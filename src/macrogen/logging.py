@@ -40,3 +40,18 @@ class LevelFilter(logging.Filter):
                 effective_limit = self.config[prefix]
                 break
         return record.levelno >= effective_limit
+
+
+class DuplicateFilter(logging.Filter):
+    """
+    Supresses duplicate log messages (if they follow each other immediately)
+    """
+    last_log = None
+
+    def filter(self, record):
+        current_log = (record.module, record.levelno, record.getMessage())
+        if current_log == self.last_log:
+            return False
+        else:
+            self.last_log = current_log
+            return True

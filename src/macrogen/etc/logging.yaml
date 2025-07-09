@@ -19,6 +19,8 @@ filters:
     default: INFO
     levels:
       macrogen.fes: DEBUG
+  duplicates:
+    (): macrogen.logging.DuplicateFilter
 
 handlers:
   # console:
@@ -32,6 +34,7 @@ handlers:
     formatter: rich
     filters:
       - display
+      - duplicates
   file:
     class: logging.FileHandler
     filename: macrogenesis.log
@@ -40,6 +43,7 @@ handlers:
     formatter: tabbed
     filters:
       - file
+      - duplicates
 
 root:
   handlers:
