@@ -19,6 +19,17 @@ yaml = YAML()
 yaml.indent(mapping=2, sequence=4, offset=2)
 import re
 
+PYPI_TO_CONDA_NAMES = {
+    "ruamel-yaml": "ruamel.yaml",
+    "logging-tree": "logging_tree",
+}
+
+
+def to_conda_name(spec: str) -> str:
+    match = re.match(r"^([-\w.]+)(.*)$", spec)
+    name, rest = match.groups()
+    return PYPI_TO_CONDA_NAMES.get(name, name) + rest
+
 
 def load_pyproject_deps():
     with open("pyproject.toml", "rb") as f:
@@ -90,7 +101,7 @@ def main():
                 print(f"{lib:>30}: new:                    {new_env_ver:20} ({ver})")
     else:
         env_dep_list.clear()
-        env_dep_list.extend(poetry_deps)
+        env_dep_list.extend(to_conda_name(dep) for dep in poetry_deps)
 
     with open("environment.yml", "w") as f:
         yaml.dump(env, f)
