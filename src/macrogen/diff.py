@@ -169,7 +169,7 @@ def main():
             logger.info('Comparing %s to %s ...', a, b)
             diff = MacrogenDiff(a, b)
             table = diff.diff_order_table()
-            output: Path = options.output_dir / (diff.filename + ".php")
+            output: Path = options.output_dir / (diff.filename + ".html")
             logger.info("Saving %s ...", output.absolute())
             write_html(output, table.format_table() + diff.conflict_diffs_html(),
                        diff.title)
@@ -181,7 +181,7 @@ def main():
                          opcounts['equal'], rank_changed, len(diff.b.info.conflicts) - len(diff.a.info.conflicts)))
         except FileNotFoundError as e:
             logger.error(e)
-    write_html(options.output_dir / "order-diff.php", summary.format_table(), head="Vergleiche")
+    write_html(options.output_dir / "order-diff.html", summary.format_table(), head="Vergleiche")
 
 if __name__ == '__main__':
     main()

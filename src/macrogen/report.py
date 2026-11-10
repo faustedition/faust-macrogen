@@ -268,9 +268,6 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
     if head is not None:
         breadcrumbs += [dict(caption=head)]
     breadcrumbs = [dict(caption='Makrogenese-Lab', link='/macrogenesis')] + breadcrumbs
-    prefix = f"""<?php include "../includes/header.php"?>
-    <!-- Generiert: {datetime.now().isoformat()} -->
-     <section>"""
     if graph_id is not None:
         init = f"""
         graph = document.getElementById('{graph_id}');
@@ -283,7 +280,24 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
         """
     else:
         init = ''
-    suffix = f"""</section>
+    page = f"""<!DOCTYPE html>
+<html lang="de" xml:lang="de">
+  <head>
+    <meta charset='utf-8'>
+    <title>Faustedition</title>
+    <script src="/js/require.js"></script>
+    <script src="/js/faust_config.js"></script>
+    <script src="/js/faust-frame.js"></script>
+    <link rel="stylesheet" href="/css/faust.css">
+    <link rel="stylesheet" href="/css/genesis-bargraph.css">
+    <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+    <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+  </head>
+  <body class="{escape(Path(filename).stem)}">
+    <faust-header></faust-header>
+    <main>
+    <!-- Generiert: {datetime.now().isoformat()} -->
+    <section>{content}</section>
     <script type="text/javascript">
         requirejs(['faust_common', 'svg-pan-zoom', 'sortable', 'jquery', 'jquery.table'],
         function(Faust, svgPanZoom, Sortable, $, $table) {{
@@ -293,11 +307,20 @@ def write_html(filename: Path, content: str, head: str = None, breadcrumbs=None,
             $("table[data-sortable]").fixedtableheader();
         }});
     </script>
-    <?php include "../includes/footer.php"?>"""
-    with open(fspath(filename), 'w', encoding='utf-8') as f:
-        f.write(prefix)
-        f.write(content)
-        f.write(suffix)
+    </main>
+    <noscript>
+      <div class="pure-alert pure-alert-warning">
+        <h3>JavaScript erforderlich</h3>
+        <p>Die Faustedition bietet ein interaktives Userinterface, für das JavaScript erforderlich ist.</p>
+        <p>Bitte deaktivieren Sie ggf. vorhandene Skriptblocker für diese Seite.</p>
+      </div>
+      <p><img src="//analytics.faustedition.net/matomo.php?idsite=1&amp;rec=1" style="border:0;" alt="" /></p>
+    </noscript>
+    <faust-footer></faust-footer>
+  </body>
+</html>
+"""
+    Path(filename).write_text(page, encoding='utf-8')
 
 
 def report_components(graphs: MacrogenesisInfo):
@@ -320,7 +343,7 @@ def report_components(graphs: MacrogenesisInfo):
 
     wcc_table = _report_subgraphs(wccs, target, 'wcc-{0:02d}')
     report += wcc_table.format_table()
-    write_html(target / 'components.php', report, head="Komponenten")
+    write_html(target / 'components.html', report, head="Komponenten")
 
 
 def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=None, head_pattern='%d'):
@@ -341,7 +364,7 @@ def _report_subgraphs(removed_edges, out, pattern, breadcrumbs=None, head_patter
         conflict_sources = {attr['source'].citation for u, v, k, attr in removed_edges}
         table.row((index, refs, len(relations), len(removed_edges), sources, conflict_sources))
         write_dot(subgraph, out / (pattern + "-graph.dot").format(index))
-        write_html(out / (pattern + '.php').format(index),
+        write_html(out / (pattern + '.html').format(index),
                    f"""<object id="refgraph" class="refgraph" type="image/svg+xml"
                           data="{pattern.format(index)}-graph.svg"></object>\n""",
                    graph_id='refgraph', breadcrumbs=breadcrumbs, head=head_pattern.format(index))
@@ -550,7 +573,7 @@ class RefTable(HtmlTable):
                                 attr.get('comments', []),
                                 attr.get('xml', [])),
                                class_='delete' if delete_ else str(attr['kind']))
-        write_html(basename.with_suffix('.php'), report + assertionTable.format_table(),
+        write_html(basename.with_suffix('.html'), report + assertionTable.format_table(),
                    breadcrumbs=[dict(caption='Referenzen', link='refs')],
                    head=ref.label, graph_id='refgraph')
 
@@ -638,7 +661,7 @@ def report_downloads(graphs: MacrogenesisInfo):
     nx.write_edgelist(simplified, str(target / 'base.edges'))
     graphs.save(target / "macrogen-info.zip")
 
-    write_html(target / 'downloads.php', """
+    write_html(target / 'downloads.html', """
     <section>
     <p>Downloadable files for the base graph in various formats:</p>
     <ol>
@@ -740,7 +763,7 @@ def report_refs(graphs: MacrogenesisInfo):
     for index, ref in enumerate(refs, start=1):
         overview.reference(ref, index, write_subpage=True)
 
-    write_html(target / 'refs.php', overview.format_table(), head="Referenzen")
+    write_html(target / 'refs.html', overview.format_table(), head="Referenzen")
 
     # write_dot(simplify_graph(graphs.base), str(target / 'base.dot'), record=False)
     # write_dot(simplify_graph(graphs.working), str(target / 'working.dot'), record=False)
@@ -804,9 +827,9 @@ def report_missing(graphs: MacrogenesisInfo):
         assertions: nx.MultiDiGraph = graphs.subgraph(ref, context=False, abs_dates=False, direct_assertions=True)
         unknown_table.row((ref, ref.uri, _flatten([x for u, v, x in assertions.edges(data='xml')])))
     report += unknown_table.format_table()
-    write_html(target / 'missing.php', report, head="Fehlendes")
+    write_html(target / 'missing.html', report, head="Fehlendes")
     for ref in missing_wits:
-        missing_path = target / ref.filename.with_suffix('.php')
+        missing_path = target / ref.filename.with_suffix('.html')
         logger.info('Writing missing page for %s to %s', ref, missing_path)
         write_html(missing_path,
                    f"""
@@ -829,7 +852,7 @@ def _format_collapsed_path(path: list[Node]):
 def _report_conflict(graphs: MacrogenesisInfo, u, v):
     target = config.path.report_dir
     reportfile = pathlink(u, v)
-    cyclefile = reportfile.with_name(reportfile.stem + '-cycles.php')
+    cyclefile = reportfile.with_name(reportfile.stem + '-cycles.html')
     graphfile = reportfile.with_name(reportfile.stem + '-graph.dot')
     cyclegraphfile = reportfile.with_name(graphfile.stem + '-graph.dot')
     relevant_nodes = {u} | set(graphs.base.predecessors(u)) | set(graphs.base.successors(u)) \
@@ -908,7 +931,7 @@ def report_conflicts(graphs: MacrogenesisInfo):
     for index, (u, v, k, attr) in enumerate(sorted(removed_edges, key=lambda t: getattr(t[0], 'index', 0)), start=1):
         _report_conflict(graphs, u, v)
         table.edge(u, v, attr)
-    write_html(target / 'conflicts.php', table.format_table(), head=f'{len(removed_edges)} entfernte Kanten')
+    write_html(target / 'conflicts.html', table.format_table(), head=f'{len(removed_edges)} entfernte Kanten')
 
 
 def report_sources(graphs: MacrogenesisInfo):
@@ -934,7 +957,7 @@ def report_sources(graphs: MacrogenesisInfo):
         csv_writer.writerow(('Source', 'Label', 'Weight', 'Assertions', 'Conflicts', 'Ignored', 'Usage', 'Witnesses'))
         for uri, edges in sorted(by_source.items()):
             source = BiblSource(uri)
-            filename = target / (source.filename + '.php')
+            filename = target / (source.filename + '.html')
             graphfile = filename.with_name(filename.stem + '-graph.dot')
             logger.info('%d assertions from %s', len(edges), source.citation)
             # subgraph = graphs.base.edge_subgraph([(u,v,k) for u,v,k,attr in edges])
@@ -958,7 +981,7 @@ def report_sources(graphs: MacrogenesisInfo):
             current_table = AssertionTable()
             for u, v, k, attr in edges:
                 current_table.edge(u, v, attr)
-            write_html(target / (source.filename + '.php'),
+            write_html(target / (source.filename + '.html'),
                        f"""<p><a href="/bibliography#{source.filename}">{source.citation} in der Bibliographie</a></p>
                        <object id="refgraph" type="image/svg+xml" data="{graphfile.with_suffix('.svg').name}"></object>
                            {current_table.format_table()}""",
@@ -966,7 +989,7 @@ def report_sources(graphs: MacrogenesisInfo):
                        breadcrumbs=[dict(caption='Quellen', link='sources')],
                        head=source.citation)
 
-    write_html(target / 'sources.php', sources_table.format_table(), head='Quellen')
+    write_html(target / 'sources.html', sources_table.format_table(), head='Quellen')
 
 
 def report_index(graphs):
@@ -1011,10 +1034,10 @@ def report_index(graphs):
       </section>
     """
 
-    write_html(target / "index.php", report)
+    write_html(target / "index.html", report)
     logger.info('Writing DAG ...')
     write_dot(graphs.dag, target / 'dag-graph.dot')
-    write_html(target / 'dag.php', '<object type="image/svg+xml" data="dag-graph.svg" id="refgraph"/>',
+    write_html(target / 'dag.html', '<object type="image/svg+xml" data="dag-graph.svg" id="refgraph"/>',
                graph_id='refgraph', head='Effektiver Gesamtgraph (ohne Konflikte)',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
@@ -1022,7 +1045,7 @@ def report_index(graphs):
     tred_base = nx.MultiDiGraph(nx.transitive_reduction(graphs.dag))
     tred = nx.edge_subgraph(graphs.dag, tred_base.edges)
     write_dot(tred, target / 'tred-graph.dot')
-    write_html(target / 'tred.php', '<object type="image/svg+xml" data="tred-graph.svg" id="refgraph"/>',
+    write_html(target / 'tred.html', '<object type="image/svg+xml" data="tred-graph.svg" id="refgraph"/>',
                graph_id='refgraph', head='Transitive Reduktion',
                graph_options=dict(controlIconsEnabled=True, maxZoom=200))
 
@@ -1114,7 +1137,7 @@ def report_help(info: Optional[MacrogenesisInfo] = None):
     </table>
     """
 
-    write_html(target / 'help.php', report, 'Legende')
+    write_html(target / 'help.html', report, 'Legende')
 
 
 def report_scenes(graphs: MacrogenesisInfo):
@@ -1137,7 +1160,7 @@ def report_scenes(graphs: MacrogenesisInfo):
         for wit in sorted(scene_wits, key=lambda ref: graphs.index.get(ref, 0)):
             witnessTable.reference(wit)
         basename = 'scene_' + scene.n.replace('.', '-')
-        subgraph_page = Path(basename + '-subgraph.php')
+        subgraph_page = Path(basename + '-subgraph.html')
         graph_name = Path(basename + '-graph.dot')
         sceneTable.row((scene.n, f'<a href="{basename}">{scene.title}</a>', (scene.first, scene.last),
                         len(scene_docs), len(scene_inscr), len(scene_wits)))
@@ -1148,7 +1171,7 @@ def report_scenes(graphs: MacrogenesisInfo):
                    graph_id='refgraph',
                    head="Szenengraph", breadcrumbs=[dict(caption='nach Szene', link='scenes'),
                                                     dict(caption=scene.title, link=basename)])
-        write_html(target / (basename + '.php'),
+        write_html(target / (basename + '.html'),
                    f"""
                        <p><a href="{subgraph_page.stem}">Szenengraph</a> ·
                           {_subgraph_link(*scene_wits)} ·
@@ -1156,7 +1179,7 @@ def report_scenes(graphs: MacrogenesisInfo):
                        {witnessTable.format_table()}""",
                    head=scene.title, breadcrumbs=[dict(caption='nach Szene', link='scenes')])
 
-    write_html(target / "scenes.php", sceneTable.format_table(), head='nach Szene')
+    write_html(target / "scenes.html", sceneTable.format_table(), head='nach Szene')
 
 
 def report_syngroups(graphs: MacrogenesisInfo):
@@ -1175,14 +1198,14 @@ def report_syngroups(graphs: MacrogenesisInfo):
         for u, v, attr in graphs.base.subgraph(cluster).edges(data=True):
             if attr.get('kind', None) == 'temp-syn':
                 assertions.edge(u, v, attr)
-        write_html(target / (file_stem + '.php'),
+        write_html(target / (file_stem + '.html'),
                    f"""<object id="refgraph" type="image/svg+xml" data="{file_stem}-graph.svg"></object>\n""" +
                    _subgraph_link(*cluster) +
                    assertions.format_table(),
                    graph_id='refgraph', head=f'Zeitgleich mit {representant.label}',
                    breadcrumbs=[dict(caption='ca. gleichzeitig', link='syn')])
         table.row((f'<a href="{file_stem}">{", ".join(map(str, cluster))}</a>', len(cluster), len(assertions)))
-    write_html(target / 'syn.php', table.format_table(), head='ca. gleichzeitig')
+    write_html(target / 'syn.html', table.format_table(), head='ca. gleichzeitig')
 
 
 def report_unused(graphs: MacrogenesisInfo):
@@ -1196,7 +1219,7 @@ def report_unused(graphs: MacrogenesisInfo):
     for node in unindexed:
         unindexed_table.reference(node)
 
-    write_html(config.path.report_dir / 'unused.php',
+    write_html(config.path.report_dir / 'unused.html',
                f"""<p>{len(unused_nodes)} Zeugen existieren im Ausgangsgraphen, aber nicht im DAG:</p>
                {not_in_dag_table.format_table()}
                <p>{len(unindexed)} Knoten haben auf unerklärliche Weise keinen Index:</p>
@@ -1359,7 +1382,7 @@ def report_stats(graphs: MacrogenesisInfo):
         </tbody>
     </table>
     """
-    write_html(config.path.report_dir / "stats.php", html, "Statistik")
+    write_html(config.path.report_dir / "stats.html", html, "Statistik")
 
 
 
@@ -1473,7 +1496,7 @@ def report_inscriptions(info: MacrogenesisInfo):
                    str(doc_assertions) if doc_assertions else '',
                    _subgraph_link(wit, *sorted(graph_inscriptions.get(doc_uri, [])), assertions=True, ignored=True)),
                   class_=relevance_class)
-    write_html(config.path.report_dir / 'inscriptions.php',
+    write_html(config.path.report_dir / 'inscriptions.html',
                """<style>
                .warning td { background-color: rgba(220,160,0,0.2); }
                .error td { background-color: rgba(190,0,0,0.1); }
@@ -1606,7 +1629,7 @@ def report_config(info: MacrogenesisInfo):
     </pre>
     """
 
-    write_html(config.path.report_dir / "config.php", content, head="Konfiguration")
+    write_html(config.path.report_dir / "config.html", content, head="Konfiguration")
 
 
 def generate_reports(info: MacrogenesisInfo):

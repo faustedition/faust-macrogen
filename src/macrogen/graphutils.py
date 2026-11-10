@@ -43,7 +43,7 @@ def pathlink(*nodes) -> Path:
         else:
             logger.warning('Unknown node type: %s (%s)', type(node), node)
             node_names.append(base_n(hash(node), 62))
-    return Path("--".join(node_names) + '.php')
+    return Path("--".join(node_names) + '.html')
 
 
 def expand_edges(graph: nx.MultiDiGraph, edges: Iterable[tuple[Any, Any]], filter: bool = False) \
