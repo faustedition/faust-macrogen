@@ -1,56 +1,22 @@
 #!/bin/bash
+#
+# Sets up the graphviewer for production outside Docker. Requires uv
+# (https://docs.astral.sh/uv/) and Graphviz with development headers
+# (Debian: graphviz libgraphviz-dev build-essential pkg-config).
 
-### The following environment variables can be used to adjust processing
+set -euo pipefail
 
-# 1. We're downloading and installing micromamba here, if required:
-MAMBA_ROOT_PREFIX=${MAMBA_ROOT_PREFIX:-"$PWD/mamba"}
-
-# 2. The path to the productive python environment:
+# The path to the productive python environment:
 PRODUCTION_ENV=${PRODUCTION_ENV:-"$PWD/venv"}
 
-#   if present, use this file to initialize the production environment:
-ENVIRONMENT_FILE=${ENVIRONMENT_FILE:-"environment.yml"}
-
-#   otherwise, just install python in the given version:
-PYTHON_VERSION=${PYTHON_VERSION:-3.10}
-
-# 3. finally, run pip with the following argument to install the project:
-PIP_SPEC="${PIP_SPEC:-.[production]}"
-###
-
-export MAMBA_ROOT_PREFIX PRODUCTION_ENV
-micromamba="$MAMBA_ROOT_PREFIX/bin/micromamba"
-
 echob () {
-  tput bold
+  tput bold 2>/dev/null || true
   echo "$@"
-  tput sgr0
+  tput sgr0 2>/dev/null || true
 }
 
-if [[ -x "$micromamba" ]]; then
-  echob "Micromamba environment present at $MAMBA_ROOT_PREFIX"
-else
-  echob "Downloading micromamba to $MAMBA_ROOT_PREFIX ..."
-  mkdir -p "$MAMBA_ROOT_PREFIX" && wget -qO- $WGET_ARGS https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C "$MAMBA_ROOT_PREFIX" -xj bin/micromamba
-fi
-
-if [[ -r ${ENVIRONMENT_FILE} ]]
-then
-  echob "Found environment.yml, installing its contents to $PRODUCTION_ENV"
-  $micromamba create --no-rc --yes -p "$PRODUCTION_ENV" -f "${ENVIRONMENT_FILE}"
-elif [[ -x "${PRODUCTION_ENV}/bin/python${PYTHON_VERSION}" ]]
-then
-  echob "Python $PYTHON_VERSION is already installed in $PRODUCTION_ENV"
-else
-  echob "Using micromamba to install Python $PYTHON_VERSION to $PRODUCTION_ENV ..."
-  $micromamba create --no-rc --yes -p "$PRODUCTION_ENV" python=3.10 wheel -c conda-forge
-fi
-
-if [[ -n "$PIP_SPEC" ]]
-then
-  echob "Using pip to install the project ($PIP_SPEC) ..."
-  $micromamba --no-rc -p "$PRODUCTION_ENV" run pip install "$PIP_SPEC"
-fi
+echob "Installing the locked environment to $PRODUCTION_ENV ..."
+UV_PROJECT_ENVIRONMENT="$PRODUCTION_ENV" uv sync --locked --no-dev --no-editable --extra production
 
 if [[ ! -r run-server ]]
 then
@@ -107,4 +73,4 @@ WantedBy=default.target
 EOF
   echob "I have created a systemd unit file at $unit. Edit and install it"
 fi
-echob "and run sudo systemcfg enable --now `basename $unit` to enable the service."
+echob "and run sudo systemctl enable --now `basename $unit` to enable the service."
