@@ -23,7 +23,6 @@ dependencies = [
   "pydantic-settings>=2.6.1",
   "rich>=13.9.4",
   "multiprocessing-logging>=0.3.4",
-  "setuptools"
 ]
 
 [project.scripts]
@@ -49,6 +48,19 @@ dev = [
     "watchdog>=0.10.3",
     "lxml-stubs>=0.5.1",
     "networkx-stubs>=0.0.1",
+]
+
+[tool.uv]
+# Build-time dependencies are not covered by uv.lock. Pin them so that building
+# from sdists (e.g., pygraphviz) keeps working when new releases drop features.
+build-constraint-dependencies = [
+  "hatchling==1.33.0",
+  "packaging==26.3",
+  "pathspec==1.1.1",
+  "pluggy==1.7.0",
+  "trove-classifiers==2026.9.21.13",
+  "setuptools==80.9.0",
+  "wheel==0.45.1",
 ]
 
 [tool.hatch.build]

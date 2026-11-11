@@ -39,7 +39,9 @@ There are two additional historical extras, which may still work but are no long
 
 It is possible to __bootstrap__ a Python environment with everything required to run macrogen. This is implemented in the installMacrogen gradle task of the build.gradle script. This is used by the global Gradle task in `faust-gen`, and it can be triggered by running `./gradlew installMacrogen`. 
 
-The bootstrapping process will download micromamba and then use that to build a python environment in `build/envs/macrogen/` using conda packages. This is controlled using the [environment.yml])(environment.yml) YAML file. Afterwards, `pip` is used to install the local package into that environment (to make sure we have everything from pyproject.toml). 
+The task runs `uv sync --locked` to build a Python environment in `build/envs/macrogen/` from `uv.lock` (Python version from `.python-version`). It needs [uv](https://docs.astral.sh/uv/) on the `PATH` (or pass `-Puv=/path/to/uv`) and Graphviz including its development headers (e.g. Debian's `graphviz libgraphviz-dev`) plus a C compiler, since pygraphviz is built from source.
+
+Build-time dependencies are pinned via `tool.uv.build-constraint-dependencies` in `pyproject.toml`, so a later `uv lock` won't change them by accident.
 
 
 ### Additional Configuration

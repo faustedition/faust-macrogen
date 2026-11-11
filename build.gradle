@@ -18,30 +18,14 @@ if (!project.hasProperty('dataDir')) {
 }
 	project.ext.venv = "$buildDir/envs/macrogen"
 
-repositories {
-    ivy {
-        url "https://anaconda.org/conda-forge/"
-        // url "https://micro.mamba.pm/api/"  no HEAD support :(
-        patternLayout { artifact "[module]/[revision]/download/linux-64/[module]-[revision]-0.[ext]" }
-        metadataSources { artifact() }
-        content { includeGroup "micromamba" }
-    }
-}
-
-configurations {
-    python
-}
-
-dependencies {
-    python group: 'micromamba', name: 'micromamba', version: '2.0.0', ext: 'tar.bz2'
-}
+project.ext.uv = project.findProperty('uv') ?: 'uv'
 
 
 task prepareMacrogenOptions {
     project.ext.macrogenArgs = []
 	project.ext.macrogenInputs = project.files()
 	project.ext.macrogenExecutable = "$venv/bin/macrogen"
-        project.ext.macrogenPath = "$venv/bin"
+        project.ext.macrogenPath = "$venv/bin" + File.pathSeparator + System.getenv("PATH")
 
 	if (project.hasProperty('macrogenOptions'))
 		macrogenArgs.add(project.macrogenOptions)
@@ -62,45 +46,16 @@ task prepareMacrogenOptions {
 
 
 
-task installMicromamba(type: Copy) {
-    description 'Installs MicroMamba to bootstrap Python'
-    project.ext.anacondaDir = "$buildDir/tools/mamba"
-    project.ext.conda = "$anacondaDir/bin/micromamba"
-    from {
-        configurations.python.collect {
-            logger.lifecycle("Extracting contrib: ${it.name}");
-            tarTree(resources.bzip2(it))
-        }
-    }
-    into anacondaDir
-    include "bin/micromamba"
-}
-
-task installMacrogen() {
-    description 'Installs the macrogenesis tool and its requirements (conda)'
-    dependsOn 'installMicromamba'
+task installMacrogen(type: Exec) {
+    description 'Installs the macrogenesis tool and its locked requirements using uv'
     group 'macrogen'
-    inputs.files("$projectDir/envionment.yaml", "$projectDir/pyproject.toml")
-    outputs.dir "$buildDir/envs"
-    // outputs.file "$venv/bin/macrogen"
-    doLast {
-        if (new File("$venv").exists()) {
-            exec {
-                executable conda
-                args "--no-rc", "-r", "$anacondaDir", "-p", "$venv", "create", "-f", "$projectDir/environment.yml", "-y"
-            }
-        } else {
-            exec {
-                executable conda
-                args "--no-rc", "-r", "$anacondaDir", "-p", "$venv", "create", "-f", "$projectDir/environment.yml", "-y"
-            }
-        }
-        exec {
-            executable "$venv/bin/pip"
-            workingDir projectDir
-            args "install", ".[solver]"
-        }
-    }
+    inputs.files("$projectDir/pyproject.toml", "$projectDir/uv.lock", "$projectDir/.python-version")
+    inputs.dir("$projectDir/src")
+    outputs.dir venv
+    workingDir projectDir
+    environment 'UV_PROJECT_ENVIRONMENT', venv
+    executable uv
+    args 'sync', '--locked', '--no-dev', '--no-editable', '--extra', 'solver'
 }
 
 task runMacrogenComplete {

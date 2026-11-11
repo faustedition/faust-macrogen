@@ -42,7 +42,7 @@ from typing import IO, Any, Callable, Optional, Union, cast
 from urllib.parse import urlparse
 
 from pandas.core.base import NoNewAttributesMixin
-import pkg_resources
+from importlib.resources import files
 import requests
 from lxml import etree
 from rich.progress import (
@@ -176,7 +176,7 @@ class LazyConfigLoader:
             logger.debug(
                 "Loading %s from internal configuration %s", self.name, self.resource
             )
-            with pkg_resources.resource_stream(*self.resource) as file:
+            with _open_resource(*self.resource) as file:
                 self.parse_data(file, instance)
         else:
             raise ValueError(
@@ -195,6 +195,10 @@ class LazyConfigLoader:
 
 _yaml = YAML(typ="rt")
 _config_package = "macrogen"
+
+
+def _open_resource(package: str, resource: str) -> IO[bytes]:
+    return files(package).joinpath(resource).open("rb")
 
 
 class _Proxy:
@@ -330,7 +334,7 @@ class Configuration:
         self.config_loaded = True
         # First, load the default config
         logger.debug("Loading default configuration.")
-        with pkg_resources.resource_stream(_config_package, "etc/default.yaml") as f:
+        with _open_resource(_config_package, "etc/default.yaml") as f:
             config = _yaml.load(f)
             self.config = config
         # now work through all config files configured in the default config

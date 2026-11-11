@@ -16,7 +16,7 @@ from collections.abc import Iterable, Mapping, Sequence, Generator
 
 import networkx as nx
 import pandas as pd
-import pkg_resources
+from importlib.resources import files
 from lxml.builder import ElementMaker
 from lxml.etree import Comment
 from more_itertools import pairwise
@@ -1418,7 +1418,7 @@ def report_timeline(graphs: MacrogenesisInfo):
                 known.add(info['id'])
     with (config.path.report_dir / 'timeline.json').open("wt") as data_out:
         json.dump(data, data_out)
-    (config.path.report_dir / 'timeline.html').write_bytes(pkg_resources.resource_string('macrogen', 'timeline.html'))
+    (config.path.report_dir / 'timeline.html').write_bytes(files('macrogen').joinpath('timeline.html').read_bytes())
 
 
 def report_inscriptions(info: MacrogenesisInfo):
